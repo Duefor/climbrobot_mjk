@@ -1,0 +1,14 @@
+<launch>
+    <!-- <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" /> -->
+
+    <!-- <node pkg="rviz" type="rviz" name="rviz" /> -->
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" /> -->
+    <!-- <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher" output="screen" /> -->
+    <!-- <node pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" name="joint_state_publisher_gui" output="screen" /> -->
+    <!-- <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" /> -->
+    <!-- <node pkg="robot_set" type="pub_cartesian_position" name="pub_cartesian_position" output="screen" /> -->
+    <node pkg="car_ctl" type="joint2speed" name="joint2speed" output="screen" />
+    <node pkg="car_ctl" type="keyboard_car" name="keyboard_car" output="screen" />
+    <!-- <node pkg="robot_simulation" type="trajectory_visualization" name="trajectory_visualization" output="screen" /> -->
+
+</launch>

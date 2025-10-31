@@ -1,0 +1,8 @@
+prefix=/home/duefor/climbrobot_mjk/devel
+
+Name: robot_simulation
+Description: Description of robot_simulation
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,8 @@
+prefix=/home/duefor/climbrobot_mjk/install
+
+Name: camera_set
+Description: Description of camera_set
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

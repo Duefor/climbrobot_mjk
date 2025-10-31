@@ -1,0 +1,8 @@
+prefix=/home/duefor/climbrobot_mjk/install
+
+Name: robot_sdk_wrapper
+Description: Description of robot_sdk_wrapper
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

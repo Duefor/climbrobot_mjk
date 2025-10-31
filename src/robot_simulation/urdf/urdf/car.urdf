@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="car">
+  <link
+    name="base_link">
+    <!-- <inertial>
+      <origin
+        xyz="-0.126642014768967 1.84182413764944E-08 0.0121789927693663"
+        rpy="0 0 0" />
+      <mass
+        value="0.0926673491878992" />
+      <inertia
+        ixx="1.53222325318173E-05"
+        ixy="-1.90046744077983E-11"
+        ixz="-1.00491553078177E-18"
+        iyy="0.000102600033510016"
+        iyz="1.20294264204574E-20"
+        izz="0.000111817073657985" />
+    </inertial> -->
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Link_left">
+    <inertial>
+      <origin
+        xyz="-1.11022302462516E-16 -3.33066907387547E-16 -1.59594559789866E-16"
+        rpy="0 0 0" />
+      <mass
+        value="2.8831968742214" />
+      <inertia
+        ixx="0.0245109625268867"
+        ixy="1.19711687878464E-13"
+        ixz="-7.56573319189726E-14"
+        iyy="0.0478895372962598"
+        iyz="3.93607883259683E-14"
+        izz="0.0245109625270905" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/Link_left.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/Link_left.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_left"
+    type="continuous">
+    <origin
+      xyz="-0.0669999999999876 0.154000018418243 0.0979999999999812"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Link_left" />
+    <axis
+      xyz="0 -1 0" />
+  </joint>
+<!-- 轮子的控制器 -->
+  <transmission name="left_wheel_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint_left">
+      <hardwareInterface>VelocityJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="left_motor">
+      <hardwareInterface>VelocityJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <link
+    name="Link_right">
+    <inertial>
+      <origin
+        xyz="9.0205620750794E-17 0 2.08166817117217E-16"
+        rpy="0 0 0" />
+      <mass
+        value="2.88319687422141" />
+      <inertia
+        ixx="0.0245109625270528"
+        ixy="-5.74148898919179E-14"
+        ixz="2.08049465003714E-14"
+        iyy="0.0478895372962598"
+        iyz="3.62741222392676E-13"
+        izz="0.0245109625269244" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/Link_right.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_car/Link_right.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_right"
+    type="continuous">
+    <origin
+      xyz="-0.0669999999999876 -0.153999981581759 0.0979999999999842"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Link_right" />
+    <axis
+      xyz="0 -1 0" />
+  </joint>
+<!-- 右轮控制器 -->
+  <transmission name="right_wheel_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint_right">
+      <hardwareInterface>VelocityJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="right_motor">
+      <hardwareInterface>VelocityJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+</robot>

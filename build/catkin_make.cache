@@ -1,0 +1,2 @@
+camera_set:car_ctl:controller_set:robot_sdk_wrapper:robot_set:robot_simulation
+-DCATKIN_DEVEL_PREFIX=/home/duefor/climbrobot_mjk/devel -DCMAKE_INSTALL_PREFIX=/home/duefor/climbrobot_mjk/install -G Unix Makefiles

@@ -1,0 +1,8 @@
+prefix=/home/duefor/climbrobot_mjk/devel
+
+Name: car_ctl
+Description: Description of car_ctl
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,8 @@
+path: /home/duefor/climbrobot_mjk/src/camera_set/dataset  # 数据集根路径
+train: images/train
+val: images/val
+
+nc: 10  # 类别数，0-9
+names: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+kpt_shape: [4, 3]   # 4个关键点，每个是(x,y)和visible

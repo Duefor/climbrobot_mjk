@@ -1,0 +1,5 @@
+摄像头相关命令
+    realsense-viewer 打开realsense官方软件
+    ls /dev/video* 检测是否打开摄像头
+    cheese 打开摄像头
+    cheese -d /dev/video1 打开指定摄像头

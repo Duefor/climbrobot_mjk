@@ -1,0 +1,17 @@
+<launch>
+  <!-- 1. 加载 URDF -->
+  <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/car.urdf" />
+
+  <!-- 2. 加载 arbotix 控制器配置（必须在节点外加载） -->
+  <rosparam file="$(find robot_simulation)/config/car_control.yaml" command="load" />
+
+  <!-- 3. 启动 arbotix_driver -->
+  <node pkg="arbotix_python" type="arbotix_driver" name="arbotix" output="screen">
+    <param name="sim" value="true" />
+  </node>
+
+  <!-- 4. 状态发布与可视化 -->
+  <node pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" name="joint_state_publisher" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" />
+  <node pkg="rviz" type="rviz" name="rviz" />
+</launch>

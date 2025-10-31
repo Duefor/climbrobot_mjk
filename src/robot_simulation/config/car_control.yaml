@@ -1,0 +1,15 @@
+controllers:
+  base_controller:
+    type: arbotix_python.diff_controller # 控制器类型。diff_controller 表示差速驱动控制器。
+    base_frame_id: base_link  # 机器人底座坐标系
+    left_wheel: joint_left
+    right_wheel: joint_right
+    wheel_separation: 0.20   # 两轮中心间距 m
+    wheel_diameter: 0.06     # 轮子直径 m
+    ticks_meter: 1000
+    Kp: 12
+    Kd: 12
+    Ki: 0
+    Ko: 50
+    accel_limit: 1.0
+    max_speed: 0.5
