@@ -14,6 +14,8 @@ EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string&
 EliteCSRobotSDK::~EliteCSRobotSDK() {
     // 释放资源
     s_driver->stopControl(1000);
+    // 老版sdk无这个参数
+    // s_driver->stopControl();
     std::cout << "Driver Control stop" << std::endl;
     s_dashboard->stopProgram();
     std::cout << "Program stop" << std::endl;
