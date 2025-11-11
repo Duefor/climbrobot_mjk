@@ -73,6 +73,13 @@
 /home/duefor/climbrobot_mjk/build/controller_set/CMakeFiles/install.dir
 /home/duefor/climbrobot_mjk/build/controller_set/CMakeFiles/install/local.dir
 /home/duefor/climbrobot_mjk/build/controller_set/CMakeFiles/install/strip.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/test.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/edit_cache.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/rebuild_cache.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/list_install_components.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/install.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/install/local.dir
+/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/CMakeFiles/install/strip.dir
 /home/duefor/climbrobot_mjk/build/car_ctl/CMakeFiles/actionlib_generate_messages_cpp.dir
 /home/duefor/climbrobot_mjk/build/car_ctl/CMakeFiles/actionlib_generate_messages_eus.dir
 /home/duefor/climbrobot_mjk/build/car_ctl/CMakeFiles/actionlib_generate_messages_lisp.dir

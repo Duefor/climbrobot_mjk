@@ -66,6 +66,7 @@ CMAKE_BINARY_DIR = /home/duefor/climbrobot_mjk/build
 all: gtest/all
 all: camera_set/all
 all: controller_set/all
+all: ROS-TCP-Endpoint/all
 all: car_ctl/all
 all: robot_sdk_wrapper/all
 all: robot_set/all
@@ -76,6 +77,7 @@ all: robot_simulation/all
 codegen: gtest/codegen
 codegen: camera_set/codegen
 codegen: controller_set/codegen
+codegen: ROS-TCP-Endpoint/codegen
 codegen: car_ctl/codegen
 codegen: robot_sdk_wrapper/codegen
 codegen: robot_set/codegen
@@ -86,6 +88,7 @@ codegen: robot_simulation/codegen
 preinstall: gtest/preinstall
 preinstall: camera_set/preinstall
 preinstall: controller_set/preinstall
+preinstall: ROS-TCP-Endpoint/preinstall
 preinstall: car_ctl/preinstall
 preinstall: robot_sdk_wrapper/preinstall
 preinstall: robot_set/preinstall
@@ -101,11 +104,31 @@ clean: CMakeFiles/doxygen.dir/clean
 clean: gtest/clean
 clean: camera_set/clean
 clean: controller_set/clean
+clean: ROS-TCP-Endpoint/clean
 clean: car_ctl/clean
 clean: robot_sdk_wrapper/clean
 clean: robot_set/clean
 clean: robot_simulation/clean
 .PHONY : clean
+
+#=============================================================================
+# Directory level rules for directory ROS-TCP-Endpoint
+
+# Recursive "all" directory target.
+ROS-TCP-Endpoint/all:
+.PHONY : ROS-TCP-Endpoint/all
+
+# Recursive "codegen" directory target.
+ROS-TCP-Endpoint/codegen:
+.PHONY : ROS-TCP-Endpoint/codegen
+
+# Recursive "preinstall" directory target.
+ROS-TCP-Endpoint/preinstall:
+.PHONY : ROS-TCP-Endpoint/preinstall
+
+# Recursive "clean" directory target.
+ROS-TCP-Endpoint/clean:
+.PHONY : ROS-TCP-Endpoint/clean
 
 #=============================================================================
 # Directory level rules for directory camera_set

@@ -7,6 +7,7 @@
 subdirs("gtest")
 subdirs("camera_set")
 subdirs("controller_set")
+subdirs("ROS-TCP-Endpoint")
 subdirs("car_ctl")
 subdirs("robot_sdk_wrapper")
 subdirs("robot_set")
