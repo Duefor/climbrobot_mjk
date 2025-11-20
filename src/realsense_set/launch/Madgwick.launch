@@ -1,0 +1,21 @@
+<launch>
+
+    <!-- Madgwick IMU Filter -->
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter" output="screen">
+
+        <!-- 不使用磁力计 -->
+        <param name="use_mag" value="false"/>
+
+        <!-- 不发布 TF，由 RTAB-Map 或其他节点负责 -->
+        <param name="publish_tf" value="false"/>
+
+        <!-- 输出 ENU 坐标系（即 ROS 惯例） -->
+        <param name="world_frame" value="enu"/>
+
+        <!-- 输入 /camera/imu，输出 /rtabmap/imu -->
+        <remap from="/imu/data_raw" to="/camera/imu"/>
+        <remap from="/imu/data" to="/rtabmap/imu"/>
+
+    </node>
+
+</launch>

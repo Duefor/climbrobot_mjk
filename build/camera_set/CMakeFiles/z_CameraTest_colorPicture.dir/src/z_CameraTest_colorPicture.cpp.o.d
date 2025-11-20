@@ -1,8 +1,7 @@
 camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/src/z_CameraTest_colorPicture.cpp.o: \
  /home/duefor/climbrobot_mjk/src/camera_set/src/z_CameraTest_colorPicture.cpp \
- /usr/include/stdc-predef.h /opt/ros/noetic/include/librealsense2/rs.hpp \
- /opt/ros/noetic/include/librealsense2/rs.h \
- /opt/ros/noetic/include/librealsense2/rsutil.h \
+ /usr/include/stdc-predef.h /usr/include/librealsense2/rs.hpp \
+ /usr/include/librealsense2/rs.h /usr/include/librealsense2/rsutil.h \
  /usr/include/c++/9/stdlib.h /usr/include/c++/9/cstdlib \
  /usr/include/x86_64-linux-gnu/c++/9/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/9/bits/os_defines.h \
@@ -89,29 +88,28 @@ camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/src/z_CameraTest_colorPictur
  /usr/include/c++/9/tr1/poly_laguerre.tcc \
  /usr/include/c++/9/tr1/riemann_zeta.tcc \
  /usr/lib/gcc/x86_64-linux-gnu/9/include/float.h \
- /opt/ros/noetic/include/librealsense2/h/rs_types.h \
- /opt/ros/noetic/include/librealsense2/h/rs_sensor.h \
- /opt/ros/noetic/include/librealsense2/h/rs_types.h \
- /opt/ros/noetic/include/librealsense2/h/rs_context.h \
- /opt/ros/noetic/include/librealsense2/h/rs_device.h \
- /opt/ros/noetic/include/librealsense2/h/rs_sensor.h \
- /opt/ros/noetic/include/librealsense2/h/rs_frame.h \
- /opt/ros/noetic/include/librealsense2/h/rs_option.h \
- /opt/ros/noetic/include/librealsense2/h/rs_processing.h \
- /opt/ros/noetic/include/librealsense2/h/rs_option.h \
- /opt/ros/noetic/include/librealsense2/h/rs_record_playback.h \
- /opt/ros/noetic/include/librealsense2/hpp/rs_types.hpp \
- /opt/ros/noetic/include/librealsense2/rs.h \
- /opt/ros/noetic/include/librealsense2/h/rs_context.h \
- /opt/ros/noetic/include/librealsense2/h/rs_device.h \
- /opt/ros/noetic/include/librealsense2/h/rs_frame.h \
- /opt/ros/noetic/include/librealsense2/h/rs_processing.h \
- /opt/ros/noetic/include/librealsense2/h/rs_record_playback.h \
- /opt/ros/noetic/include/librealsense2/h/rs_sensor.h \
- /opt/ros/noetic/include/librealsense2/h/rs_pipeline.h \
- /opt/ros/noetic/include/librealsense2/h/rs_config.h \
- /usr/include/c++/9/string /usr/include/c++/9/bits/stringfwd.h \
- /usr/include/c++/9/bits/memoryfwd.h \
+ /usr/include/librealsense2/h/rs_types.h \
+ /usr/include/librealsense2/h/rs_sensor.h \
+ /usr/include/librealsense2/h/rs_types.h \
+ /usr/include/librealsense2/h/rs_context.h \
+ /usr/include/librealsense2/h/rs_device.h \
+ /usr/include/librealsense2/h/rs_sensor.h \
+ /usr/include/librealsense2/h/rs_frame.h \
+ /usr/include/librealsense2/h/rs_option.h \
+ /usr/include/librealsense2/h/rs_processing.h \
+ /usr/include/librealsense2/h/rs_option.h \
+ /usr/include/librealsense2/h/rs_record_playback.h \
+ /usr/include/librealsense2/hpp/rs_types.hpp \
+ /usr/include/librealsense2/rs.h \
+ /usr/include/librealsense2/h/rs_context.h \
+ /usr/include/librealsense2/h/rs_device.h \
+ /usr/include/librealsense2/h/rs_frame.h \
+ /usr/include/librealsense2/h/rs_processing.h \
+ /usr/include/librealsense2/h/rs_record_playback.h \
+ /usr/include/librealsense2/h/rs_sensor.h \
+ /usr/include/librealsense2/h/rs_pipeline.h \
+ /usr/include/librealsense2/h/rs_config.h /usr/include/c++/9/string \
+ /usr/include/c++/9/bits/stringfwd.h /usr/include/c++/9/bits/memoryfwd.h \
  /usr/include/c++/9/bits/char_traits.h /usr/include/c++/9/bits/postypes.h \
  /usr/include/c++/9/cwchar /usr/include/wchar.h \
  /usr/lib/gcc/x86_64-linux-gnu/9/include/stdarg.h \
@@ -223,21 +221,23 @@ camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/src/z_CameraTest_colorPictur
  /usr/include/c++/9/bits/sstream.tcc /usr/include/c++/9/chrono \
  /usr/include/c++/9/ratio /usr/include/c++/9/ctime \
  /usr/include/c++/9/bits/parse_numbers.h \
- /opt/ros/noetic/include/librealsense2/hpp/rs_context.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_types.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_record_playback.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_device.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_sensor.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_frame.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_processing.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_options.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_device.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_frame.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_processing.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_record_playback.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_sensor.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_pipeline.hpp \
- /opt/ros/noetic/include/librealsense2/hpp/rs_context.hpp \
+ /usr/include/librealsense2/hpp/rs_context.hpp \
+ /usr/include/librealsense2/hpp/rs_types.hpp \
+ /usr/include/librealsense2/hpp/rs_record_playback.hpp \
+ /usr/include/librealsense2/hpp/rs_device.hpp \
+ /usr/include/librealsense2/hpp/rs_sensor.hpp \
+ /usr/include/librealsense2/hpp/rs_frame.hpp \
+ /usr/include/librealsense2/hpp/rs_processing.hpp \
+ /usr/include/librealsense2/hpp/rs_options.hpp \
+ /usr/include/librealsense2/h/rs_types.h /usr/include/c++/9/cstring \
+ /usr/include/string.h /usr/include/strings.h \
+ /usr/include/librealsense2/hpp/rs_device.hpp \
+ /usr/include/librealsense2/hpp/rs_frame.hpp \
+ /usr/include/librealsense2/hpp/rs_processing.hpp \
+ /usr/include/librealsense2/hpp/rs_record_playback.hpp \
+ /usr/include/librealsense2/hpp/rs_sensor.hpp \
+ /usr/include/librealsense2/hpp/rs_pipeline.hpp \
+ /usr/include/librealsense2/hpp/rs_context.hpp \
  /usr/include/opencv4/opencv2/opencv.hpp \
  /usr/include/opencv4/opencv2/opencv_modules.hpp \
  /usr/include/opencv4/opencv2/core.hpp \
@@ -261,8 +261,7 @@ camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/src/z_CameraTest_colorPictur
  /usr/include/opencv4/opencv2/core/base.hpp /usr/include/c++/9/climits \
  /usr/include/c++/9/algorithm \
  /usr/include/c++/9/pstl/glue_algorithm_defs.h \
- /usr/include/opencv4/opencv2/core/cvstd.hpp /usr/include/c++/9/cstring \
- /usr/include/string.h /usr/include/strings.h \
+ /usr/include/opencv4/opencv2/core/cvstd.hpp \
  /usr/include/opencv4/opencv2/core/cvstd_wrapper.hpp \
  /usr/include/opencv4/opencv2/core/neon_utils.hpp \
  /usr/include/opencv4/opencv2/core/vsx_utils.hpp /usr/include/assert.h \

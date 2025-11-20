@@ -141,7 +141,7 @@ Checkerboard_poseGet_EXTERNAL_OBJECTS =
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_viz.so.4.2.0
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so.4.2.0
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_xphoto.so.4.2.0
-/home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /opt/ros/noetic/lib/x86_64-linux-gnu/librealsense2.so.2.50.0
+/home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/librealsense2.so.2.55.1
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_apps.so
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_outofcore.so
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_people.so
@@ -278,6 +278,7 @@ Checkerboard_poseGet_EXTERNAL_OBJECTS =
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_photo.so.4.2.0
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.4.2.0
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libopencv_core.so.4.2.0
+/home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/librsutils.a
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_surface.so
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_keypoints.so
 /home/duefor/climbrobot_mjk/devel/lib/camera_set/Checkerboard_poseGet: /usr/lib/x86_64-linux-gnu/libpcl_tracking.so

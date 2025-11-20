@@ -1,0 +1,13 @@
+该包为自己建立的realsense相关包
+
+25/11/12
+相机无法运行rs2::frameset frames = pipe.wait_for_frames() 来获得一帧数据
+测试发现问题：连接的realsense库为：
+duefor@DF:~/climbrobot_mjk$ ldd devel/lib/realsense_set/pub | grep realsense 
+        librealsense2.so.2.50 => /opt/ros/noetic/lib/x86_64-linux-gnu/librealsense2.so.2.50 (0x00007f8d1b3bf000)
+需要用至少2.55版本以上的才行，在realsense官网下载，并必须将ros安装的旧版本删除，否则cmake会优先寻找ros安装的旧版本。sudo apt remove ros-noetic-librealsense2*
+删除旧版本后重新编译后会发现链接到新版本：
+duefor@DF:~/climbrobot_mjk$ ldd devel/lib/realsense_set/pub | grep realsense
+        librealsense2.so.2.55 => /lib/x86_64-linux-gnu/librealsense2.so.2.55 (0x00007f4a4005f000)
+注意此处删除旧版ros-noetic-librealsense2*会一并删除rtabmap，只需要再下载回来就行了，
+但是下载回来会把ros安装的旧版本realsense一并下载回来，不用担心，因为即使下载回来了catkin_make也不会去找这个旧版的realsense，他仍然连接的新版本

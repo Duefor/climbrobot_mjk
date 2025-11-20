@@ -3,28 +3,6 @@
 
 camera_set/CMakeFiles/Checkerboard_poseGet.dir/src/Checkerboard_poseGet.cpp.o
  /home/duefor/climbrobot_mjk/src/camera_set/src/Checkerboard_poseGet.cpp
- /opt/ros/noetic/include/librealsense2/h/rs_config.h
- /opt/ros/noetic/include/librealsense2/h/rs_context.h
- /opt/ros/noetic/include/librealsense2/h/rs_device.h
- /opt/ros/noetic/include/librealsense2/h/rs_frame.h
- /opt/ros/noetic/include/librealsense2/h/rs_option.h
- /opt/ros/noetic/include/librealsense2/h/rs_pipeline.h
- /opt/ros/noetic/include/librealsense2/h/rs_processing.h
- /opt/ros/noetic/include/librealsense2/h/rs_record_playback.h
- /opt/ros/noetic/include/librealsense2/h/rs_sensor.h
- /opt/ros/noetic/include/librealsense2/h/rs_types.h
- /opt/ros/noetic/include/librealsense2/hpp/rs_context.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_device.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_frame.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_options.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_pipeline.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_processing.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_record_playback.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_sensor.hpp
- /opt/ros/noetic/include/librealsense2/hpp/rs_types.hpp
- /opt/ros/noetic/include/librealsense2/rs.h
- /opt/ros/noetic/include/librealsense2/rs.hpp
- /opt/ros/noetic/include/librealsense2/rsutil.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
  /usr/include/asm-generic/errno.h
@@ -219,6 +197,28 @@ camera_set/CMakeFiles/Checkerboard_poseGet.dir/src/Checkerboard_poseGet.cpp.o
  /usr/include/errno.h
  /usr/include/features.h
  /usr/include/libintl.h
+ /usr/include/librealsense2/h/rs_config.h
+ /usr/include/librealsense2/h/rs_context.h
+ /usr/include/librealsense2/h/rs_device.h
+ /usr/include/librealsense2/h/rs_frame.h
+ /usr/include/librealsense2/h/rs_option.h
+ /usr/include/librealsense2/h/rs_pipeline.h
+ /usr/include/librealsense2/h/rs_processing.h
+ /usr/include/librealsense2/h/rs_record_playback.h
+ /usr/include/librealsense2/h/rs_sensor.h
+ /usr/include/librealsense2/h/rs_types.h
+ /usr/include/librealsense2/hpp/rs_context.hpp
+ /usr/include/librealsense2/hpp/rs_device.hpp
+ /usr/include/librealsense2/hpp/rs_frame.hpp
+ /usr/include/librealsense2/hpp/rs_options.hpp
+ /usr/include/librealsense2/hpp/rs_pipeline.hpp
+ /usr/include/librealsense2/hpp/rs_processing.hpp
+ /usr/include/librealsense2/hpp/rs_record_playback.hpp
+ /usr/include/librealsense2/hpp/rs_sensor.hpp
+ /usr/include/librealsense2/hpp/rs_types.hpp
+ /usr/include/librealsense2/rs.h
+ /usr/include/librealsense2/rs.hpp
+ /usr/include/librealsense2/rsutil.h
  /usr/include/limits.h
  /usr/include/linux/errno.h
  /usr/include/linux/limits.h
