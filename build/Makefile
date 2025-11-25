@@ -402,7 +402,7 @@ roscpp_generate_messages_cpp: cmake_check_build_system
 
 # fast build rule for target.
 roscpp_generate_messages_cpp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/roscpp_generate_messages_cpp.dir/build.make camera_set/CMakeFiles/roscpp_generate_messages_cpp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/roscpp_generate_messages_cpp.dir/build.make controller_set/CMakeFiles/roscpp_generate_messages_cpp.dir/build
 .PHONY : roscpp_generate_messages_cpp/fast
 
 #=============================================================================
@@ -415,7 +415,7 @@ roscpp_generate_messages_eus: cmake_check_build_system
 
 # fast build rule for target.
 roscpp_generate_messages_eus/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/roscpp_generate_messages_eus.dir/build.make camera_set/CMakeFiles/roscpp_generate_messages_eus.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/roscpp_generate_messages_eus.dir/build.make controller_set/CMakeFiles/roscpp_generate_messages_eus.dir/build
 .PHONY : roscpp_generate_messages_eus/fast
 
 #=============================================================================
@@ -428,7 +428,7 @@ roscpp_generate_messages_lisp: cmake_check_build_system
 
 # fast build rule for target.
 roscpp_generate_messages_lisp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/roscpp_generate_messages_lisp.dir/build.make camera_set/CMakeFiles/roscpp_generate_messages_lisp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/roscpp_generate_messages_lisp.dir/build.make controller_set/CMakeFiles/roscpp_generate_messages_lisp.dir/build
 .PHONY : roscpp_generate_messages_lisp/fast
 
 #=============================================================================
@@ -441,7 +441,7 @@ roscpp_generate_messages_nodejs: cmake_check_build_system
 
 # fast build rule for target.
 roscpp_generate_messages_nodejs/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/roscpp_generate_messages_nodejs.dir/build.make camera_set/CMakeFiles/roscpp_generate_messages_nodejs.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/roscpp_generate_messages_nodejs.dir/build.make controller_set/CMakeFiles/roscpp_generate_messages_nodejs.dir/build
 .PHONY : roscpp_generate_messages_nodejs/fast
 
 #=============================================================================
@@ -454,7 +454,7 @@ roscpp_generate_messages_py: cmake_check_build_system
 
 # fast build rule for target.
 roscpp_generate_messages_py/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/roscpp_generate_messages_py.dir/build.make camera_set/CMakeFiles/roscpp_generate_messages_py.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/roscpp_generate_messages_py.dir/build.make controller_set/CMakeFiles/roscpp_generate_messages_py.dir/build
 .PHONY : roscpp_generate_messages_py/fast
 
 #=============================================================================
@@ -467,7 +467,7 @@ rosgraph_msgs_generate_messages_cpp: cmake_check_build_system
 
 # fast build rule for target.
 rosgraph_msgs_generate_messages_cpp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build.make camera_set/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build.make controller_set/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build
 .PHONY : rosgraph_msgs_generate_messages_cpp/fast
 
 #=============================================================================
@@ -480,7 +480,7 @@ rosgraph_msgs_generate_messages_eus: cmake_check_build_system
 
 # fast build rule for target.
 rosgraph_msgs_generate_messages_eus/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build.make camera_set/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build.make controller_set/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build
 .PHONY : rosgraph_msgs_generate_messages_eus/fast
 
 #=============================================================================
@@ -493,7 +493,7 @@ rosgraph_msgs_generate_messages_lisp: cmake_check_build_system
 
 # fast build rule for target.
 rosgraph_msgs_generate_messages_lisp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build.make camera_set/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build.make controller_set/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build
 .PHONY : rosgraph_msgs_generate_messages_lisp/fast
 
 #=============================================================================
@@ -506,7 +506,7 @@ rosgraph_msgs_generate_messages_nodejs: cmake_check_build_system
 
 # fast build rule for target.
 rosgraph_msgs_generate_messages_nodejs/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build.make camera_set/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build.make controller_set/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build
 .PHONY : rosgraph_msgs_generate_messages_nodejs/fast
 
 #=============================================================================
@@ -519,7 +519,7 @@ rosgraph_msgs_generate_messages_py: cmake_check_build_system
 
 # fast build rule for target.
 rosgraph_msgs_generate_messages_py/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build.make camera_set/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build.make controller_set/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build
 .PHONY : rosgraph_msgs_generate_messages_py/fast
 
 #=============================================================================
@@ -532,7 +532,7 @@ std_msgs_generate_messages_cpp: cmake_check_build_system
 
 # fast build rule for target.
 std_msgs_generate_messages_cpp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/std_msgs_generate_messages_cpp.dir/build.make camera_set/CMakeFiles/std_msgs_generate_messages_cpp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/std_msgs_generate_messages_cpp.dir/build.make controller_set/CMakeFiles/std_msgs_generate_messages_cpp.dir/build
 .PHONY : std_msgs_generate_messages_cpp/fast
 
 #=============================================================================
@@ -545,7 +545,7 @@ std_msgs_generate_messages_eus: cmake_check_build_system
 
 # fast build rule for target.
 std_msgs_generate_messages_eus/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/std_msgs_generate_messages_eus.dir/build.make camera_set/CMakeFiles/std_msgs_generate_messages_eus.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/std_msgs_generate_messages_eus.dir/build.make controller_set/CMakeFiles/std_msgs_generate_messages_eus.dir/build
 .PHONY : std_msgs_generate_messages_eus/fast
 
 #=============================================================================
@@ -558,7 +558,7 @@ std_msgs_generate_messages_lisp: cmake_check_build_system
 
 # fast build rule for target.
 std_msgs_generate_messages_lisp/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/std_msgs_generate_messages_lisp.dir/build.make camera_set/CMakeFiles/std_msgs_generate_messages_lisp.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/std_msgs_generate_messages_lisp.dir/build.make controller_set/CMakeFiles/std_msgs_generate_messages_lisp.dir/build
 .PHONY : std_msgs_generate_messages_lisp/fast
 
 #=============================================================================
@@ -571,7 +571,7 @@ std_msgs_generate_messages_nodejs: cmake_check_build_system
 
 # fast build rule for target.
 std_msgs_generate_messages_nodejs/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build.make camera_set/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build.make controller_set/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build
 .PHONY : std_msgs_generate_messages_nodejs/fast
 
 #=============================================================================
@@ -584,99 +584,8 @@ std_msgs_generate_messages_py: cmake_check_build_system
 
 # fast build rule for target.
 std_msgs_generate_messages_py/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/std_msgs_generate_messages_py.dir/build.make camera_set/CMakeFiles/std_msgs_generate_messages_py.dir/build
+	$(MAKE) $(MAKESILENT) -f controller_set/CMakeFiles/std_msgs_generate_messages_py.dir/build.make controller_set/CMakeFiles/std_msgs_generate_messages_py.dir/build
 .PHONY : std_msgs_generate_messages_py/fast
-
-#=============================================================================
-# Target rules for targets named Camera_external_parameter_calibration
-
-# Build rule for target.
-Camera_external_parameter_calibration: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Camera_external_parameter_calibration
-.PHONY : Camera_external_parameter_calibration
-
-# fast build rule for target.
-Camera_external_parameter_calibration/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/Camera_external_parameter_calibration.dir/build.make camera_set/CMakeFiles/Camera_external_parameter_calibration.dir/build
-.PHONY : Camera_external_parameter_calibration/fast
-
-#=============================================================================
-# Target rules for targets named Camera_internal_parameter_calibration
-
-# Build rule for target.
-Camera_internal_parameter_calibration: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Camera_internal_parameter_calibration
-.PHONY : Camera_internal_parameter_calibration
-
-# fast build rule for target.
-Camera_internal_parameter_calibration/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/Camera_internal_parameter_calibration.dir/build.make camera_set/CMakeFiles/Camera_internal_parameter_calibration.dir/build
-.PHONY : Camera_internal_parameter_calibration/fast
-
-#=============================================================================
-# Target rules for targets named Camera_internal_parameter_calibration_dataGet
-
-# Build rule for target.
-Camera_internal_parameter_calibration_dataGet: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Camera_internal_parameter_calibration_dataGet
-.PHONY : Camera_internal_parameter_calibration_dataGet
-
-# fast build rule for target.
-Camera_internal_parameter_calibration_dataGet/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/Camera_internal_parameter_calibration_dataGet.dir/build.make camera_set/CMakeFiles/Camera_internal_parameter_calibration_dataGet.dir/build
-.PHONY : Camera_internal_parameter_calibration_dataGet/fast
-
-#=============================================================================
-# Target rules for targets named Checkerboard_poseGet
-
-# Build rule for target.
-Checkerboard_poseGet: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Checkerboard_poseGet
-.PHONY : Checkerboard_poseGet
-
-# fast build rule for target.
-Checkerboard_poseGet/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/Checkerboard_poseGet.dir/build.make camera_set/CMakeFiles/Checkerboard_poseGet.dir/build
-.PHONY : Checkerboard_poseGet/fast
-
-#=============================================================================
-# Target rules for targets named z_CameraTest_colorPicture
-
-# Build rule for target.
-z_CameraTest_colorPicture: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 z_CameraTest_colorPicture
-.PHONY : z_CameraTest_colorPicture
-
-# fast build rule for target.
-z_CameraTest_colorPicture/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/build.make camera_set/CMakeFiles/z_CameraTest_colorPicture.dir/build
-.PHONY : z_CameraTest_colorPicture/fast
-
-#=============================================================================
-# Target rules for targets named z_CameraTest_find_PatternSize
-
-# Build rule for target.
-z_CameraTest_find_PatternSize: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 z_CameraTest_find_PatternSize
-.PHONY : z_CameraTest_find_PatternSize
-
-# fast build rule for target.
-z_CameraTest_find_PatternSize/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/z_CameraTest_find_PatternSize.dir/build.make camera_set/CMakeFiles/z_CameraTest_find_PatternSize.dir/build
-.PHONY : z_CameraTest_find_PatternSize/fast
-
-#=============================================================================
-# Target rules for targets named z_CameraTest_find_target
-
-# Build rule for target.
-z_CameraTest_find_target: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 z_CameraTest_find_target
-.PHONY : z_CameraTest_find_target
-
-# fast build rule for target.
-z_CameraTest_find_target/fast:
-	$(MAKE) $(MAKESILENT) -f camera_set/CMakeFiles/z_CameraTest_find_target.dir/build.make camera_set/CMakeFiles/z_CameraTest_find_target.dir/build
-.PHONY : z_CameraTest_find_target/fast
 
 #=============================================================================
 # Target rules for targets named pose_converter
@@ -2920,10 +2829,6 @@ help:
 	@echo "... visualization_msgs_generate_messages_lisp"
 	@echo "... visualization_msgs_generate_messages_nodejs"
 	@echo "... visualization_msgs_generate_messages_py"
-	@echo "... Camera_external_parameter_calibration"
-	@echo "... Camera_internal_parameter_calibration"
-	@echo "... Camera_internal_parameter_calibration_dataGet"
-	@echo "... Checkerboard_poseGet"
 	@echo "... IK"
 	@echo "... camera_static_tf_broadcaster"
 	@echo "... camera_tf_pub"
@@ -2953,9 +2858,6 @@ help:
 	@echo "... robot_main_1"
 	@echo "... robot_sdk"
 	@echo "... trajectory_visualization"
-	@echo "... z_CameraTest_colorPicture"
-	@echo "... z_CameraTest_find_PatternSize"
-	@echo "... z_CameraTest_find_target"
 .PHONY : help
 
 

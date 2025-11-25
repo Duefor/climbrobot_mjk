@@ -1,2 +1,2 @@
-ROS-TCP-Endpoint:camera_set:car_ctl:controller_set:realsense-ros/realsense2_camera:realsense-ros/realsense2_description:realsense_set:robot_sdk_wrapper:robot_set:robot_simulation
+ROS-TCP-Endpoint:car_ctl:controller_set:realsense-ros/realsense2_camera:realsense-ros/realsense2_description:realsense_set:robot_sdk_wrapper:robot_set:robot_simulation
 -DCATKIN_DEVEL_PREFIX=/home/duefor/climbrobot_mjk/devel -DCMAKE_INSTALL_PREFIX=/home/duefor/climbrobot_mjk/install -G Unix Makefiles

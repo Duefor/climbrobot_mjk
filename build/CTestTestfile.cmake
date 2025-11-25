@@ -6,7 +6,6 @@
 # testing this directory and lists subdirectories to be tested as well.
 subdirs("gtest")
 subdirs("realsense-ros/realsense2_description")
-subdirs("camera_set")
 subdirs("controller_set")
 subdirs("ROS-TCP-Endpoint")
 subdirs("car_ctl")

@@ -137,7 +137,6 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/home/duefor/climbrobot_mjk/build/gtest/cmake_install.cmake")
   include("/home/duefor/climbrobot_mjk/build/realsense-ros/realsense2_description/cmake_install.cmake")
-  include("/home/duefor/climbrobot_mjk/build/camera_set/cmake_install.cmake")
   include("/home/duefor/climbrobot_mjk/build/controller_set/cmake_install.cmake")
   include("/home/duefor/climbrobot_mjk/build/ROS-TCP-Endpoint/cmake_install.cmake")
   include("/home/duefor/climbrobot_mjk/build/car_ctl/cmake_install.cmake")
