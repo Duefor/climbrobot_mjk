@@ -158,6 +158,8 @@ add_executable(camera_static_tf_broadcaster src/camera_static_tf_broadcaster.cpp
 
 add_executable(camera_tf_pub src/camera_tf_pub.cpp)
 
+add_executable(imu_cov_republisher src/imu_cov_republisher.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -184,6 +186,9 @@ target_link_libraries(camera_tf_pub
   ${catkin_LIBRARIES}
 )
 
+target_link_libraries(imu_cov_republisher
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############

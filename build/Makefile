@@ -2304,6 +2304,19 @@ camera_tf_pub/fast:
 .PHONY : camera_tf_pub/fast
 
 #=============================================================================
+# Target rules for targets named imu_cov_republisher
+
+# Build rule for target.
+imu_cov_republisher: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 imu_cov_republisher
+.PHONY : imu_cov_republisher
+
+# fast build rule for target.
+imu_cov_republisher/fast:
+	$(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/imu_cov_republisher.dir/build.make realsense_set/CMakeFiles/imu_cov_republisher.dir/build
+.PHONY : imu_cov_republisher/fast
+
+#=============================================================================
 # Target rules for targets named gazebo_plugins_gencfg
 
 # Build rule for target.
@@ -2840,6 +2853,7 @@ help:
 	@echo "... gtest_main"
 	@echo "... ik_position_solver"
 	@echo "... ik_velocity_solver"
+	@echo "... imu_cov_republisher"
 	@echo "... joint2speed"
 	@echo "... joint_teleop_follower"
 	@echo "... joint_velocity2position"

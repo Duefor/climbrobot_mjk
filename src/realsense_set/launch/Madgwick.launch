@@ -12,8 +12,8 @@
         <!-- 输出 ENU 坐标系（即 ROS 惯例） -->
         <param name="world_frame" value="enu"/>
 
-        <!-- 输入 /camera/imu，输出 /rtabmap/imu -->
-        <remap from="/imu/data_raw" to="/camera/imu"/>
+        <!-- 输入 相机imu数据，输出 /rtabmap/imu -->
+        <remap from="/imu/data_raw" to="/camera/imu_calib"/>
         <remap from="/imu/data" to="/rtabmap/imu"/>
 
     </node>

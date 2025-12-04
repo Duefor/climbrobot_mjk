@@ -1,0 +1,10 @@
+<launch>
+    <!-- 启动 RealSense D435i -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="enable_gyro"         default="true"/>
+        <arg name="enable_accel"        default="true"/>
+        <arg name="enable_sync"         default="false"/>
+        <arg name="unite_imu_method"    default="linear_interpolation"/>
+        
+    </include>
+</launch>

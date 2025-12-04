@@ -11,3 +11,26 @@ duefor@DF:~/climbrobot_mjk$ ldd devel/lib/realsense_set/pub | grep realsense
         librealsense2.so.2.55 => /lib/x86_64-linux-gnu/librealsense2.so.2.55 (0x00007f4a4005f000)
 注意此处删除旧版ros-noetic-librealsense2*会一并删除rtabmap，只需要再下载回来就行了，
 但是下载回来会把ros安装的旧版本realsense一并下载回来，不用担心，因为即使下载回来了catkin_make也不会去找这个旧版的realsense，他仍然连接的新版本
+
+25/12/4
+相机经过了IMU标定，再开启建图
+常规建图：
+        roscore
+        启动相机节点：roslaunch realsense_set realsense.launch
+        启动IMU标定转换节点：rosrun realsense_set imu_cov_republisher 
+        启动相机IMU转rtab IMU节点：roslaunch realsense_set Madgwick.launch 
+        在另一个工作空间rtabmap_ros_ws中启动rtabmap节点：roslaunch rtab_launch rtab.launch
+使用深度图转点云建图：
+        roscore
+        启动相机节点：roslaunch realsense_set realsense.launch
+        启动IMU标定转换节点：rosrun realsense_set imu_cov_republisher 
+        启动相机IMU转rtab IMU节点：roslaunch realsense_set Madgwick.launch 
+        启动深度图转点云节点：roslaunch realsense_set depth_image_proc_pointcloud.launch 
+        在另一个工作空间rtabmap_ros_ws中启动rtabmap节点：roslaunch rtab_launch rtab_1.launch
+使用相机自带的点云建图：
+        roscore
+        启动相机节点：roslaunch realsense_set realsense.launch  启动点云话题
+        启动IMU标定转换节点：rosrun realsense_set imu_cov_republisher 
+        启动相机IMU转rtab IMU节点：roslaunch realsense_set Madgwick.launch
+        在另一个工作空间rtabmap_ros_ws中启动rtabmap节点：roslaunch rtab_launch rtab_1.launch    注意改一下点云话题
+imu也可以让rtabmap自行生成

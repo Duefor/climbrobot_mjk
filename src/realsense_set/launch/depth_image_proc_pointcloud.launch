@@ -1,0 +1,32 @@
+<!-- 用于外部将深度图像转换为点云 -->
+<launch>
+
+  <!-- 独立 nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="depth_cloud_manager" args="manager" output="screen"/>
+
+  <!-- point_cloud_xyz nodelet -->
+  <node pkg="nodelet"
+        type="nodelet"
+        name="depth_cloud_xyz"
+        args="load depth_image_proc/point_cloud_xyz depth_cloud_manager"
+        output="screen">
+
+    <!-- nodelet 参数 -->
+    <param name="approx_sync" value="false"/>
+    <param name="decimation"  value="4"/>
+
+    <!-- 话题重映射 -->
+    <remap from="image_rect"  to="/camera/depth/image_rect_raw"/>
+    <remap from="camera_info" to="/camera/depth/camera_info"/>
+
+  </node>
+
+</launch>
+
+<!-- 也可以直接使用命令行启动 -->
+<!-- rosrun nodelet nodelet standalone 
+depth_image_proc/point_cloud_xyz \ 
+_approx_sync:=false \ 
+/image_rect:=/camera/depth/image_rect_raw \ 
+/camera_info:=/camera/depth/camera_info \ 
+_decimation:=4 -->

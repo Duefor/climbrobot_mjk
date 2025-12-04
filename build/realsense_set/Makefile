@@ -381,6 +381,20 @@ camera_tf_pub/fast:
 	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/camera_tf_pub.dir/build.make realsense_set/CMakeFiles/camera_tf_pub.dir/build
 .PHONY : camera_tf_pub/fast
 
+# Convenience name for target.
+realsense_set/CMakeFiles/imu_cov_republisher.dir/rule:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 realsense_set/CMakeFiles/imu_cov_republisher.dir/rule
+.PHONY : realsense_set/CMakeFiles/imu_cov_republisher.dir/rule
+
+# Convenience name for target.
+imu_cov_republisher: realsense_set/CMakeFiles/imu_cov_republisher.dir/rule
+.PHONY : imu_cov_republisher
+
+# fast build rule for target.
+imu_cov_republisher/fast:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/imu_cov_republisher.dir/build.make realsense_set/CMakeFiles/imu_cov_republisher.dir/build
+.PHONY : imu_cov_republisher/fast
+
 src/camera_static_tf_broadcaster.o: src/camera_static_tf_broadcaster.cpp.o
 .PHONY : src/camera_static_tf_broadcaster.o
 
@@ -428,6 +442,30 @@ src/camera_tf_pub.s: src/camera_tf_pub.cpp.s
 src/camera_tf_pub.cpp.s:
 	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/camera_tf_pub.dir/build.make realsense_set/CMakeFiles/camera_tf_pub.dir/src/camera_tf_pub.cpp.s
 .PHONY : src/camera_tf_pub.cpp.s
+
+src/imu_cov_republisher.o: src/imu_cov_republisher.cpp.o
+.PHONY : src/imu_cov_republisher.o
+
+# target to build an object file
+src/imu_cov_republisher.cpp.o:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/imu_cov_republisher.dir/build.make realsense_set/CMakeFiles/imu_cov_republisher.dir/src/imu_cov_republisher.cpp.o
+.PHONY : src/imu_cov_republisher.cpp.o
+
+src/imu_cov_republisher.i: src/imu_cov_republisher.cpp.i
+.PHONY : src/imu_cov_republisher.i
+
+# target to preprocess a source file
+src/imu_cov_republisher.cpp.i:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/imu_cov_republisher.dir/build.make realsense_set/CMakeFiles/imu_cov_republisher.dir/src/imu_cov_republisher.cpp.i
+.PHONY : src/imu_cov_republisher.cpp.i
+
+src/imu_cov_republisher.s: src/imu_cov_republisher.cpp.s
+.PHONY : src/imu_cov_republisher.s
+
+# target to generate assembly for a file
+src/imu_cov_republisher.cpp.s:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f realsense_set/CMakeFiles/imu_cov_republisher.dir/build.make realsense_set/CMakeFiles/imu_cov_republisher.dir/src/imu_cov_republisher.cpp.s
+.PHONY : src/imu_cov_republisher.cpp.s
 
 src/pub_camera.o: src/pub_camera.cpp.o
 .PHONY : src/pub_camera.o
@@ -480,6 +518,7 @@ help:
 	@echo "... topic_tools_generate_messages_py"
 	@echo "... camera_static_tf_broadcaster"
 	@echo "... camera_tf_pub"
+	@echo "... imu_cov_republisher"
 	@echo "... pub_camera"
 	@echo "... src/camera_static_tf_broadcaster.o"
 	@echo "... src/camera_static_tf_broadcaster.i"
@@ -487,6 +526,9 @@ help:
 	@echo "... src/camera_tf_pub.o"
 	@echo "... src/camera_tf_pub.i"
 	@echo "... src/camera_tf_pub.s"
+	@echo "... src/imu_cov_republisher.o"
+	@echo "... src/imu_cov_republisher.i"
+	@echo "... src/imu_cov_republisher.s"
 	@echo "... src/pub_camera.o"
 	@echo "... src/pub_camera.i"
 	@echo "... src/pub_camera.s"

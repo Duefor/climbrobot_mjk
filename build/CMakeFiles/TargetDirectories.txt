@@ -239,6 +239,7 @@
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/pub_camera.dir
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/camera_static_tf_broadcaster.dir
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/camera_tf_pub.dir
+/home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/imu_cov_republisher.dir
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/test.dir
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/edit_cache.dir
 /home/duefor/climbrobot_mjk/build/realsense_set/CMakeFiles/rebuild_cache.dir
