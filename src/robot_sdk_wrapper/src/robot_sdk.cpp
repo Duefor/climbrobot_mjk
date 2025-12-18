@@ -141,10 +141,22 @@ ELITE::vector6d_t EliteCSRobotSDK::getCurrentJoint() {
     return current_joint;
 }
 
+// 获取当前关节速度(rad/s)
+ELITE::vector6d_t EliteCSRobotSDK::getCurrentJointVelocity() {
+    ELITE::vector6d_t current_joint_velocity = s_rtsi_io->getActualJointVelocity();
+    return current_joint_velocity;
+}
+
 // 获取当前末端笛卡尔空间位姿（m）(x,y,z,rx,ry,rz)
 ELITE::vector6d_t EliteCSRobotSDK::getCurrentTCPPose() {
     ELITE::vector6d_t current_TCP_Pose = s_rtsi_io->getAcutalTCPPose();
     return current_TCP_Pose;
+}
+
+// 获取当前末端笛卡尔空间速度（m/s）(x,y,z,rx,ry,rz)
+ELITE::vector6d_t EliteCSRobotSDK::getCurrentTCPVelocity() {
+    ELITE::vector6d_t current_TCP_velocity = s_rtsi_io->getAcutalTCPVelocity();
+    return current_TCP_velocity;
 }
 
 // 关节移动
@@ -154,7 +166,7 @@ bool EliteCSRobotSDK::moveJoint(const ELITE::vector6d_t& joint, float time, floa
     // 发送开始运动的指令，部位点数量为1，设置下次发送指令的超时时间为500ms（即500ms内需要给出下一条指令）。
     s_driver->writeTrajectoryControlAction(ELITE::TrajectoryControlAction::START, 1, 500);
 
-    // 设制轨迹点，设置当前点为起始点，设置到达时间为3s，设置半径为0.05，设置true表输入笛卡尔空间，false为关节空间。
+    // 设制轨迹点，设置当前点为起始点，设置到达时间为10s，设置半径为0.05，设置true表输入笛卡尔空间，false为关节空间。
     s_driver->writeTrajectoryPoint(joint, time, blend_radius, false);
 
     // 等待运动结束，等待期间持续调用`writeTrajectoryControlAction()`函数给机器人发送空指令，否则会对外部控制造成影响。
@@ -177,7 +189,7 @@ bool EliteCSRobotSDK::moveLine(const ELITE::vector6d_t& pose, float time, float 
     // 发送开始运动的指令，点位数量为1，设置下次发送指令的超时时间为500ms（即500ms内需要给出下一条指令）。
     s_driver->writeTrajectoryControlAction(ELITE::TrajectoryControlAction::START, 1, 500);
 
-    // 设制轨迹点，设置当前点为起始点，设置到达时间为3s，设置半径为0.05，设置true表输入笛卡尔空间，false为关节空间。
+    // 设制轨迹点，设置当前点为起始点，设置到达时间为10s，设置半径为0.05，设置true表输入笛卡尔空间，false为关节空间。
     s_driver->writeTrajectoryPoint(pose, time, blend_radius, true);
 
     // 等待运动结束，等待期间持续调用`writeTrajectoryControlAction()`函数给机器人发送空指令，否则会对外部控制造成影响。

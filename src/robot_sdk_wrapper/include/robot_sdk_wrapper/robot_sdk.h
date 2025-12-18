@@ -48,14 +48,20 @@ public:
     // 获取当前关节位置，单位rad
     ELITE::vector6d_t getCurrentJoint();
 
+    // 获取当前关节速度，单位rad/s
+    ELITE::vector6d_t getCurrentJointVelocity();
+
     // 获取当前末端笛卡尔空间位姿，单位m
     ELITE::vector6d_t getCurrentTCPPose();
 
-    // 关节移动，暂用轨迹跟踪控制实现，单位rad
-    bool moveJoint(const ELITE::vector6d_t& joint, float time = 3, float blend_radius = 0.05);
+    // 获取当前末端笛卡尔速度，单位m/s
+    ELITE::vector6d_t getCurrentTCPVelocity();
 
-    // 笛卡尔空间直线运动，输入末端位姿移动，单位m，rad
-    bool moveLine(const ELITE::vector6d_t& pose, float time = 3, float blend_radius = 0.05);
+    // 关节移动，暂用轨迹跟踪控制实现，单位rad，注意实际运行时间是 time 的五倍
+    bool moveJoint(const ELITE::vector6d_t& joint, float time = 10.0, float blend_radius = 0.05);
+
+    // 笛卡尔空间直线运动，输入末端位姿移动，单位m，rad，注意实际运行时间是 time 的五倍
+    bool moveLine(const ELITE::vector6d_t& pose, float time = 10.0, float blend_radius = 0.05);
 
     // 停止运动
     bool stopMove();
