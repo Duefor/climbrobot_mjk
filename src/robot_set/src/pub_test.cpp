@@ -37,9 +37,12 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
+    auto start = std::chrono::steady_clock::now();
     ELITE::vector6d_t startline = {0.3 ,0 ,0.3, 3.14, 0, 3.14};
     cs66robot.moveLine(startline,5);
-    std::cout << "Robot move to start successful" << std::endl;
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
 
     cs66robot.disconnect();
 
