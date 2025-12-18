@@ -153,6 +153,7 @@
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/pub_cartesian_velocity.dir
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/pub_joint_position.dir
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/pub_posANDvel.dir
+/home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/pub_test.dir
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/robot_main.dir
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/robot_main_1.dir
 /home/duefor/climbrobot_mjk/build/robot_set/CMakeFiles/test.dir

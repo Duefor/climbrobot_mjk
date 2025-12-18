@@ -62,10 +62,10 @@ int main(int argc, char** argv)
 
     pub_pose.publish(pose_msg);
     pub_vel.publish(vel_msg);
-    // std::cout << "当前期望位姿指令为：" << "[" << pose_msg.position[0] << "," << pose_msg.position[1] << "," << pose_msg.position[2] << "," 
-    //     << pose_msg.position[3] << "," << pose_msg.position[4] << "," << pose_msg.position[5] << "]" << std::endl;
-    // std::cout << "当前期望速度指令为：" << "[" << vel_msg.velocity[0] << "," << vel_msg.velocity[1] << "," << vel_msg.velocity[2] << "," 
-    //     << vel_msg.velocity[3] << "," << vel_msg.velocity[4] << "," << vel_msg.velocity[5] << "]" << std::endl;
+    std::cout << "当前期望位姿指令为：" << "[" << pose_msg.position[0] << "," << pose_msg.position[1] << "," << pose_msg.position[2] << "," 
+        << pose_msg.position[3] << "," << pose_msg.position[4] << "," << pose_msg.position[5] << "]" << std::endl;
+    std::cout << "当前期望速度指令为：" << "[" << vel_msg.velocity[0] << "," << vel_msg.velocity[1] << "," << vel_msg.velocity[2] << "," 
+        << vel_msg.velocity[3] << "," << vel_msg.velocity[4] << "," << vel_msg.velocity[5] << "]" << std::endl;
 
     rate.sleep();
   }

@@ -7,10 +7,4 @@
 # new environment variables
 
 # modified environment variables
-export CMAKE_PREFIX_PATH="/home/duefor/climbrobot_mjk/devel:$CMAKE_PREFIX_PATH"
-export LD_LIBRARY_PATH="/home/duefor/climbrobot_mjk/devel/lib:$LD_LIBRARY_PATH"
-export PKG_CONFIG_PATH="/home/duefor/climbrobot_mjk/devel/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PWD='/home/duefor/climbrobot_mjk/build'
-export PYTHONPATH="/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages:$PYTHONPATH"
-export ROSLISP_PACKAGE_DIRECTORIES='/home/duefor/climbrobot_mjk/devel/share/common-lisp'
-export ROS_PACKAGE_PATH="/home/duefor/climbrobot_mjk/src:$ROS_PACKAGE_PATH"

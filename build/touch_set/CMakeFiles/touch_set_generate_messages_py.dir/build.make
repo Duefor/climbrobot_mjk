@@ -84,11 +84,11 @@ touch_set/CMakeFiles/touch_set_generate_messages_py: /home/duefor/climbrobot_mjk
 
 /home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/lib/genpy/genmsg_py.py
 /home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /home/duefor/climbrobot_mjk/src/touch_set/msg/OmniState.msg
-/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Pose.msg
-/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Quaternion.msg
 /home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/std_msgs/msg/Header.msg
-/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Point.msg
+/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Pose.msg
 /home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Vector3.msg
+/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Point.msg
+/home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg/_OmniState.py: /opt/ros/noetic/share/geometry_msgs/msg/Quaternion.msg
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/duefor/climbrobot_mjk/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Generating Python from MSG touch_set/OmniState"
 	cd /home/duefor/climbrobot_mjk/build/touch_set && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genpy/cmake/../../../lib/genpy/genmsg_py.py /home/duefor/climbrobot_mjk/src/touch_set/msg/OmniState.msg -Itouch_set:/home/duefor/climbrobot_mjk/src/touch_set/msg -Igeometry_msgs:/opt/ros/noetic/share/geometry_msgs/cmake/../msg -Isensor_msgs:/opt/ros/noetic/share/sensor_msgs/cmake/../msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p touch_set -o /home/duefor/climbrobot_mjk/devel/lib/python3/dist-packages/touch_set/msg
 

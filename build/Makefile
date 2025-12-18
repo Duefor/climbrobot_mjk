@@ -1277,6 +1277,19 @@ pub_posANDvel/fast:
 .PHONY : pub_posANDvel/fast
 
 #=============================================================================
+# Target rules for targets named pub_test
+
+# Build rule for target.
+pub_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 pub_test
+.PHONY : pub_test
+
+# fast build rule for target.
+pub_test/fast:
+	$(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_test.dir/build.make robot_set/CMakeFiles/pub_test.dir/build
+.PHONY : pub_test/fast
+
+#=============================================================================
 # Target rules for targets named robot_main
 
 # Build rule for target.
@@ -3076,6 +3089,7 @@ help:
 	@echo "... pub_joint_position"
 	@echo "... pub_joint_velocity"
 	@echo "... pub_posANDvel"
+	@echo "... pub_test"
 	@echo "... realsense2_camera"
 	@echo "... robot_main"
 	@echo "... robot_main_1"

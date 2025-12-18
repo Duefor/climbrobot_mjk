@@ -606,6 +606,20 @@ pub_posANDvel/fast:
 .PHONY : pub_posANDvel/fast
 
 # Convenience name for target.
+robot_set/CMakeFiles/pub_test.dir/rule:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 robot_set/CMakeFiles/pub_test.dir/rule
+.PHONY : robot_set/CMakeFiles/pub_test.dir/rule
+
+# Convenience name for target.
+pub_test: robot_set/CMakeFiles/pub_test.dir/rule
+.PHONY : pub_test
+
+# fast build rule for target.
+pub_test/fast:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_test.dir/build.make robot_set/CMakeFiles/pub_test.dir/build
+.PHONY : pub_test/fast
+
+# Convenience name for target.
 robot_set/CMakeFiles/robot_main.dir/rule:
 	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 robot_set/CMakeFiles/robot_main.dir/rule
 .PHONY : robot_set/CMakeFiles/robot_main.dir/rule
@@ -849,6 +863,30 @@ src/pub_posANDvel.cpp.s:
 	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_posANDvel.dir/build.make robot_set/CMakeFiles/pub_posANDvel.dir/src/pub_posANDvel.cpp.s
 .PHONY : src/pub_posANDvel.cpp.s
 
+src/pub_test.o: src/pub_test.cpp.o
+.PHONY : src/pub_test.o
+
+# target to build an object file
+src/pub_test.cpp.o:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_test.dir/build.make robot_set/CMakeFiles/pub_test.dir/src/pub_test.cpp.o
+.PHONY : src/pub_test.cpp.o
+
+src/pub_test.i: src/pub_test.cpp.i
+.PHONY : src/pub_test.i
+
+# target to preprocess a source file
+src/pub_test.cpp.i:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_test.dir/build.make robot_set/CMakeFiles/pub_test.dir/src/pub_test.cpp.i
+.PHONY : src/pub_test.cpp.i
+
+src/pub_test.s: src/pub_test.cpp.s
+.PHONY : src/pub_test.s
+
+# target to generate assembly for a file
+src/pub_test.cpp.s:
+	cd /home/duefor/climbrobot_mjk/build && $(MAKE) $(MAKESILENT) -f robot_set/CMakeFiles/pub_test.dir/build.make robot_set/CMakeFiles/pub_test.dir/src/pub_test.cpp.s
+.PHONY : src/pub_test.cpp.s
+
 src/robot_main.o: src/robot_main.cpp.o
 .PHONY : src/robot_main.o
 
@@ -941,6 +979,7 @@ help:
 	@echo "... pub_cartesian_velocity"
 	@echo "... pub_joint_position"
 	@echo "... pub_posANDvel"
+	@echo "... pub_test"
 	@echo "... robot_main"
 	@echo "... robot_main_1"
 	@echo "... src/IK.o"
@@ -970,6 +1009,9 @@ help:
 	@echo "... src/pub_posANDvel.o"
 	@echo "... src/pub_posANDvel.i"
 	@echo "... src/pub_posANDvel.s"
+	@echo "... src/pub_test.o"
+	@echo "... src/pub_test.i"
+	@echo "... src/pub_test.s"
 	@echo "... src/robot_main.o"
 	@echo "... src/robot_main.i"
 	@echo "... src/robot_main.s"

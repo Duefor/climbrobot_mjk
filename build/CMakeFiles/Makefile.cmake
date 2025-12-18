@@ -824,6 +824,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "robot_set/CMakeFiles/pub_cartesian_velocity.dir/DependInfo.cmake"
   "robot_set/CMakeFiles/pub_joint_position.dir/DependInfo.cmake"
   "robot_set/CMakeFiles/pub_posANDvel.dir/DependInfo.cmake"
+  "robot_set/CMakeFiles/pub_test.dir/DependInfo.cmake"
   "robot_set/CMakeFiles/robot_main.dir/DependInfo.cmake"
   "robot_set/CMakeFiles/robot_main_1.dir/DependInfo.cmake"
   "realsense-ros/realsense2_camera/CMakeFiles/nav_msgs_generate_messages_cpp.dir/DependInfo.cmake"
