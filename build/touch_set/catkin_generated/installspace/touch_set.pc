@@ -1,0 +1,8 @@
+prefix=/home/duefor/climbrobot_mjk/install
+
+Name: touch_set
+Description: Description of touch_set
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -ltouch_set
+Requires: geometry_msgs roscpp rospy sensor_msgs std_msgs tf message_runtime

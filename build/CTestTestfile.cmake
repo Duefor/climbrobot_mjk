@@ -5,6 +5,7 @@
 # This file includes the relevant testing commands required for 
 # testing this directory and lists subdirectories to be tested as well.
 subdirs("gtest")
+subdirs("camera_yolo")
 subdirs("realsense-ros/realsense2_description")
 subdirs("controller_set")
 subdirs("ROS-TCP-Endpoint")
@@ -13,4 +14,5 @@ subdirs("robot_sdk_wrapper")
 subdirs("robot_set")
 subdirs("realsense-ros/realsense2_camera")
 subdirs("realsense_set")
+subdirs("touch_set")
 subdirs("robot_simulation")
