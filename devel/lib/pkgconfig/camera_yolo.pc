@@ -1,8 +1,0 @@
-prefix=/home/duefor/climbrobot_mjk/devel
-
-Name: camera_yolo
-Description: Description of camera_yolo
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
