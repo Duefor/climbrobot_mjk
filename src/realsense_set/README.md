@@ -1,6 +1,6 @@
-该包为自己建立的realsense相关包
+# 该包为自己建立的realsense相关包
 
-25/11/12
+## 25/11/12
 相机无法运行rs2::frameset frames = pipe.wait_for_frames() 来获得一帧数据
 测试发现问题：连接的realsense库为：
 duefor@DF:~/climbrobot_mjk$ ldd devel/lib/realsense_set/pub | grep realsense 
@@ -12,7 +12,7 @@ duefor@DF:~/climbrobot_mjk$ ldd devel/lib/realsense_set/pub | grep realsense
 注意此处删除旧版ros-noetic-librealsense2*会一并删除rtabmap，只需要再下载回来就行了，
 但是下载回来会把ros安装的旧版本realsense一并下载回来，不用担心，因为即使下载回来了catkin_make也不会去找这个旧版的realsense，他仍然连接的新版本
 
-25/12/4
+## 25/12/4
 相机经过了IMU标定，再开启建图
 常规建图：
         roscore

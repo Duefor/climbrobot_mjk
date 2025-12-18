@@ -37,13 +37,26 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
-    auto start = std::chrono::steady_clock::now();
-    ELITE::vector6d_t startline = {0.3 ,0 ,0.3, 3.14, 0, 3.14};
-    cs66robot.moveLine(startline,5);
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
+    // auto start = std::chrono::steady_clock::now();
+    // ELITE::vector6d_t startline = cs66robot.getCurrentTCPPose();
+    // startline[2] += 0.05;
+    // cs66robot.moveLine(startline,5.0);
+    // auto end = std::chrono::steady_clock::now();
+    // std::chrono::duration<double> elapsed_seconds = end - start;
+    // std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
 
+    ELITE::vector6d_t vec{0.0,0.0,0.01,0.0,0.0,0.0};
+    cs66robot.lineSpeed(vec);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    auto actualvec = cs66robot.getCurrentTCPVelocity();
+    std::cout << "当前tcp速度为：";
+    for(int i=0; i<6; i++)
+    {
+        std::cout << actualvec[i] << ",";
+    }
+    std::cout << std::endl;
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     cs66robot.disconnect();
 
     return 0;

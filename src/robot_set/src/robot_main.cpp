@@ -21,7 +21,7 @@ const std::string external_control_file_address = "/home/barry/workspace/climbro
 const std::string output_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
 const std::string input_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
-
+const ELITE::vector6d_t root_tcp_pose{0.0,0.0,0.0,0.0,0.0,0.0};    // tcp零点位姿
 
 // 订阅回调：控制机械臂笛卡尔速度
 void TCPCallback(const robot_set::TCPState::ConstPtr& msg, EliteCSRobotSDK* robot)
@@ -96,9 +96,8 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
-    ELITE::vector6d_t startline = {0.3 ,0 ,0.3, 3.14, 0, 3.14};
-    cs66robot.moveLine(startline,5);
-    std::cout << "Robot move to start successful" << std::endl;
+    cs66robot.moveLine(root_tcp_pose,30.0);
+    std::cout << "Robot move to root successful" << std::endl;
 
 
     // 订阅笛卡尔速度话题

@@ -1,6 +1,8 @@
-该包为realsense官方ros包
-----------------------------------------------------
-25/11/20
+# 该包为realsense官方ros包
+
+---
+
+## 25/11/20
 启动realsense相机的时候，如果使用官方realsense-ros包的话，需要保证
 
 duefor@DF:~/realsense2_ws$ dpkg -l | grep realsense
@@ -17,4 +19,3 @@ ii  librealsense2-utils:amd64                       2.55.1-0~realsense.12473    
 
 错误的安装方法可能导致realsense d435i 无法开启imu流
 删除旧版本的librealsense包也会一并删除rtabmap，故rtabmap和rtabmap_ros也需要源码编译。
-----------------------------------------------------
