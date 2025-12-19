@@ -21,22 +21,63 @@ const std::string output_recipe_file_address = "output_recipe.txt";
 const std::string input_recipe_file_address = "input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
 
+const double MAX_QDOT[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};   // 关节速度限额
+
+const double MAX_QDDOT[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};   // 关节角加速度限额
 
 // 订阅回调：控制机械臂各关节速度
 void jointCallback(const sensor_msgs::JointState::ConstPtr& msg, EliteCSRobotSDK* robot)
 {
-    if(msg->velocity.size()!=6) return;
-    ELITE::vector6d_t joint_speed;
-    for(int i=0;i<6;i++)
-    {
-        joint_speed[i] = msg->velocity[i];
-    }
-    // 限制sdk的调用频率，避免超过控制接口带宽
-    static ros::Time last;
-    if ((ros::Time::now() - last).toSec() < 0.02) return;  // 50 Hz
-    last = ros::Time::now();
+    if (msg->velocity.size() != 6) return;
 
-    robot->jointSpeed(joint_speed,0);
+    // 当前时间
+    ros::Time now = ros::Time::now();
+
+    // 频率 / 时间基准
+    static ros::Time last;
+    static ELITE::vector6d_t last_qdot = {0,0,0,0,0,0};
+
+    // 第一次进入，建立时间基准，防止 dt 异常
+    if (last.isZero())
+    {
+        last = now;
+        for (int i = 0; i < 6; ++i)
+            last_qdot[i] = msg->velocity[i];
+        return;
+    }
+
+    double dt = (now - last).toSec();
+    if (dt < 0.02) return;   // 50 Hz
+    last = now;
+
+    // 读取期望关节速度
+    ELITE::vector6d_t qdot;
+    for (int i = 0; i < 6; ++i)
+        qdot[i] = msg->velocity[i];
+
+    // 关节速度硬限幅
+    for (int i = 0; i < 6; ++i)
+    {
+        if (qdot[i] >  MAX_QDOT[i]) qdot[i] =  MAX_QDOT[i];
+        if (qdot[i] < -MAX_QDOT[i]) qdot[i] = -MAX_QDOT[i];
+    }
+
+    // 关节加速度限幅
+    for (int i = 0; i < 6; ++i)
+    {
+        double max_delta = MAX_QDDOT[i] * dt;
+        double delta = qdot[i] - last_qdot[i];
+
+        if (delta >  max_delta) delta =  max_delta;
+        if (delta < -max_delta) delta = -max_delta;
+
+        qdot[i] = last_qdot[i] + delta;
+    }
+
+    // 更新历史速度（只在真正发送指令时）
+    last_qdot = qdot;
+
+    robot->jointSpeed(qdot, 0);
 }
 
 // 发布关节角度信息
@@ -81,7 +122,7 @@ int main(int argc, char** argv)
     // 订阅关节速度话题
     ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/joint_vel", 1, bind(jointCallback, _1, &cs66robot));
     // 发布关节状态
-    ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_state", 10);
+    ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 10);
 
     // 启动关节状态发布线程
     std::thread pub_thread(jointStatePublisher, &cs66robot, &joint_pub);

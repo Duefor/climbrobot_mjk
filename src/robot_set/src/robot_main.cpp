@@ -21,23 +21,57 @@ const std::string external_control_file_address = "/home/barry/workspace/climbro
 const std::string output_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
 const std::string input_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
-const ELITE::vector6d_t root_tcp_pose{0.0,0.0,0.0,0.0,0.0,0.0};    // tcp零点位姿
+const ELITE::vector6d_t root_joint_pose{0.0,0.0,0.0,0.0,0.0,0.0};    // joint零点位姿
+
+// 限制机械臂最大线速度和角速度
+constexpr double MAX_LIN_SPEED = 0.25;   // m/s，常见 0.1~0.3
+constexpr double MAX_ANG_SPEED = 0.8;    // rad/s，常见 0.5~1.0
 
 // 订阅回调：控制机械臂笛卡尔速度
 void TCPCallback(const robot_set::TCPState::ConstPtr& msg, EliteCSRobotSDK* robot)
 {
     if(msg->velocity.size()!=6) return;
-    ELITE::vector6d_t cartesian_speed;
-    for(int i=0;i<6;i++)
-    {
-        cartesian_speed[i] = msg->velocity[i];
-    }
     // // 限制sdk的调用频率，避免超过控制接口带宽
-    // static ros::Time last;
-    // if ((ros::Time::now() - last).toSec() < 0.02) return;  // 50 Hz
-    // last = ros::Time::now();
+    static ros::Time last;
+    if ((ros::Time::now() - last).toSec() < 0.02) return;  // 50 Hz
+    last = ros::Time::now();
 
-    // 可以尝试限制笛卡尔速度，（后续实现）
+    ELITE::vector6d_t cartesian_speed;
+    for(int i=0;i<6;i++) cartesian_speed[i] = msg->velocity[i];
+
+    // 线速度限幅
+    double lin_norm = std::sqrt(cartesian_speed[0]*cartesian_speed[0] + cartesian_speed[1]*cartesian_speed[1] + cartesian_speed[2]*cartesian_speed[2]);
+    if (lin_norm > MAX_LIN_SPEED){
+        double scale = MAX_LIN_SPEED / lin_norm;
+        for (int i = 0; i < 3; ++i)
+            cartesian_speed[i] *= scale;
+    }
+
+    // 角速度限幅
+    double ang_norm = std::sqrt(cartesian_speed[3]*cartesian_speed[3] +cartesian_speed[4]*cartesian_speed[4] +cartesian_speed[5]*cartesian_speed[5]);
+    if (ang_norm > MAX_ANG_SPEED){
+        double scale = MAX_ANG_SPEED / ang_norm;
+        for (int i = 3; i < 6; ++i)
+            cartesian_speed[i] *= scale;
+    }
+
+    // 加速度限幅
+    static ELITE::vector6d_t last_speed = {0,0,0,0,0,0};
+    constexpr double MAX_LIN_DELTA = 0.01; // m/s per cycle
+    constexpr double MAX_ANG_DELTA = 0.05; // rad/s per cycle
+
+    for (int i = 0; i < 6; ++i)
+    {
+        double max_delta = (i < 3) ? MAX_LIN_DELTA : MAX_ANG_DELTA;
+        double delta = cartesian_speed[i] - last_speed[i];
+
+        if (delta >  max_delta) delta =  max_delta;
+        if (delta < -max_delta) delta = -max_delta;
+
+        cartesian_speed[i] = last_speed[i] + delta;
+    }
+    last_speed = cartesian_speed;
+
     robot->lineSpeed(cartesian_speed,0);
 }
 
@@ -96,7 +130,8 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
-    cs66robot.moveLine(root_tcp_pose,30.0);
+    // 机械臂位姿移动到原点
+    cs66robot.moveJoint(root_joint_pose,30.0);
     std::cout << "Robot move to root successful" << std::endl;
 
 

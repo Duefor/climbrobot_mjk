@@ -42,9 +42,9 @@ int main(int argc, char** argv)
     ros::Publisher vel_pub = nh.advertise<robot_set::TCPState>("/cartesian_vel", 10);
 
     // 测试
-    // ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 10);
-    // sensor_msgs::JointState testmsg;
-    // testmsg.position = {0.0,-0.93,-2.21,-1.58,1.42,0.0};
+    ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 10);
+    sensor_msgs::JointState testmsg;
+    testmsg.position = {0.0,-0.93,-2.21,-1.58,1.42,0.0};
 
     ros::Rate loop_rate(freq); // 10 Hz
     const double dt = 0.1;  // 与 loop_rate 对应
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
         // 发布末端笛卡尔速度 [vx, vy, vz, wx, wy, wz]
         robot_set::TCPState vel_msg;
         // vel_msg.velocity = {vx, vy, vz, 0.0, 0.0, 0.0};
-        vel_msg.velocity = {0.1, 0.0, 0.0, 0.0, 0.0, 0.0};
+        vel_msg.velocity = {0.0, 0.0, 0.0, 0.0, 0.0, 0.1};
         vel_msg.header.stamp = ros::Time::now();
         vel_pub.publish(vel_msg);
 
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
             << vel_msg.velocity[3] << "," << vel_msg.velocity[4] << "," << vel_msg.velocity[5] << "]" << std::endl;
 
         // 发布测试关节角
-        // joint_pub.publish(testmsg);
+        joint_pub.publish(testmsg);
 
         // ros::spinOnce();
         loop_rate.sleep();
@@ -100,5 +100,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
-
