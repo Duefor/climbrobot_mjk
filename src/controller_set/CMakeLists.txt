@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  # 为了引用robot_set中的自定义msg
+  robot_set
 )
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -68,10 +70,10 @@ find_package(Eigen3 REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,7 +107,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES controller_set
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+ CATKIN_DEPENDS roscpp rospy std_msgs message_runtime robot_set
 #  DEPENDS system_lib
 )
 
@@ -131,23 +133,13 @@ include_directories(
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-file(GLOB SRC_FILES "src/*.cpp")
-
-foreach(SRC_FILE ${SRC_FILES})
-    # 获取文件名（不包括路径和扩展名）
-    get_filename_component(FILENAME ${SRC_FILE} NAME_WE)
-    add_executable(${FILENAME} ${SRC_FILE})
-    target_link_libraries(${FILENAME} 
-        ${catkin_LIBRARIES}
-        ${Eigen3_LIBRARIES}
-    )
-endforeach()
 
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/controller_set_node.cpp)
+add_executable(pose_converter src/pose_converter.cpp)
+add_executable(pub_controller_pose src/pub_controller_pose.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,13 +149,17 @@ endforeach()
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(pose_converter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(pub_controller_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(pose_converter
+  ${catkin_LIBRARIES}
+)
 
+target_link_libraries(pub_controller_pose
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############

@@ -319,6 +319,9 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
   feedback[0] = omni_state->force[0];
   feedback[1] = omni_state->force[2];
   feedback[2] = -omni_state->force[1];
+  // feedback[0] = 0.0;
+  // feedback[1] = 0.0;
+  // feedback[2] = 0.0;
   hdSetDoublev(HD_CURRENT_FORCE, feedback); // 写入力反馈
 
   // 获取按键输入

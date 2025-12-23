@@ -11,10 +11,29 @@ ros::Publisher pub;
 sensor_msgs::JointState current_joint;
 bool q_ready = false;
 
+// 角加速度限制
+static bool ik_initialized = false;
+static Eigen::VectorXd last_qdot_ik = Eigen::VectorXd::Zero(6);
+static ros::Time last_time_ik;
+const double MAX_QDDOT[6] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};   // 关节角加速度限额
+
 // DH 参数
 const double d[6]     = {0.1625, 0, 0, 0.1475, 0.0965, 0.092};
 const double a[6]     = {0, 0, -0.427, -0.3905, 0, 0};
 const double alpha[6] = {0, M_PI/2, 0, 0, M_PI/2, -M_PI/2};
+
+// sdk中关节角速度最大值，为[150，150，180，230，230，230] （°/s）
+const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
+// 使用手册中最大速度的1/10
+const double M_MAX_QDOT[6] = {
+    SDK_MAX_QDOT[0] / 10.0,
+    SDK_MAX_QDOT[1] / 10.0,
+    SDK_MAX_QDOT[2] / 10.0,
+    SDK_MAX_QDOT[3] / 10.0,
+    SDK_MAX_QDOT[4] / 10.0,
+    SDK_MAX_QDOT[5] / 10.0
+};
+
 
 Vector3d so3Log(const Matrix3d &R)
 {
@@ -85,7 +104,7 @@ Matrix4d forwardKinematics(const vector<double>& q)
 //     return J;
 // }
 
-// 数组雅可比
+// 数值雅可比
 MatrixXd computeNumericJacobian(const vector<double>& q)
 {
     const double eps = 1e-6;
@@ -179,6 +198,8 @@ void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
     double sigma_min = svd.singularValues().minCoeff();
 
     double lambda = 0.0;
+    // 触发阈值设置为0.05
+    // 阻尼增益为0.1
     if (sigma_min < 0.05)
         lambda = 0.1 * (0.05 - sigma_min);
 
@@ -188,8 +209,22 @@ void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
 
     VectorXd qdot = Jplus * vc;
 
-    // 整体关节速度缩放
-    const double MAX_QDOT[6] = {2.0,2.0,2.0,3.0,3.0,3.0};
+    // 关节加速度限幅时间基准
+    ros::Time now = ros::Time::now();
+    if (!ik_initialized)
+    {
+        last_time_ik = now;
+        last_qdot_ik = qdot;
+        ik_initialized = true;
+    }
+    double dt = (now - last_time_ik).toSec();
+    last_time_ik = now;
+    // 防止异常 dt
+    if (dt < 1e-4) dt = 1e-4;
+
+
+    // 整体关节速度缩放，这一步是为了保证整体关节速度缩放，不会导致最终tcp速度扭曲
+    auto MAX_QDOT = M_MAX_QDOT;
     double scale = 1.0;
     for (int i = 0; i < 6; ++i)
         if (std::abs(qdot(i)) > 1e-6)
@@ -198,12 +233,26 @@ void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
     if (scale < 1.0)
         qdot *= scale;
 
+    // 关节加速度限制
+    for (int i = 0; i < 6; ++i)
+    {
+        double max_delta = MAX_QDDOT[i] * dt;
+        double delta = qdot(i) - last_qdot_ik(i);
+
+        if (delta >  max_delta) delta =  max_delta;
+        if (delta < -max_delta) delta = -max_delta;
+
+        qdot(i) = last_qdot_ik(i) + delta;
+    }
+    last_qdot_ik = qdot;
+
     sensor_msgs::JointState out;
     out.velocity.resize(6);
     for (int i = 0; i < 6; ++i)
         out.velocity[i] = qdot(i);
 
     out.header.stamp = ros::Time::now();
+    out.name = {"joint_1","joint_2","joint_3","joint_4","joint_5","joint_6"};
     pub.publish(out);
 
     cout << "当前各关节速度为：" << "[" << out.velocity[0] << "," << out.velocity[1] << "," << out.velocity[2] << "," 
@@ -211,12 +260,12 @@ void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
     
     // 调试输出
     // MatrixXd J_ana = computeJacobian(current_joint.position);
-    MatrixXd J_num = computeNumericJacobian(current_joint.position);
+    // MatrixXd J_num = computeNumericJacobian(current_joint.position);
 
     // cout << "J analytic:\n" << J_ana << endl;
-    cout << "J numeric:\n" << J_num << endl;
     // cout << "diff:\n" << J_ana - J_num << endl;
 
+    // cout << "J numeric:\n" << J_num << endl;
 }
 
 

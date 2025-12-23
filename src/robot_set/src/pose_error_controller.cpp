@@ -285,25 +285,17 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   }
 }
 
-// 期望的机械臂tcp位姿
+// 期望的机械臂tcp位姿和速度
 void desiredCB(const robot_set::TCPState::ConstPtr &msg)
 {
-  if (msg->position.size() == 6)
+  if (msg->position.size() == 6 && msg->velocity.size() == 6)
   {
     std::lock_guard<std::mutex> lk(mtx);
     for (int i=0;i<6;i++) desired_pose[i]=msg->position[i];
-  }
-}
-
-// 期望的机械臂tcp速度
-void velCB(const robot_set::TCPState::ConstPtr &msg)
-{
-  if (msg->velocity.size() == 6)
-  {
-    std::lock_guard<std::mutex> lk(mtx);
     for (int i=0;i<6;i++) desired_vel[i]=msg->velocity[i];
   }
 }
+
 
 int main(int argc, char** argv)
 {
@@ -312,8 +304,7 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   ros::Subscriber sub_actual = nh.subscribe("/tcp_state", 1, actualCB);
-  ros::Subscriber sub_desired = nh.subscribe("/desired_pose_sub", 1, desiredCB);
-  ros::Subscriber sub_vel = nh.subscribe("/desired_vel_sub", 1, velCB);
+  ros::Subscriber sub_desired = nh.subscribe("/desired_robot_sub", 1, desiredCB);
   ros::Publisher pub_cmd = nh.advertise<robot_set::TCPState>("/cartesian_vel", 1);
 
   actual_pose.setZero();
@@ -326,7 +317,7 @@ int main(int argc, char** argv)
 // 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
   // 临时pid参数
   Matrix3d Kp_lin = 2.5 * Matrix3d::Identity();
-  Matrix3d Ki_lin = 0.03 * Matrix3d::Identity();
+  Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
   Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
   Matrix3d Kp_rot = 2.0 * Matrix3d::Identity();   // 姿态只用 P
@@ -407,6 +398,7 @@ int main(int argc, char** argv)
 
     robot_set::TCPState msg;
     msg.velocity.resize(6);
+    msg.header.stamp = ros::Time::now();
     for (int i=0;i<6;i++) msg.velocity[i]=v_cmd[i];
     pub_cmd.publish(msg);
     // std::cout << "当前tcp速度控制指令为：" << "[" << msg.velocity[0] << "," << msg.velocity[1] << "," << msg.velocity[2] << "," 

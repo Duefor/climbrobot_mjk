@@ -20,10 +20,21 @@ const std::string external_control_file_address = "external_control.script";
 const std::string output_recipe_file_address = "output_recipe.txt";
 const std::string input_recipe_file_address = "input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
+const ELITE::vector6d_t root_joint_pose{0.0,0.0,0.0,0.0,0.0,0.0};    // joint零点位姿
 
-const double MAX_QDOT[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};   // 关节速度限额
+// sdk中关节角速度最大值，为[150，150，180，230，230，230] （°/s）
+const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
+// 使用手册中最大速度的1/10，这里与速度ik处保持一致
+const double MAX_QDOT[6] = {
+    SDK_MAX_QDOT[0] / 10.0,
+    SDK_MAX_QDOT[1] / 10.0,
+    SDK_MAX_QDOT[2] / 10.0,
+    SDK_MAX_QDOT[3] / 10.0,
+    SDK_MAX_QDOT[4] / 10.0,
+    SDK_MAX_QDOT[5] / 10.0
+};
 
-const double MAX_QDDOT[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};   // 关节角加速度限额
+const double MAX_QDDOT[6] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8};   // 关节角加速度限额
 
 // 订阅回调：控制机械臂各关节速度
 void jointCallback(const sensor_msgs::JointState::ConstPtr& msg, EliteCSRobotSDK* robot)
@@ -118,6 +129,10 @@ int main(int argc, char** argv)
         return 1;
     }
     std::cout << "Robot start successful" << std::endl;
+
+    // 机械臂位姿移动到原点
+    cs66robot.moveJoint(root_joint_pose,30.0);
+    std::cout << "Robot move to root successful" << std::endl;
 
     // 订阅关节速度话题
     ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/joint_vel", 1, bind(jointCallback, _1, &cs66robot));

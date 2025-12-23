@@ -16,3 +16,7 @@ pub_posANDvel.cpp文件用于发布测试代码,绘制一个三角形
 需要注意一个事情，robot_main本质是调用tcp速度的，ik靠机械臂内部程序实现，在tcp速度处限幅，关节速度也可能超额，特别是在奇异点附近容易出问题，
 最好的方法是调用joint速度，也就是将tcp速度进行ik得到joint速度，robot_main_1，但是速度ik有点问题，需要解决一下
 但是如果使用joint速度控制的话有另一个问题，就是在对joint关节角速度进行安全限制的话，速度ik得到的joint角速度就会扭曲，可能实际tcp速度与期望不一样
+### **重大更新**
+该更新针对ik_velocity_solver.cpp文件
+其订阅的期望tcp速度为vc = [ vx, vy, vz, rx, ry, rz ]，[vx, vy, vz]TCP 线速度（m/s），在基坐标系表达；[rx, ry, rz]旋转向量（rotation vector）的时间导数（rad/s）
+与cs66机械臂sdk定义一致
