@@ -140,6 +140,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(pose_converter src/pose_converter.cpp)
 add_executable(pub_controller_pose src/pub_controller_pose.cpp)
+add_executable(Cal_scaleANDoffset src/Cal_scaleANDoffset.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +152,7 @@ add_executable(pub_controller_pose src/pub_controller_pose.cpp)
 ## same as for the library above
 add_dependencies(pose_converter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(pub_controller_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(Cal_scaleANDoffset ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(pose_converter
@@ -158,6 +160,10 @@ target_link_libraries(pose_converter
 )
 
 target_link_libraries(pub_controller_pose
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(Cal_scaleANDoffset
   ${catkin_LIBRARIES}
 )
 #############

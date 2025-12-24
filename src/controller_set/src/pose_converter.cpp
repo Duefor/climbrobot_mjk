@@ -7,14 +7,22 @@
 using namespace Eigen;
 ros::Publisher pub;
 
+// 位置映射系数
+const double k_x = 3.8;
+const double k_y = 10.0;
+const double k_z = 2.76;
+const double b_x = 0.0;
+const double b_y = 0.0;
+const double b_z = 0.4;
+
 Vector3d mapPosition(const Vector3d& pos)
 {
     Vector3d conver_pos;
     Matrix3d T;
-    T << 3.4 , 0.0 , 0.0,
-         0.0 , 3.8 , 0.0,
-         0.0 , 0.0 , 4.0;
-    Vector3d b(0.0 , 0.0 , 0.0);
+    T << k_x , 0.0 , 0.0,
+         0.0 , k_y , 0.0,
+         0.0 , 0.0 , k_z;
+    Vector3d b(b_x , b_y , b_z);
     conver_pos = T * pos + b;
     return conver_pos;
 }
@@ -31,9 +39,9 @@ Vector3d mapRotation(const Vector3d& rot)
 Vector3d mapLinearVelocity(const Vector3d& vel)
 {
     Matrix3d T;
-    T << 3.4 , 0.0 , 0.0,
-         0.0 , 3.8 , 0.0,
-         0.0 , 0.0 , 4.0;
+    T << k_x , 0.0 , 0.0,
+         0.0 , k_y , 0.0,
+         0.0 , 0.0 , k_z;
     return T * vel;
 }
 void cb(const robot_set::TCPState::ConstPtr& msg)
@@ -69,6 +77,13 @@ void cb(const robot_set::TCPState::ConstPtr& msg)
         robot_pose.velocity[i] = 0.0;
     }
 
+    // robot_pose.position[0] = 0.0;
+    // robot_pose.position[1] = 0.0;
+    // robot_pose.position[2] = 0.5;
+    // robot_pose.position[3] = 0.0;
+    // robot_pose.position[4] = 0.0;
+    // robot_pose.position[5] = 0.0;
+
     robot_pose.header.stamp = ros::Time::now();
     pub.publish(robot_pose);
     std::cout << "转换后的机器臂期望tcp姿态为：" << "[" << robot_pose.position[0] << "," << robot_pose.position[1] << "," << robot_pose.position[2] << "," 
@@ -82,7 +97,8 @@ int main(int argc, char *argv[])
     ros::init(argc,argv,"pose_converter");
     ros::NodeHandle nh;
     ros::Subscriber sub = nh.subscribe("/phantom/pose",10,cb);  // 手柄姿态和速度话题
-    pub = nh.advertise<robot_set::TCPState>("/desired_robot_sub",10);   // 机械臂期望姿态和速度
+    // pub = nh.advertise<robot_set::TCPState>("/desired_robot_sub",10);   // 机械臂期望姿态和速度
+    pub = nh.advertise<robot_set::TCPState>("/cartesian_pose",10);   // 仿真用
     ros::spin();
     return 0;
 }

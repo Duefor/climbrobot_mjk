@@ -18,50 +18,6 @@
 // MatrixXd K_d = MatrixXd::Identity(6,6); // 位姿微分误差增益矩阵：d
 // std::mutex mtx;
 
-// // Matrix3d eulerToRot(double rx, double ry, double rz)
-// // {
-// //   AngleAxisd roll(rx, Vector3d::UnitX());
-// //   AngleAxisd pitch(ry, Vector3d::UnitY());
-// //   AngleAxisd yaw(rz, Vector3d::UnitZ());
-// //   return (yaw * pitch * roll).toRotationMatrix(); // ZYX顺序
-// // }
-
-// // Matrix4d poseToHomog(const VectorXd &p)
-// // {
-// //   Matrix4d T = Matrix4d::Identity();
-// //   T.block<3,3>(0,0) = eulerToRot(p[3], p[4], p[5]);
-// //   T.block<3,1>(0,3) = p.head<3>();
-// //   return T;
-// // }
-
-// // // 李代数误差公式，求出位姿误差向量
-// // VectorXd se3Log(const Matrix4d &E)
-// // {
-// //   Vector3d omega;
-// //   Matrix3d R = E.block<3,3>(0,0);
-// //   double theta = acos(std::min(1.0, std::max(-1.0, (R.trace()-1)/2)));
-// //   if (fabs(theta) < 1e-6)
-// //     omega.setZero();
-// //   else
-// //     omega = theta/(2*sin(theta))*Vector3d(R(2,1)-R(1,2), R(0,2)-R(2,0), R(1,0)-R(0,1));
-
-// //   Matrix3d Omega = Matrix3d::Zero();
-// //   Omega(0,1) = -omega(2); Omega(0,2) = omega(1);
-// //   Omega(1,0) = omega(2);  Omega(1,2) = -omega(0);
-// //   Omega(2,0) = -omega(1); Omega(2,1) = omega(0);
-
-// //   Matrix3d I = Matrix3d::Identity();
-// //   Matrix3d V;
-// //   if (fabs(theta) < 1e-6)
-// //     V = I;
-// //   else
-// //     V = I + (1 - cos(theta))/pow(theta,2)*Omega + (theta - sin(theta))/pow(theta,3)*(Omega*Omega);
-
-// //   Vector3d v = V.inverse() * E.block<3,1>(0,3);
-// //   VectorXd xi(6);
-// //   xi << v, omega;
-// //   return xi;
-// // }
 
 // // 机械臂实际tcp位姿反馈
 // void actualCB(const robot_set::TCPState::ConstPtr &msg)
@@ -133,10 +89,6 @@
 //       v_d = desired_vel;
 //     }
 
-//     // Matrix4d T_a = poseToHomog(a);
-//     // Matrix4d T_d = poseToHomog(d);
-//     // Matrix4d E = T_d * T_a.inverse();
-//     // VectorXd xi = se3Log(E);
 //     double dt = 1.0/rrr;
     
 //     auto angle_diff = [](double target, double current){
@@ -183,14 +135,7 @@
 
 //     // PID 控制律
 //     VectorXd v_cmd = v_d + K_p * xi + K_i * error_integral + K_d * error_derivative_filtered;
-//     // VectorXd v_cmd = v_d + K_p * xi + K_d * error_derivative_filtered;
-//     // std::cout<<"vd:"<<std::endl;
-//     // std::cout<<v_d<<std::endl;
-//     // std::cout<<"-----------------------------------------"<<std::endl;
 
-//     // std::cout<<"vcmd:"<<std::endl;
-//     // std::cout<<v_cmd<<std::endl;
-//     // std::cout<<"-----------------------------------------"<<std::endl;
 
 //     robot_set::TCPState msg;
 //     msg.velocity.resize(6);
@@ -354,7 +299,7 @@ int main(int argc, char** argv)
       xii[i]=std::round(xii[i]*1e7)/1e7;
     }
     std::cout<<std::fixed<<std::setprecision(7);
-    std::cout<<"原始误差:"<<std::endl<<xii;
+    std::cout<<"原始误差:"<<std::endl<<xii<<std::endl;
     std::cout<<"-----------------------------------------"<<std::endl;
     
 
