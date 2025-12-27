@@ -1,3 +1,4 @@
+<!-- 用于仿真遥操作机械臂 -->
 <launch>
     <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" />
 

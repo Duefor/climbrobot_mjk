@@ -13,7 +13,7 @@
 using namespace std;
 using namespace Eigen;
 
-double freq = 10;
+double freq = 1000;
 
 // dh表
 const double d[6+1] = { 0,0.1625,0,0,0.1475,0.0965,0.092 };//第0个不用
@@ -26,7 +26,7 @@ robot_set::TCPState latest_pose;    // 最新笛卡尔空间位姿
 bool pose_received = false; // 标记是否接收数据
 
 // 解的选取
-vector<double> prev_joints = {0.1, 0.2, 0.1, 0, 0, 0};   // 上一帧解，初始为初始位姿角
+vector<double> prev_joints = {-0.01, -1.08, -1.91, -1.73, 1.58, -1.86};   // 上一帧解，初始为初始位姿角
 
 // 选取解
 int selectClosestSolution(const vector<vector<double>>& solutions, const vector<double>& prev_joints){
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     // ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states_target", 10);
     ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 10);  // 用于测试仿真的话题名称
 
-    ros::Rate loop_rate(freq); // 50 Hz 发布频率，但是注意该频率不会大于订阅频率
+    ros::Rate loop_rate(freq); 
 
     sensor_msgs::JointState joint_msg;
     joint_msg.position.resize(6);
@@ -233,8 +233,13 @@ int main(int argc, char** argv)
                     // 这里可以考虑采用低通滤波平滑输出
                     // joint_msg.data[j] = 0.9 * prev_joints[j] + 0.1 * solutions[best_idx][j];
 
-                    joint_msg.position[j] = solutions[best_idx][j]; // 取最优解
-                    prev_joints[j] = joint_msg.position[j]; // 记录上一组解
+                    // joint_msg.position[j] = solutions[best_idx][j]; // 取最优解
+                    // prev_joints[j] = joint_msg.position[j]; // 记录上一组解
+                    double ang = solutions[best_idx][j];
+                    ang = norm_angle(ang);
+
+                    joint_msg.position[j] = ang;
+                    prev_joints[j] = ang;
                 }
                 joint_msg.header.stamp = ros::Time::now();  // 时间戳
                 joint_pub.publish(joint_msg);

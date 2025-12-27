@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tf
 )
+find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -124,6 +125,7 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIR}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 # 查找openhatics库
@@ -143,6 +145,7 @@ find_path(OPENHAPTICS_INCLUDE_DIR NAMES HD/hd.h HL/hl.h HDU/hdu.h)
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(touch_pub src/touch_pub.cpp)
+add_executable(touch_pub_test src/touch_pub_test.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,9 +156,18 @@ add_executable(touch_pub src/touch_pub.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(touch_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(touch_pub_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(touch_pub
+  HD
+  HDU
+  rt
+  ncurses
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(touch_pub_test
   HD
   HDU
   rt

@@ -22,8 +22,11 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   visualization_msgs
+
+  robot_set
 )
 
+find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -116,7 +119,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robot_simulation
-#  CATKIN_DEPENDS urdf xacro
+ CATKIN_DEPENDS urdf xacro roscpp rospy std_msgs message_runtime robot_set
 #  DEPENDS system_lib
 )
 
@@ -129,6 +132,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 # 获取 src 目录下的所有.cpp 文件

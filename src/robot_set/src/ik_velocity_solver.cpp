@@ -11,27 +11,27 @@ ros::Publisher pub;
 sensor_msgs::JointState current_joint;
 bool q_ready = false;
 
-// 角加速度限制
-static bool ik_initialized = false;
-static Eigen::VectorXd last_qdot_ik = Eigen::VectorXd::Zero(6);
-static ros::Time last_time_ik;
-const double MAX_QDDOT[6] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};   // 关节角加速度限额
-
 // DH 参数
 const double d[6]     = {0.1625, 0, 0, 0.1475, 0.0965, 0.092};
 const double a[6]     = {0, 0, -0.427, -0.3905, 0, 0};
 const double alpha[6] = {0, M_PI/2, 0, 0, M_PI/2, -M_PI/2};
 
+// 角加速度限制
+static bool ik_initialized = false;
+static Eigen::VectorXd last_qdot_ik = Eigen::VectorXd::Zero(6);
+static ros::Time last_time_ik;
+const double MAX_QDDOT[6] = {0.3, 0.3, 0.3, 0.3, 0.3, 0.3};   // 关节角加速度限额
+
 // sdk中关节角速度最大值，为[150，150，180，230，230，230] （°/s）
 const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
 // 使用手册中最大速度的1/10
 const double M_MAX_QDOT[6] = {
-    SDK_MAX_QDOT[0] / 10.0,
-    SDK_MAX_QDOT[1] / 10.0,
-    SDK_MAX_QDOT[2] / 10.0,
-    SDK_MAX_QDOT[3] / 10.0,
-    SDK_MAX_QDOT[4] / 10.0,
-    SDK_MAX_QDOT[5] / 10.0
+    SDK_MAX_QDOT[0] / 20.0,
+    SDK_MAX_QDOT[1] / 20.0,
+    SDK_MAX_QDOT[2] / 20.0,
+    SDK_MAX_QDOT[3] / 20.0,
+    SDK_MAX_QDOT[4] / 20.0,
+    SDK_MAX_QDOT[5] / 20.0
 };
 
 

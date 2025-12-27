@@ -50,7 +50,7 @@ static const hduMatrix Rz_base(
 );
 
 
-static const double TOOL_RX =  -24.0 * M_PI / 180.0;
+static const double TOOL_RX =  90.0 * M_PI / 180.0;
 static const double TOOL_RZ =  -90.0 * M_PI / 180.0;
 static const double TOOL_RY = -60.0 * M_PI / 180.0;
 static const hduMatrix R_tool =
@@ -72,12 +72,12 @@ static const hduMatrix R_tool =
     0,             0,            1, 0,
     0, 0, 0, 1
   )
-  * hduMatrix(
-     cos(TOOL_RY), 0, sin(TOOL_RY), 0,
-     0,            1, 0,            0,
-    -sin(TOOL_RY), 0, cos(TOOL_RY), 0,
-     0, 0, 0, 1
-  )
+  // * hduMatrix(
+  //    cos(TOOL_RY), 0, sin(TOOL_RY), 0,
+  //    0,            1, 0,            0,
+  //   -sin(TOOL_RY), 0, cos(TOOL_RY), 0,
+  //    0, 0, 0, 1
+  // )
   ;
 
 

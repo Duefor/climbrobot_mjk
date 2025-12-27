@@ -100,6 +100,11 @@
   <build_export_depend>gazebo_ros_control</build_export_depend>
   <exec_depend>gazebo_ros_control</exec_depend>
 
+  <build_depend>robot_set</build_depend>
+  <exec_depend>robot_set</exec_depend>
+  <build_depend>message_runtime</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->

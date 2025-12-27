@@ -26,15 +26,15 @@ const ELITE::vector6d_t root_joint_pose{0.0,0.0,0.0,0.0,0.0,0.0};    // joint零
 const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
 // 使用手册中最大速度的1/10，这里与速度ik处保持一致
 const double MAX_QDOT[6] = {
-    SDK_MAX_QDOT[0] / 10.0,
-    SDK_MAX_QDOT[1] / 10.0,
-    SDK_MAX_QDOT[2] / 10.0,
-    SDK_MAX_QDOT[3] / 10.0,
-    SDK_MAX_QDOT[4] / 10.0,
-    SDK_MAX_QDOT[5] / 10.0
+    SDK_MAX_QDOT[0] / 20.0,
+    SDK_MAX_QDOT[1] / 20.0,
+    SDK_MAX_QDOT[2] / 20.0,
+    SDK_MAX_QDOT[3] / 20.0,
+    SDK_MAX_QDOT[4] / 20.0,
+    SDK_MAX_QDOT[5] / 20.0
 };
 
-const double MAX_QDDOT[6] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8};   // 关节角加速度限额
+const double MAX_QDDOT[6] = {0.4, 0.4, 0.4, 0.4, 0.4, 0.4};   // 关节角加速度限额
 
 // 订阅回调：控制机械臂各关节速度
 void jointCallback(const sensor_msgs::JointState::ConstPtr& msg, EliteCSRobotSDK* robot)

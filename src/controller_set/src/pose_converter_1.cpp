@@ -57,6 +57,71 @@ double mapVelocityAxis(
     return gain * v;
 }
 
+// 姿态限幅
+const double ROT_MAX = 5 * M_PI / 4;   // 例如 ±45°
+Vector3d prev_rot(0.0, 0.0, 0.0);  // 初始姿态，也可以是零
+Vector3d clampRotationVector(const Vector3d& rot)
+{
+    double angle = rot.norm();
+    std::cout << angle << std::endl;
+    // return rot;
+
+    if (angle <= ROT_MAX + 1e-8)
+    {
+        prev_rot = rot;
+        return rot;   // 近似 0，不处理   
+    }
+    else
+    {
+        return prev_rot;
+    }
+    
+}
+
+// 姿态映射（rotation vector），交换手柄的rx和ry，也就是让4，5轴的转动交换，这一步仅仅是为了让视觉合理
+Vector3d mapRotation(const Vector3d& rot)
+{
+    // rotation vector -> rotation matrix
+    double angle = rot.norm();
+    Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
+
+    if (angle > 1e-8)
+    {
+        Eigen::Vector3d axis = rot / angle;
+        R = Eigen::AngleAxisd(angle, axis).toRotationMatrix();
+    }
+
+    //  固定姿态偏差，注意在交换轴之前
+    static Eigen::Matrix3d R_offset = []{
+        Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
+        Vector3d rot_offset(M_PI/2, 0.0, 0.0);   // 在这里定义
+        double a = rot_offset.norm();
+        if (a > 1e-8)
+            R = Eigen::AngleAxisd(a, rot_offset / a).toRotationMatrix();
+        return R;
+    }();
+
+    // 左乘
+    Eigen::Matrix3d Rm_corr = R_offset * R;
+
+    // 定义轴交换矩阵（交换 x / y），目的是让视觉感受正常
+    Eigen::Matrix3d A;
+    A << 0, -1, 0,
+         -1, 0, 0,
+         0, 0, 1;
+    // A << 1, 0, 0,
+    //      0, 1, 0,
+    //      0, 0, 1;
+
+    // 坐标系下的旋转映射
+    Eigen::Matrix3d Rm = A * Rm_corr * A.transpose();
+
+    
+
+    // rotation matrix -> rotation vector
+    Eigen::AngleAxisd aa(Rm);
+    return aa.angle() * aa.axis();
+}
 
 
 void hapticCallback(const robot_set::TCPState::ConstPtr& msg)
@@ -84,6 +149,7 @@ void hapticCallback(const robot_set::TCPState::ConstPtr& msg)
             R_INIT[i], R_MIN[i], R_MAX[i]);
     }
 
+    Vector3d r_rot = mapRotation(h_rot);
 
     robot_set::TCPState out;
     out.position.resize(6);
@@ -93,12 +159,9 @@ void hapticCallback(const robot_set::TCPState::ConstPtr& msg)
     out.position[0] = r_pos[0];
     out.position[1] = r_pos[1];
     out.position[2] = r_pos[2];
-    // out.position[3] = h_rot[0];
-    // out.position[4] = h_rot[1];
-    // out.position[5] = h_rot[2];
-    out.position[3] = 3.14;
-    out.position[4] = 0.0;
-    out.position[5] = 0.0;
+    out.position[3] = r_rot[0];
+    out.position[4] = r_rot[1];
+    out.position[5] = r_rot[2];
 
     // velocity（只映射 xyz，其余清零）
     out.velocity[0] = r_vel[0];

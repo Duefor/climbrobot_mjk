@@ -55,6 +55,12 @@ int main(int argc, char** argv)
     {
         robot_set::TCPState pose_msg;
         pose_msg.position = traj[index];
+        pose_msg.position[0] = 0.28;
+        pose_msg.position[1] = -0.15;
+        pose_msg.position[2] = 0.48;
+        pose_msg.position[3] = 0.0;
+        pose_msg.position[4] = 0.0;
+        pose_msg.position[5] = 0.0;
         pose_msg.header.stamp = ros::Time::now();
         pose_pub.publish(pose_msg);
         ROS_INFO_STREAM("Published pose: [" 
