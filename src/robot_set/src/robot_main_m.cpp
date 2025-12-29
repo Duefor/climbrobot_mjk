@@ -1,3 +1,4 @@
+// 完善版本，sdk调用加锁
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <robot_set/TCPState.h>
@@ -10,7 +11,9 @@
 #include <iostream>
 #include <cmath>
 
-/* =================== 配置 =================== */
+// 配置
+const double robot_pub_rate = 100; // 机械臂发布状态频率，注意不能大于sdk带宽，最好小于带宽的1/2
+const double robot_sdk_rate = 250; // 机械臂sdk调用频率
 
 const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
 const std::string DEFAULT_PC_IP    = "192.168.1.150";
@@ -19,7 +22,7 @@ const std::string output_recipe_file_address    = "output_recipe.txt";
 const std::string input_recipe_file_address     = "input_recipe.txt";
 const std::string task_file_address              = "mjktest.task";
 
-const ELITE::vector6d_t root_joint_pose{0.0,-1.07,-1.97,-1.67,1.57,-1.57};
+const ELITE::vector6d_t root_joint_pose{0.0,-1.18,-2.44,-1.1,1.57,-1.57};
 
 // SDK 关节最大速度（rad/s）
 const double SDK_MAX_QDOT[6] = {
@@ -36,7 +39,12 @@ const double MAX_QDOT[6] = {
 // 最大关节加速度
 const double MAX_QDDOT[6] = {0.4,0.4,0.4,0.4,0.4,0.4};
 
-/* =================== 共享数据 =================== */
+// 安全保护
+std::atomic<double> last_cmd_time{0.0};
+// 机械臂sdk调用超时
+const double CMD_TIMEOUT = 0.05;   // 50 ms（建议 < 2 * IK 频率）
+
+
 
 // 控制指令（callback → SDK IO）
 std::atomic<bool> qdot_valid{false};
@@ -47,7 +55,7 @@ ELITE::vector6d_t joint_cache{0,0,0,0,0,0};
 ELITE::vector6d_t tcp_cache{0,0,0,0,0,0};
 std::mutex state_mtx;
 
-/* =================== ROS Callback =================== */
+
 
 void jointCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
@@ -60,8 +68,19 @@ void jointCallback(const sensor_msgs::JointState::ConstPtr& msg)
     if (last.isZero()) { last = now; return; }
 
     double dt = (now - last).toSec();
+
+    // 不能接收太快的信息
     if (dt < 0.02) return;   // 50 Hz
     last = now;
+
+    // 关节速度发布太慢或是断线重连
+    if (dt > 0.1)
+    {
+        // 认为 IK 刚恢复，重置加速度历史
+        for (int i = 0; i < 6; ++i) last_qdot[i] = msg->velocity[i];
+        qdot_valid.store(false, std::memory_order_release);
+        return;
+    }
 
     ELITE::vector6d_t qdot;
 
@@ -88,22 +107,35 @@ void jointCallback(const sensor_msgs::JointState::ConstPtr& msg)
     last_qdot = qdot;
 
     qdot_cmd = qdot;
+    // 超时保护
     qdot_valid.store(true, std::memory_order_release);
+    last_cmd_time.store(ros::Time::now().toSec(), std::memory_order_release);
+    
 }
 
-/* =================== SDK IO 线程 =================== */
+// 机械臂sdk线程
 
 void sdkIOThread(EliteCSRobotSDK* robot)
 {
-    ros::Rate rate(250);   // SDK 控制周期
+    ros::Rate rate(robot_sdk_rate);   // SDK 控制周期
+    ELITE::vector6d_t zero{0,0,0,0,0,0};
 
     while (ros::ok())
     {
+        double now = ros::Time::now().toSec();
+        double last = last_cmd_time.load(std::memory_order_acquire);
         /* 下发控制 */
-        if (qdot_valid.load(std::memory_order_acquire))
+        if (qdot_valid.load(std::memory_order_acquire) && (now - last) < CMD_TIMEOUT)
         {
             robot->jointSpeed(qdot_cmd, 0);
         }
+        else
+        {
+            // 安全保护
+            robot->jointSpeed(zero, 0);
+            qdot_valid.store(false, std::memory_order_release);
+        }
+        
 
         /* 读取状态 */
         ELITE::vector6d_t joints = robot->getCurrentJoint();
@@ -119,11 +151,11 @@ void sdkIOThread(EliteCSRobotSDK* robot)
     }
 }
 
-/* =================== 状态发布线程 =================== */
+
 
 void jointStatePublisher(ros::Publisher* pub)
 {
-    ros::Rate rate(50);
+    ros::Rate rate(robot_pub_rate);
     sensor_msgs::JointState msg;
     msg.name = {"joint_1","joint_2","joint_3","joint_4","joint_5","joint_6"};
     msg.position.resize(6);
@@ -144,7 +176,7 @@ void jointStatePublisher(ros::Publisher* pub)
 
 void tcpStatePublisher(ros::Publisher* pub)
 {
-    ros::Rate rate(50);
+    ros::Rate rate(robot_pub_rate);
     robot_set::TCPState msg;
     msg.position.resize(6);
 
@@ -162,11 +194,10 @@ void tcpStatePublisher(ros::Publisher* pub)
     }
 }
 
-/* =================== main =================== */
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "robot_rt_node");
+    ros::init(argc, argv, "robot_main_node");
     ros::AsyncSpinner spinner(2);
     spinner.start();
     ros::NodeHandle nh;
@@ -187,16 +218,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // 机械臂移动到初始位置
     cs66robot.moveJoint(root_joint_pose, 30.0);
 
-    ros::Subscriber sub =
-        nh.subscribe<sensor_msgs::JointState>("/joint_vel", 1, jointCallback);
+    ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1, jointCallback);
 
-    ros::Publisher joint_pub =
-        nh.advertise<sensor_msgs::JointState>("/joint_states", 10);
+    ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/cs66/joint_states", 10);
 
-    ros::Publisher tcp_pub =
-        nh.advertise<robot_set::TCPState>("/tcp_state", 10);
+    ros::Publisher tcp_pub = nh.advertise<robot_set::TCPState>("/cs66/tcp_state", 10);
 
     std::thread sdk_thread(sdkIOThread, &cs66robot);
     std::thread pub_joint_thread(jointStatePublisher, &joint_pub);

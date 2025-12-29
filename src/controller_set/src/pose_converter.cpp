@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 
     ros::Subscriber haptic_sub = nh.subscribe("/phantom/pose", 10, hapticCallback);
 
-    robot_pub = nh.advertise<robot_set::TCPState>("/cartesian_pose", 10);
+    robot_pub = nh.advertise<robot_set::TCPState>("/pose_converter/desired_robot_sub", 10);
 
     ROS_INFO("Haptic to robot mapping node started.");
     ros::spin();

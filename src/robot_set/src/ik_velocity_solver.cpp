@@ -9,7 +9,11 @@ using namespace std;
 
 ros::Publisher pub;
 sensor_msgs::JointState current_joint;
-bool q_ready = false;
+
+// 同步/超时保护
+bool joint_ready = false;
+ros::Time t_joint;
+const double TIMEOUT = 0.1;
 
 // DH 参数
 const double d[6]     = {0.1625, 0, 0, 0.1475, 0.0965, 0.092};
@@ -144,46 +148,23 @@ void jointStateCallback(const sensor_msgs::JointState::ConstPtr &msg)
     if(msg->position.size()!=6) return;
 
     current_joint.position=msg->position;
-    q_ready=true;
+    joint_ready=true;
+    // 不在意同步，只在意安全性，故不用stamp而是直接使用接收信息的时间。
+    t_joint = ros::Time::now();
     // cout << "打印 forwardKinematics(q):" << std::endl << forwardKinematics(current_joint.position) << std::endl;
 }
 
-// // 调试工具函数：
-// Vector3d rotationMatrixToVector(const Matrix3d& R)
-// {
-//     AngleAxisd aa(R);
-//     return aa.angle() * aa.axis();
-// }
-// MatrixXd computeNumericalJacobian(const vector<double>& q)
-// {
-//     const double eps = 1e-6;
-//     MatrixXd Jnum(6,6);
-
-//     Matrix4d T0 = forwardKinematics(q);
-//     Vector3d p0 = T0.block<3,1>(0,3);
-//     Vector3d r0 = rotationMatrixToVector(T0.block<3,3>(0,0));
-
-//     for (int i = 0; i < 6; ++i)
-//     {
-//         vector<double> q_eps = q;
-//         q_eps[i] += eps;
-
-//         Matrix4d Ti = forwardKinematics(q_eps);
-//         Vector3d pi = Ti.block<3,1>(0,3);
-//         Vector3d ri = rotationMatrixToVector(Ti.block<3,3>(0,0));
-
-//         // 数值微分
-//         Jnum.block<3,1>(0,i) = (pi - p0) / eps;
-//         Jnum.block<3,1>(3,i) = (ri - r0) / eps;
-//     }
-//     return Jnum;
-// }
 
 
 // 笛卡尔速度回调，并发布关节速度控制命令
 void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
 {
-    if (!q_ready) return;
+    if (!joint_ready) return;
+    if ((ros::Time::now() - t_joint).toSec() > TIMEOUT)
+    {
+        ik_initialized = false;
+        return;
+    }
     if (msg->velocity.size() != 6) return;
 
     VectorXd vc(6);
@@ -273,9 +254,9 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ik_velocity_solver");
     ros::NodeHandle nh;
-    pub = nh.advertise<sensor_msgs::JointState>("/joint_vel", 1);
-    ros::Subscriber sub_vel = nh.subscribe("/cartesian_vel", 1, cartVelCallback);
-    ros::Subscriber sub_joint = nh.subscribe("/joint_states", 1, jointStateCallback);
+    pub = nh.advertise<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1);
+    ros::Subscriber sub_vel = nh.subscribe("/controller/cartesian_vel", 1, cartVelCallback);
+    ros::Subscriber sub_joint = nh.subscribe("/cs66/joint_states", 1, jointStateCallback);
     // // 
     // ros::Rate rate(100);
     // while(ros::ok()){

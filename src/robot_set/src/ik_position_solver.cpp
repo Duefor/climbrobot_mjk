@@ -203,7 +203,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "ik_position_solver");
     ros::NodeHandle nh;
 
-    ros::Subscriber pose_sub = nh.subscribe("/cartesian_pose", 10, poseCallback);
+    ros::Subscriber pose_sub = nh.subscribe("/pose_converter/desired_robot_sub", 10, poseCallback);
     // ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states_target", 10);
     ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/joint_states", 10);  // 用于测试仿真的话题名称
 

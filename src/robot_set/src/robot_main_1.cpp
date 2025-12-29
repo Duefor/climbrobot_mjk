@@ -1,5 +1,6 @@
 // 订阅关节速度并控制
 // 发布实时关节角度
+// sdk调用未加锁
 #include <ros/ros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <vector>
@@ -20,7 +21,7 @@ const std::string external_control_file_address = "external_control.script";
 const std::string output_recipe_file_address = "output_recipe.txt";
 const std::string input_recipe_file_address = "input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
-const ELITE::vector6d_t root_joint_pose{0.0,-1.07,-1.97,-1.67,1.57,-1.57};    // joint零点位姿
+const ELITE::vector6d_t root_joint_pose{0.0,-1.18,-2.44,-1.1,1.57,-1.57};    // joint零点位姿
 
 // sdk中关节角速度最大值，为[150，150，180，230，230，230] （°/s）
 const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
