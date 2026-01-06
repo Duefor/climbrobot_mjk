@@ -29,7 +29,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "cartesian_traj_publisher");
     ros::NodeHandle nh;
 
-    ros::Publisher pose_pub = nh.advertise<robot_set::TCPState>("/cartesian_pose", 10);
+    // ros::Publisher pose_pub = nh.advertise<robot_set::TCPState>("/cartesian_pose", 10);
+    ros::Publisher pose_pub = nh.advertise<robot_set::TCPState>("/pose_converter/desired_robot_sub", 10);
     ros::Rate loop_rate(freq); //频率
 
     // 三角形顶点 (单位: m, rad)

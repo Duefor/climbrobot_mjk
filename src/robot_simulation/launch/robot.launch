@@ -1,5 +1,5 @@
 <launch>
-    <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/robot2.urdf" />
+    <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/cs66_3.urdf" />
     <!-- <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" /> -->
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/robot2.rviz"/>

@@ -28,6 +28,22 @@ void rotationVectorToQuaternion(double rx, double ry, double rz,
     qw = cos(half_angle);
 }
 
+void eulerRPYToQuaternion(double roll, double pitch, double yaw,
+                          double& qx, double& qy, double& qz, double& qw)
+{
+    double cr = cos(roll  * 0.5);
+    double sr = sin(roll  * 0.5);
+    double cp = cos(pitch * 0.5);
+    double sp = sin(pitch * 0.5);
+    double cy = cos(yaw   * 0.5);
+    double sy = sin(yaw   * 0.5);
+
+    qw = cy * cp * cr + sy * sp * sr;
+    qx = cy * cp * sr - sy * sp * cr;
+    qy = sy * cp * sr + cy * sp * cr;
+    qz = sy * cp * cr - cy * sp * sr;
+}
+
 // 位姿回调函数
 void poseCallback(const robot_set::TCPState::ConstPtr& msg, 
                   tf2_ros::TransformBroadcaster* tf_broadcaster) {
@@ -60,6 +76,7 @@ void poseCallback(const robot_set::TCPState::ConstPtr& msg,
     // 旋转向量转四元数
     double qx, qy, qz, qw;
     rotationVectorToQuaternion(rx, ry, rz, qx, qy, qz, qw);
+    // eulerRPYToQuaternion(rx, ry, rz, qx, qy, qz, qw);
     
     // 设置旋转
     transformStamped.transform.rotation.x = qx;

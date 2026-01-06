@@ -1,5 +1,6 @@
 <launch>
-    <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" />
+    <!-- <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" /> -->
+    <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/cs66_3.urdf" />
 
     <!-- <node pkg="rviz" type="rviz" name="rviz" /> -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" />
@@ -8,7 +9,7 @@
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
     <!-- <node pkg="robot_set" type="pub_cartesian_position" name="pub_cartesian_position" output="screen" /> -->
     <node pkg="robot_set" type="pub_cartesian_position" name="pub_cartesian_position" output="screen" />
-    <node pkg="robot_set" type="ik_position_solver" name="ik_position_solver" output="screen" />
-    <node pkg="robot_simulation" type="trajectory_visualization" name="trajectory_visualization" output="screen" />
+    <node pkg="robot_set" type="ik_position_solver_m" name="ik_position_solver_m" output="screen" />
+    <!-- <node pkg="robot_simulation" type="trajectory_visualization" name="trajectory_visualization" output="screen" /> -->
 
 </launch>

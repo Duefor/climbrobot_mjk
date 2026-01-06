@@ -22,9 +22,9 @@ VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
 VectorXd error_prev(6);
 VectorXd error_integral(6);
-MatrixXd K_p = MatrixXd::Identity(6,6); // 位姿误差增益矩阵：p
-MatrixXd K_i = MatrixXd::Identity(6,6); // 位姿积分误差增益矩阵：i
-MatrixXd K_d = MatrixXd::Identity(6,6); // 位姿微分误差增益矩阵：d
+// MatrixXd K_p = MatrixXd::Identity(6,6); // 位姿误差增益矩阵：p
+// MatrixXd K_i = MatrixXd::Identity(6,6); // 位姿积分误差增益矩阵：i
+// MatrixXd K_d = MatrixXd::Identity(6,6); // 位姿微分误差增益矩阵：d
 // 数据锁，防止数据争夺
 std::mutex mtx;
 

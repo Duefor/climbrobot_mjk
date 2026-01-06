@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="robot_simulation">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.00060368 1.4129E-05 0.060221"
+        rpy="0 0 0" />
+      <mass
+        value="0.57127" />
+      <inertia
+        ixx="0.0010759"
+        ixy="7.5147E-08"
+        ixz="-1.3218E-05"
+        iyy="0.0010109"
+        iyz="4.5643E-07"
+        izz="0.001408" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Link_1">
+    <inertial>
+      <origin
+        xyz="-4.5001E-06 -0.0077343 0.00090439"
+        rpy="0 0 0" />
+      <mass
+        value="1.7991" />
+      <inertia
+        ixx="0.0035369"
+        ixy="-1.3483E-07"
+        ixz="1.3731E-07"
+        iyy="0.0032873"
+        iyz="0.00042036"
+        izz="0.0035585" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_1"
+    type="continuous">
+    <origin
+      xyz="0 0 0.1625"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Link_1" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Link_2">
+    <inertial>
+      <origin
+        xyz="-0.1892 7.303E-07 0.14184"
+        rpy="0 0 0" />
+      <mass
+        value="5.2713" />
+      <inertia
+        ixx="0.0078027"
+        ixy="1.5768E-07"
+        ixz="0.00022048"
+        iyy="0.024036"
+        iyz="-8.9585E-08"
+        izz="0.023861" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_2"
+    type="continuous">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="Link_1" />
+    <child
+      link="Link_2" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Link_3">
+    <inertial>
+      <origin
+        xyz="-0.18281 3.2527E-06 -0.047348"
+        rpy="0 0 0" />
+      <mass
+        value="2.7304" />
+      <inertia
+        ixx="0.0026069"
+        ixy="-4.3276E-08"
+        ixz="-0.00014399"
+        iyy="0.010566"
+        iyz="1.08E-07"
+        izz="0.010407" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_3"
+    type="continuous">
+    <origin
+      xyz="-0.427 0 0.0628"
+      rpy="0 0 0" />
+    <parent
+      link="Link_2" />
+    <child
+      link="Link_3" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Link_4">
+    <inertial>
+      <origin
+        xyz="2.6409E-06 0.004712 -0.019047"
+        rpy="0 0 0" />
+      <mass
+        value="0.75308" />
+      <inertia
+        ixx="0.0010195"
+        ixy="-1.2546E-08"
+        ixz="-2.971E-09"
+        iyy="0.00098659"
+        iyz="0.00010828"
+        izz="0.00059472" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_4"
+    type="continuous">
+    <origin
+      xyz="-0.3905 0 0.0847"
+      rpy="0 0 0" />
+    <parent
+      link="Link_3" />
+    <child
+      link="Link_4" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Link_5">
+    <inertial>
+      <origin
+        xyz="-3.5214E-06 -0.006111 -0.0049595"
+        rpy="0 0 0" />
+      <mass
+        value="0.5807" />
+      <inertia
+        ixx="0.0005059"
+        ixy="-8.7655E-09"
+        ixz="2.8124E-09"
+        iyy="0.0004794"
+        iyz="-5.6328E-05"
+        izz="0.0004639" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_5"
+    type="continuous">
+    <origin
+      xyz="0 -0.0965 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="Link_4" />
+    <child
+      link="Link_5" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Link_6">
+    <inertial>
+      <origin
+        xyz="-1.7686E-10 -0.00015025 -0.023107"
+        rpy="0 0 0" />
+      <mass
+        value="0.17861" />
+      <inertia
+        ixx="8.6545E-05"
+        ixy="8.1733E-13"
+        ixz="6.4355E-13"
+        iyy="8.8095E-05"
+        iyz="3.2548E-07"
+        izz="0.00012597" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://robot_simulation/meshes_robot3/Link_6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_6"
+    type="continuous">
+    <origin
+      xyz="0 0.092 0"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="Link_5" />
+    <child
+      link="Link_6" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+</robot>

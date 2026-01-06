@@ -269,13 +269,33 @@ public:
     pose_msg.position[0] = state_msg.pose.position.x / 1000.0; 
     pose_msg.position[1] = state_msg.pose.position.y / 1000.0; 
     pose_msg.position[2] = state_msg.pose.position.z / 1000.0; 
-    // 姿态转换：Quaternion -> (rx, ry, rz) 
+
+    // 姿态转换：Quaternion -> (rx, ry, rz) 旋转向量
     hduVector3Dd axis; 
     double angle; 
     state->rot.toAxisAngle(axis, angle); 
     pose_msg.position[3] = axis[0] * angle; // rx 
     pose_msg.position[4] = axis[1] * angle; // ry 
     pose_msg.position[5] = axis[2] * angle; // rz 
+
+    // // 姿态转换：Quaternion -> Euler (rpy)
+    // // hduQuaternion -> Eigen quaternion
+    // Eigen::Quaterniond q_eig(
+    //     state->rot.s(),
+    //     state->rot.v()[0],
+    //     state->rot.v()[1],
+    //     state->rot.v()[2]
+    // );
+    // q_eig.normalize();
+    // // Quaternion -> rotation matrix
+    // Eigen::Matrix3d R = q_eig.toRotationMatrix();
+    // // Rotation matrix -> Euler angles (base frame, ZYX / RPY)
+    // Eigen::Vector3d rpy = R.eulerAngles(2, 1, 0);
+    // // 发布 [x, y, z, roll, pitch, yaw]
+    // pose_msg.position[3] = rpy[2];  // roll
+    // pose_msg.position[4] = rpy[1];  // pitch
+    // pose_msg.position[5] = rpy[0];  // yaw
+
     // tcp速度只发布xyz，因为角速度难以估计 
     pose_msg.velocity.resize(6); 
     pose_msg.velocity[0] = state->velocity[0] / 1000.0; 
