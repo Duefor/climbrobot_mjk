@@ -17,12 +17,14 @@ const double robot_sdk_rate = 250; // 机械臂sdk调用频率
 
 const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
 const std::string DEFAULT_PC_IP    = "192.168.1.150";
-const std::string external_control_file_address = "external_control.script";
-const std::string output_recipe_file_address    = "output_recipe.txt";
-const std::string input_recipe_file_address     = "input_recipe.txt";
+const std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
+const std::string output_recipe_file_address    = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
+const std::string input_recipe_file_address     = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
 const std::string task_file_address              = "mjktest.task";
 
-const ELITE::vector6d_t root_joint_pose{0.0,-1.18,-2.44,-1.1,1.57,-1.57};
+const ELITE::vector6d_t root_joint_pose{0.0,-1.18,-2.44,-1.1,1.57,-1.57};   // 关节初始位置
+
+const ELITE::vector6d_t joint_zero_speed{0.0,0.0,0.0,0.0,0.0,0.0};  // 关节速度置零
 
 // SDK 关节最大速度（rad/s）
 const double SDK_MAX_QDOT[6] = {
@@ -118,7 +120,6 @@ void jointCallback(const sensor_msgs::JointState::ConstPtr& msg)
 void sdkIOThread(EliteCSRobotSDK* robot)
 {
     ros::Rate rate(robot_sdk_rate);   // SDK 控制周期
-    ELITE::vector6d_t zero{0,0,0,0,0,0};
 
     while (ros::ok())
     {
@@ -132,7 +133,7 @@ void sdkIOThread(EliteCSRobotSDK* robot)
         else
         {
             // 安全保护
-            robot->jointSpeed(zero, 0);
+            robot->jointSpeed(joint_zero_speed, 0);
             qdot_valid.store(false, std::memory_order_release);
         }
         
@@ -220,6 +221,7 @@ int main(int argc, char** argv)
 
     // 机械臂移动到初始位置
     cs66robot.moveJoint(root_joint_pose, 30.0);
+    std::cout << "机械臂已移动到初始位置" << std::endl;
 
     ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1, jointCallback);
 
@@ -232,10 +234,13 @@ int main(int argc, char** argv)
     std::thread pub_tcp_thread(tcpStatePublisher, &tcp_pub);
 
     ros::waitForShutdown();
+    std::cout << "已断开机械臂控制" << std::endl;
 
     sdk_thread.join();
     pub_joint_thread.join();
     pub_tcp_thread.join();
+
+    cs66robot.jointSpeed(joint_zero_speed,0);
     cs66robot.disconnect();
 
     return 0;

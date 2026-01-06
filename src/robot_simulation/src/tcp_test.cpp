@@ -1,4 +1,3 @@
-// transform_publisher_simple.cpp
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_broadcaster.h>

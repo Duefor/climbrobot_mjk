@@ -10,7 +10,9 @@
         "/usr/include/**",
         "/usr/local/include/**",
         "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/include/**",
+        // "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/include/**",
         "/home/duefor/climbrobot_mjk/devel/include/**"
+        // "/home/barry/workspace/climbrobot_mjk/devel/include/**"
       ],
       "name": "ROS",
       "intelliSenseMode": "gcc-x64",

@@ -306,6 +306,9 @@ public:
     pose_msg.velocity[5] = 0.0 / 1000.0; 
     pose_publisher.publish(pose_msg);
 
+
+
+
     if ((state->buttons[0] != state->buttons_prev[0]) or (state->buttons[1] != state->buttons_prev[1]))
     {
       if (state->buttons[0] == 1) {

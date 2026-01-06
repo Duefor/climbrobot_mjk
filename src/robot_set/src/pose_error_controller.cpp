@@ -17,6 +17,7 @@ Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
 Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
+Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
 
 VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
@@ -188,14 +189,19 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   // 姿态：P
   v_cmd.tail<3>() =
       Kp_rot * xi.tail<3>();
-  // VectorXd v_cmd = v_d + K_p * xi + K_d * error_derivative_filtered;
-  // std::cout<<"vd:"<<std::endl;
-  // std::cout<<v_d<<std::endl;
-  // std::cout<<"-----------------------------------------"<<std::endl;
 
-  // std::cout<<"vcmd:"<<std::endl;
-  // std::cout<<v_cmd<<std::endl;
-  // std::cout<<"-----------------------------------------"<<std::endl;
+  // // --- 姿态误差 ---
+  // Matrix3d R_a = T_a.block<3,3>(0,0);
+  // Matrix3d R_d = T_d.block<3,3>(0,0);
+  // AngleAxisd aa(R_d * R_a.transpose());
+  // Vector3d e_w = aa.axis() * aa.angle();
+  // static Vector3d e_w_prev = Vector3d::Zero();
+  // Vector3d e_w_dot = (e_w - e_w_prev) / dt;
+  // e_w_prev = e_w;
+  // v_cmd.tail<3>() =
+  //     Kp_rot * e_w
+  //   - Kd_rot * e_w_dot;
+
 
   robot_set::TCPState tcp_vel_msg;
   tcp_vel_msg.velocity.resize(6);

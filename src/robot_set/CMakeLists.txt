@@ -138,6 +138,7 @@ include_directories(
   ${ELITE_LIB_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIRS}
   /home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/include
+  # /home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/include
   # robot_sdk
 )
 

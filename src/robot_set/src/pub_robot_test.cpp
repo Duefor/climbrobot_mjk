@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     ros::Publisher pub_joint = nh.advertise<sensor_msgs::JointState>("/joint_pos", 10);
-    ros::Publisher pub_tcp = nh.advertise<robot_set::TCPState>("/tcp_pos", 10);
+    ros::Publisher pub_tcp = nh.advertise<robot_set::TCPState>("/phantom/pose", 10);
 
     ros::Rate rate(100);
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
     joint_msg.position = {0.0,0.0,0.0,0.0,0.0,0.0};
     joint_msg.velocity = {0.0,0.0,0.0,0.0,0.0,0.0};
-    tcp_msg.position = {0.0,0.0,0.0,0.0,0.0,0.0};
+    tcp_msg.position = {0.001871337890625, -1.145863978938533e-19, -0.06545825958251954, -0.15641778385716565, 1.0340304101706983, -0.2723418753213803};
     tcp_msg.velocity = {0.0,0.0,0.0,0.0,0.0,0.0};
 
     while (ros::ok())

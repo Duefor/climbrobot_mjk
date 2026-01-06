@@ -39,3 +39,10 @@
 订阅话题：`/velocity_ik/joint_vel`  
 > 该节点按照订阅话题的关节速度执行命令  
 > **该节点强停可以强制停止机械臂**
+
+## 26/1/6
+在barry电脑中需要做的操作： 
+c_cpp_properties文件改路径名 
+robot_set包的cmakelist中改include_directories的路径 
+进入root操作 
+编译时使用catkin_make_pkg.sh
