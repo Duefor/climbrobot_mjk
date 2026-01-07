@@ -16,7 +16,7 @@ Matrix3d Kp_lin = 2.5 * Matrix3d::Identity();
 Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
-Matrix3d Kp_rot = 0.1 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
+Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
 Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
 
 VectorXd desired_pose(6); // 期望tcp位姿
@@ -147,21 +147,19 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   Matrix4d T_d = Matrix4d::Identity();
   T_d.block<3,3>(0,0) = rotvecToRot(d.tail<3>());
   T_d.block<3,1>(0,3) = d.head<3>();
-
   Matrix4d T_a = Matrix4d::Identity();
   T_a.block<3,3>(0,0) = eulerXYZToRot(a[3], a[4], a[5]);
   T_a.block<3,1>(0,3) = a.head<3>();
 
-  Matrix3d R_a = Matrix3d::Identity();
-  R_a.block<3,3>(0,0) = eulerXYZToRot(a[3], a[4], a[5]);
-
-  Matrix3d R_d = Matrix3d::Identity();
-  R_d.block<3,3>(0,0) = rotvecToRot(d.tail<3>());
-
   Matrix4d E = T_d * T_a.inverse();
-  VectorXd xi = d - a;
-  Vector3d e_w = AngleAxisd(R_d * R_a.transpose()).axis()
-             * AngleAxisd(R_d * R_a.transpose()).angle();
+  VectorXd debug_print = se3Log(E);
+
+
+  VectorXd xi(6);
+  xi.head<3>() = T_d.block<3,1>(0,3) - T_a.block<3,1>(0,3);   // 位置误差直接相减得到
+  
+  auto xi_rot = T_d.block<3,3>(0,0) * T_a.block<3,3>(0,0).transpose();
+  xi.tail<3>() = AngleAxisd(xi_rot).axis() * AngleAxisd(xi_rot).angle();   // 姿态误差
   
   double dt = (now - last_ctl_time).toSec();
   last_ctl_time = now;
@@ -173,7 +171,8 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   // std::cout<<"-----------------------------------------"<<std::endl;
   // std::cout << "当前位姿指令为：" << "[" << a[0] << "," << a[1] << "," << a[2] << "," 
   //     << a[3] << "," << a[4] << "," << a[5] << "]" << std::endl;
-  auto xii = xi;
+
+  auto xii = debug_print;
   for(int i = 0; i<6; ++i)
   {
     xii[i]=std::round(xii[i]*1e7)/1e7;
@@ -209,9 +208,31 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     + Ki_lin * error_integral.head<3>()
     + Kd_lin * error_derivative.head<3>();
 
+
+
+
+static Matrix3d R_d_prev = Matrix3d::Identity();
+static bool R_d_init = false;
+Vector3d omega_d = Vector3d::Zero();
+if (R_d_init)
+{
+  Matrix3d R_delta = T_d.block<3,3>(0,0) * R_d_prev.transpose();
+  AngleAxisd aa(R_delta);
+  omega_d = aa.axis() * aa.angle() / dt;
+}
+else
+{
+  R_d_init = true;
+}
+R_d_prev = T_d.block<3,3>(0,0);
+
+
+
+
   // 姿态：P
-  v_cmd.tail<3>() =
-      Kp_rot * e_w;
+  Kp_rot.diagonal() << 1.5, -1.5, -1.5;
+  v_cmd.tail<3>() = omega_d +
+      Kp_rot * xi.tail<3>();
 
   // // --- 姿态误差 ---
   // Matrix3d R_a = T_a.block<3,3>(0,0);
