@@ -17,7 +17,7 @@ Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
 Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
-Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
+Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();
 
 VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
@@ -226,13 +226,18 @@ else
 }
 R_d_prev = T_d.block<3,3>(0,0);
 
+static Vector3d eR_prev = Vector3d::Zero();
+Vector3d eR_dot = (xi.tail<3>() - eR_prev) / dt;
+eR_prev = xi.tail<3>();
 
 
 
   // 姿态：P
   Kp_rot.diagonal() << 1.5, -1.5, -1.5;
+  Kd_rot.diagonal() << 0.2, -0.2, -0.2;
   v_cmd.tail<3>() = omega_d +
-      Kp_rot * xi.tail<3>();
+      Kp_rot * xi.tail<3>()
+      + Kd_rot * eR_dot;
 
   // // --- 姿态误差 ---
   // Matrix3d R_a = T_a.block<3,3>(0,0);
