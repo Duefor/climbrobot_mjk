@@ -42,7 +42,8 @@
 
 ## 26/1/6
 在barry电脑中需要做的操作： 
-c_cpp_properties文件改路径名 
+c_cpp_properties文件改路径名    
 robot_set包的cmakelist中改include_directories的路径 
-进入root操作 
+注释掉touch_set包中cmakelist的catkin_package    
+进入root操作    
 编译时使用catkin_make_pkg.sh
