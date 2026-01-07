@@ -12,7 +12,7 @@
 #include <thread>
 #include <iostream>
 
-const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
+const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
 const std::string DEFAULT_PC_IP = "192.168.1.150";
 const std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
 const std::string output_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";

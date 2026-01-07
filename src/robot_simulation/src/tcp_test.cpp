@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     
     // 订阅位姿话题
     ros::Subscriber pose_sub = nh.subscribe<robot_set::TCPState>(
-        "/phantom/pose", 10, 
+        "/pose_converter/desired_robot_sub", 10, 
         boost::bind(poseCallback, _1, &tf_broadcaster)
     );
     

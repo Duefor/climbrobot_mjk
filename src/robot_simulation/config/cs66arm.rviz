@@ -64,37 +64,56 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        Link_1:
+        base_footprint:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
-        Link_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ee_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_cam:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        motion_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -130,26 +149,12 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        Link_1:
-          Value: false
-        Link_2:
-          Value: false
-        Link_3:
-          Value: false
-        Link_4:
-          Value: false
-        Link_5:
-          Value: false
-        Link_6:
-          Value: true
-        base_link:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 2
       Name: TF
@@ -157,16 +162,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          Link_1:
-            Link_2:
-              Link_3:
-                Link_4:
-                  Link_5:
-                    Link_6:
-                      {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -211,9 +209,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4553988575935364
+      Pitch: 0.43039873242378235
       Target Frame: <Fixed Frame>
-      Yaw: 5.035376071929932
+      Yaw: 1.2672005891799927
     Saved: ~
 Window Geometry:
   Displays:

@@ -93,12 +93,12 @@ void hapticCallback(const robot_set::TCPState::ConstPtr& msg)
     out.position[0] = r_pos[0];
     out.position[1] = r_pos[1];
     out.position[2] = r_pos[2];
-    // out.position[3] = h_rot[0];
-    // out.position[4] = h_rot[1];
-    // out.position[5] = h_rot[2];
     out.position[3] = 3.14;
     out.position[4] = 0.0;
     out.position[5] = 0.0;
+    // out.position[3] = h_rot[0];
+    // out.position[4] = h_rot[1];
+    // out.position[5] = h_rot[2];
 
     // velocity（只映射 xyz，其余清零）
     out.velocity[0] = r_vel[0];

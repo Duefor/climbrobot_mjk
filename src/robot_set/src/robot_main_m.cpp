@@ -15,7 +15,8 @@
 const double robot_pub_rate = 100; // 机械臂发布状态频率，注意不能大于sdk带宽，最好小于带宽的1/2
 const double robot_sdk_rate = 250; // 机械臂sdk调用频率
 
-const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
+const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
+// const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
 const std::string DEFAULT_PC_IP    = "192.168.1.150";
 const std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
 const std::string output_recipe_file_address    = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
@@ -34,12 +35,12 @@ const double SDK_MAX_QDOT[6] = {
 
 // 实际使用速度（1/20）
 const double MAX_QDOT[6] = {
-    SDK_MAX_QDOT[0]/20.0, SDK_MAX_QDOT[1]/20.0, SDK_MAX_QDOT[2]/20.0,
-    SDK_MAX_QDOT[3]/20.0, SDK_MAX_QDOT[4]/20.0, SDK_MAX_QDOT[5]/20.0
+    SDK_MAX_QDOT[0]/10.0, SDK_MAX_QDOT[1]/10.0, SDK_MAX_QDOT[2]/10.0,
+    SDK_MAX_QDOT[3]/10.0, SDK_MAX_QDOT[4]/10.0, SDK_MAX_QDOT[5]/10.0
 };
 
 // 最大关节加速度
-const double MAX_QDDOT[6] = {0.4,0.4,0.4,0.4,0.4,0.4};
+const double MAX_QDDOT[6] = {0.8,0.8,0.8,0.8,0.8,0.8};
 
 // 安全保护
 std::atomic<double> last_cmd_time{0.0};
@@ -220,7 +221,15 @@ int main(int argc, char** argv)
     }
 
     // 机械臂移动到初始位置
-    cs66robot.moveJoint(root_joint_pose, 30.0);
+    double arrive_time = 0.0;
+    double max_joint = 0.0;
+    ELITE::vector6d_t current_joint_pose = cs66robot.getCurrentJoint();
+    for(int i = 0; i < 6; i++)
+    {
+        max_joint = std::max(abs(root_joint_pose[i] - current_joint_pose[i]) , max_joint);
+    }
+    arrive_time = std::max(max_joint / MAX_QDOT[0], 3.0);
+    cs66robot.moveJoint(root_joint_pose, arrive_time);
     std::cout << "机械臂已移动到初始位置" << std::endl;
 
     ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1, jointCallback);

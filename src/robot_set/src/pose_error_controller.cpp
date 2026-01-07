@@ -16,7 +16,7 @@ Matrix3d Kp_lin = 2.5 * Matrix3d::Identity();
 Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
-Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
+Matrix3d Kp_rot = 0.1 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
 Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
 
 VectorXd desired_pose(6); // 期望tcp位姿

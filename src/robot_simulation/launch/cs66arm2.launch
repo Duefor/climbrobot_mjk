@@ -1,7 +1,8 @@
 <!-- 用于仿真遥操作机械臂 -->
 <launch>
-    <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" />
-    <!-- <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/robot3.urdf" /> -->
+    <!-- <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" /> -->
+    <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/cs66_3.urdf" />
+
 
     <!-- <node pkg="rviz" type="rviz" name="rviz" /> -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" />
