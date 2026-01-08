@@ -165,7 +165,7 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   VectorXd xi(6);
   xi.head<3>() = T_d.block<3,1>(0,3) - T_a.block<3,1>(0,3);   // 位置误差直接相减得到
   
-  auto xi_rot = T_d.block<3,3>(0,0) * T_a.block<3,3>(0,0).transpose();
+  auto xi_rot = T_a.block<3,3>(0,0).transpose() * T_d.block<3,3>(0,0);  // 自身坐标系中的姿态误差
   xi.tail<3>() = AngleAxisd(xi_rot).axis() * AngleAxisd(xi_rot).angle();   // 姿态误差
   
   double dt = (now - last_ctl_time).toSec();
@@ -215,10 +215,10 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     + Ki_lin * error_integral.head<3>()
     + Kd_lin * error_derivative.head<3>();
 
-  // 制造虚拟角速度，因为touch无法发布角速度
+  // 制造虚拟角速度（tcp空间），因为touch无法发布角速度
   if (R_d_init)
   {
-    Matrix3d R_delta = T_d.block<3,3>(0,0) * R_d_prev.transpose();
+    Matrix3d R_delta = R_d_prev.transpose() * T_d.block<3,3>(0,0);
     AngleAxisd aa(R_delta);
     virtual_rotVel = aa.axis() * aa.angle() / dt;
   }
@@ -231,8 +231,8 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   
 
   // 姿态：虚拟加速度 + P
-  Kvir_rot.diagonal() << 1.0, -1.0, -1.0;
-  Kp_rot.diagonal() << 1.5, -1.5, -1.5;
+  Kvir_rot.diagonal() << 1.0, 1.0, 1.0;
+  Kp_rot.diagonal() << 1.5, 1.5, 1.5;
   v_cmd.tail<3>() = Kvir_rot * virtual_rotVel +
       Kp_rot * xi.tail<3>();
 

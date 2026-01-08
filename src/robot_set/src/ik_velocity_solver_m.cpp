@@ -1,3 +1,4 @@
+// 数值雅可比是混合空间的，其中位置在基坐标系，姿态在自身坐标系
 #include <ros/ros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
@@ -127,10 +128,10 @@ MatrixXd computeNumericJacobian(const vector<double>& q)
         Vector3d p1 = T1.block<3,1>(0,3);
         Matrix3d R1 = T1.block<3,3>(0,0);
 
-        // 线速度部分
+        // 线速度部分（TCP 在基坐标系中的线速度）
         Vector3d dp = (p1 - p0) / eps;
 
-        // rotation vector 速度
+        // rotation vector 速度（TCP 自身坐标系中的角速度）
         Matrix3d dR = R0.transpose() * R1;
         Vector3d dr = so3Log(dR) / eps;
 
