@@ -138,7 +138,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(pose_converter src/pose_converter.cpp)
+add_executable(pose_converter_m src/pose_converter_m.cpp)
 add_executable(pose_converter_1 src/pose_converter_1.cpp)
 add_executable(pub_controller_pose src/pub_controller_pose.cpp)
 add_executable(Cal_scaleANDoffset src/Cal_scaleANDoffset.cpp)
@@ -151,13 +151,13 @@ add_executable(Cal_scaleANDoffset src/Cal_scaleANDoffset.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(pose_converter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(pose_converter_m ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(pose_converter_1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(pub_controller_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(Cal_scaleANDoffset ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(pose_converter
+target_link_libraries(pose_converter_m
   ${catkin_LIBRARIES}
 )
 

@@ -168,7 +168,7 @@ Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
 Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();
-Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();
+Matrix3d Kvir_rot = 0.0 * Matrix3d::Identity();
 
 VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
@@ -185,6 +185,11 @@ bool desired_valid = false;
 ros::Time t_desired;
 // 定义超时最长时间
 const double TIMEOUT = 0.1; // 100 ms
+
+// 虚拟角速度
+Matrix3d R_d_prev = Matrix3d::Identity();
+bool R_d_init = false;
+Vector3d virtual_rotVel = Vector3d::Zero();
 
 ros::Subscriber sub_actual;
 ros::Subscriber sub_desired;
@@ -279,11 +284,13 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
 
   bool ready = desired_valid && (now - t_desired).toSec() < TIMEOUT ;
 
+  // 如果没接收到期望的机械臂位姿和速度或是突然断开
   if (!ready)
   {
     error_integral.setZero();
     error_prev.setZero();
     last_ctl_time = now;
+    R_d_init = false;
     return;
   }
 
@@ -359,16 +366,12 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     + Ki_lin * error_integral.head<3>()
     + Kd_lin * error_derivative.head<3>();
 
-
-
-  static Matrix3d R_d_prev = Matrix3d::Identity();
-  static bool R_d_init = false;
-  static Vector3d omega_d = Vector3d::Zero();
+  // 制造虚拟角速度，因为touch无法发布角速度
   if (R_d_init)
   {
     Matrix3d R_delta = T_d.block<3,3>(0,0) * R_d_prev.transpose();
     AngleAxisd aa(R_delta);
-    omega_d = aa.axis() * aa.angle() / dt;
+    virtual_rotVel = aa.axis() * aa.angle() / dt;
   }
   else
   {
@@ -378,10 +381,10 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   R_d_prev = T_d.block<3,3>(0,0);
   
 
-  // 姿态：P
+  // 姿态：虚拟加速度 + P
+  Kvir_rot.diagonal() << 1.0, -1.0, -1.0;
   Kp_rot.diagonal() << 1.5, -1.5, -1.5;
-  Kd_rot.diagonal() << 0.1, -0.1, -0.1;
-  v_cmd.tail<3>() = omega_d +
+  v_cmd.tail<3>() = Kvir_rot * virtual_rotVel +
       Kp_rot * xi.tail<3>();
 
   // // --- 姿态误差 ---
@@ -394,7 +397,7 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   // e_w_prev = e_w;
   // v_cmd.tail<3>() =
   //     Kp_rot * e_w
-  //   - Kd_rot * e_w_dot;
+  //   - Kvir_rot * e_w_dot;
 
 
   robot_set::TCPState tcp_vel_msg;

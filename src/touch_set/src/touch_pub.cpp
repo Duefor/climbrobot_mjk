@@ -80,14 +80,20 @@ static const hduMatrix R_tool =
   )
   ;
 
-// 翻转手柄z轴，使其触控笔朝向为+
-static const hduMatrix R_tool_z =
+// 翻转手柄z轴，使其触控笔朝向为+；并翻转其xy轴，保证触控笔中心对齐机械臂中心
+static const hduMatrix R_tool_z_xy =
   hduMatrix(
      cos(M_PI), 0, sin(M_PI), 0,
      0,            1, 0,            0,
     -sin(M_PI), 0, cos(M_PI), 0,
      0, 0, 0, 1
-  ) ;
+  ) 
+  * hduMatrix(
+    cos(M_PI), -sin(M_PI), 0, 0,
+    sin(M_PI),  cos(M_PI), 0, 0,
+    0,             0,            1, 0,
+    0, 0, 0, 1
+  );
 
 struct OmniState {
   hduVector3Dd position;  //3x1 vector of position
@@ -382,7 +388,7 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 
   // 姿态：R_B'T = Rᵀ * R_BT
   hduMatrix R_Bp = Rz_T * R_B;
-  omni_state->rot = hduQuaternion(R_tool_z * R_Bp * R_tool);
+  omni_state->rot = hduQuaternion(R_tool_z_xy * R_Bp * R_tool);
 
   // 速度估计（仍在 B′）
   hduVector3Dd vel_buff =
