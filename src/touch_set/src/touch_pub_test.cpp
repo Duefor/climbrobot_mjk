@@ -1,3 +1,527 @@
+// #include <ros/ros.h>
+// #include <geometry_msgs/PoseStamped.h>
+// #include <geometry_msgs/Wrench.h>
+// #include <geometry_msgs/WrenchStamped.h>
+// #include <urdf/model.h>
+// #include <sensor_msgs/JointState.h>
+// #include <robot_set/TCPState.h>
+
+// #include <string.h>
+// #include <stdio.h>
+// #include <math.h>
+// #include <assert.h>
+// #include <sstream>
+
+// #include <HL/hl.h>
+// #include <HD/hd.h>
+// #include <HDU/hduError.h>
+// #include <HDU/hduVector.h>
+// #include <HDU/hduMatrix.h>
+// #include <HDU/hduQuaternion.h>
+// #define BT_EULER_DEFAULT_ZYX
+// #include <bullet/LinearMath/btMatrix3x3.h>
+
+// #include "touch_set/OmniButtonEvent.h"
+// #include "touch_set/OmniFeedback.h"
+// #include "touch_set/OmniState.h"
+// #include <pthread.h>
+
+// #include <iostream>
+// #include <Eigen/Dense>
+
+// float prev_time;
+// int calibrationStyle;
+
+// std::string default_device_name = "Default Device";   // 逻辑设备名，如果要改设备名，需要在TouchDriver软件中重新设置
+// std::string default_omni_name = "phantom";  // 所有话题前缀
+// std::string default_ref_frame = "map";  // 位姿所属坐标系
+// std::string default_units = "mm";   // 决定基础单位是什么。可选mm，cm，dm，m
+// int default_publish_rate = 1000;    // ros发布频率
+
+// // 新基坐标系：B -> B'
+// static const double BASE_YAW = -M_PI / 2.0;  // 绕 z 轴旋转
+// static const hduVector3Dd BASE_TRANS(0.0, 0.09*1000.0, 0.0); // mm
+
+// static const hduMatrix Rz_base(
+//   cos(BASE_YAW), -sin(BASE_YAW), 0.0, 0.0,
+//   sin(BASE_YAW),  cos(BASE_YAW), 0.0, 0.0,
+//   0.0,            0.0,           1.0, 0.0,
+//   0.0,            0.0,           0.0, 1.0
+// );
+
+
+// static const double TOOL_RX =  90.0 * M_PI / 180.0;
+// static const double TOOL_RZ =  -90.0 * M_PI / 180.0;
+// static const double TOOL_RY = -60.0 * M_PI / 180.0;
+// static const hduMatrix R_tool =
+//   hduMatrix(
+//       1, 0, 0, 0,
+//       0, 1, 0, 0,
+//       0, 0, 1, 0,
+//       0, 0, 0, 1
+//     ) 
+//   * hduMatrix(
+//     1, 0, 0, 0,
+//     0, cos(TOOL_RX), -sin(TOOL_RX), 0,
+//     0, sin(TOOL_RX),  cos(TOOL_RX), 0,
+//     0, 0, 0, 1
+//   ) 
+//   * hduMatrix(
+//     cos(TOOL_RZ), -sin(TOOL_RZ), 0, 0,
+//     sin(TOOL_RZ),  cos(TOOL_RZ), 0, 0,
+//     0,             0,            1, 0,
+//     0, 0, 0, 1
+//   )
+//   // * hduMatrix(
+//   //    cos(TOOL_RY), 0, sin(TOOL_RY), 0,
+//   //    0,            1, 0,            0,
+//   //   -sin(TOOL_RY), 0, cos(TOOL_RY), 0,
+//   //    0, 0, 0, 1
+//   // )
+//   ;
+
+
+// struct OmniState {
+//   hduVector3Dd position;  //3x1 vector of position
+//   hduVector3Dd velocity;  //3x1 vector of velocity
+//   hduVector3Dd inp_vel1;  //3x1 history of velocity used for filtering velocity estimate
+//   hduVector3Dd inp_vel2;
+//   hduVector3Dd inp_vel3;
+//   hduVector3Dd out_vel1;
+//   hduVector3Dd out_vel2;
+//   hduVector3Dd out_vel3;
+//   hduVector3Dd pos_hist1; //3x1 history of position used for 2nd order backward difference estimate of velocity
+//   hduVector3Dd pos_hist2;
+//   hduQuaternion rot;
+//   hduVector3Dd joints;
+//   hduVector3Dd force;   //3 element double vector force[0], force[1], force[2]
+//   float thetas[7];
+//   int buttons[2];
+//   int buttons_prev[2];
+//   bool lock;
+//   bool close_gripper;
+//   hduVector3Dd lock_pos;
+//   double units_ratio;
+// };
+
+// class PhantomROS {
+
+// public:
+//   ros::NodeHandle n;
+//   ros::Publisher state_publisher;
+//   ros::Publisher pose_publisher;
+//   ros::Publisher button_publisher;
+//   ros::Publisher joint_publisher;
+//   ros::Subscriber haptic_sub;
+//   std::string omni_name, ref_frame, units;
+
+//   OmniState *state;
+
+//   // 初始化，用于设置各种发布者与订阅者；单位等
+//   void init(OmniState *s) {
+//     omni_name = default_omni_name;
+//     ref_frame = default_ref_frame;
+//     units = default_units;
+
+
+//     //Publish button state on NAME/button
+//     std::ostringstream stream1;
+//     stream1 << omni_name << "/button";
+//     std::string button_topic = std::string(stream1.str());
+//     button_publisher = n.advertise<touch_set::OmniButtonEvent>(button_topic.c_str(), 100);
+
+//     //Publish on NAME/state
+//     std::ostringstream stream2;
+//     stream2 << omni_name << "/state";
+//     std::string state_topic_name = std::string(stream2.str());
+//     state_publisher = n.advertise<touch_set::OmniState>(state_topic_name.c_str(), 1);
+
+//     //Subscribe to NAME/force_feedback
+//     std::ostringstream stream3;
+//     stream3 << omni_name << "/force_feedback";
+//     std::string force_feedback_topic = std::string(stream3.str());
+//     haptic_sub = n.subscribe(force_feedback_topic.c_str(), 1, &PhantomROS::force_callback, this);
+
+//     //Publish on NAME/pose
+//     std::ostringstream stream4;
+//     stream4 << omni_name << "/pose";
+//     std::string pose_topic_name = std::string(stream4.str());
+//     // pose_publisher = n.advertise<geometry_msgs::PoseStamped>(pose_topic_name.c_str(), 1);
+//     // pose发布改为自定义的TCPstate格式
+//     pose_publisher = n.advertise<robot_set::TCPState>(pose_topic_name.c_str(), 1);
+
+//     //Publish on NAME/joint_states
+//     std::ostringstream stream5;
+//     stream5 << omni_name << "/joint_states";
+//     std::string joint_topic_name = std::string(stream5.str());
+//     joint_publisher = n.advertise<sensor_msgs::JointState>(joint_topic_name.c_str(), 1);
+
+//     state = s;
+//     state->buttons[0] = 0;
+//     state->buttons[1] = 0;
+//     state->buttons_prev[0] = 0;
+//     state->buttons_prev[1] = 0;
+//     hduVector3Dd zeros(0, 0, 0);
+//     state->velocity = zeros;
+//     state->inp_vel1 = zeros;  //3x1 history of velocity
+//     state->inp_vel2 = zeros;  //3x1 history of velocity
+//     state->inp_vel3 = zeros;  //3x1 history of velocity
+//     state->out_vel1 = zeros;  //3x1 history of velocity
+//     state->out_vel2 = zeros;  //3x1 history of velocity
+//     state->out_vel3 = zeros;  //3x1 history of velocity
+//     state->pos_hist1 = zeros; //3x1 history of position
+//     state->pos_hist2 = zeros; //3x1 history of position
+//     state->lock = false;
+//     state->close_gripper = false;
+//     state->lock_pos = zeros;
+//     if (!units.compare("mm"))
+//       state->units_ratio = 1.0;
+//     else if (!units.compare("cm"))
+//       state->units_ratio = 10.0;
+//     else if (!units.compare("dm"))
+//       state->units_ratio = 100.0;
+//     else if (!units.compare("m"))
+//       state->units_ratio = 1000.0;
+//     else
+//     {
+//       state->units_ratio = 1.0;
+//       ROS_WARN("Unknown units [%s] unsing [mm]", units.c_str());
+//       units = "mm";
+//     }
+//     ROS_INFO("PHaNTOM position given in [%s], ratio [%.1f]", units.c_str(), state->units_ratio);
+//   }
+
+//   // 接收外部力的回调
+//   void force_callback(const touch_set::OmniFeedbackConstPtr& omnifeed) {
+//     ////////////////////Some people might not like this extra damping, but it
+//     ////////////////////helps to stabilize the overall force feedback. It isn't
+//     ////////////////////like we are getting direct impedance matching from the
+//     ////////////////////omni anyway
+//     state->force[0] = omnifeed->force.x - 0.001 * state->velocity[0];
+//     state->force[1] = omnifeed->force.y - 0.001 * state->velocity[1];
+//     state->force[2] = omnifeed->force.z - 0.001 * state->velocity[2];
+
+//     state->lock_pos[0] = omnifeed->position.x;
+//     state->lock_pos[1] = omnifeed->position.y;
+//     state->lock_pos[2] = omnifeed->position.z;
+//   }
+
+//   // 发布touch的各种数据
+//   void publish_omni_state() {
+//     // touch未经处理的标准信息
+//     // Build the state msg
+//     touch_set::OmniState state_msg;
+//     // Locked
+//     state_msg.locked = state->lock;
+//     state_msg.close_gripper = state->close_gripper;
+//     // Position
+//     state_msg.pose.position.x = state->position[0];
+//     state_msg.pose.position.y = state->position[1];
+//     state_msg.pose.position.z = state->position[2];
+//     // Orientation
+//     state_msg.pose.orientation.x = state->rot.v()[0];
+//     state_msg.pose.orientation.y = state->rot.v()[1];
+//     state_msg.pose.orientation.z = state->rot.v()[2];
+//     state_msg.pose.orientation.w = state->rot.s();
+//     // Velocity
+//     state_msg.velocity.x = state->velocity[0];
+//     state_msg.velocity.y = state->velocity[1];
+//     state_msg.velocity.z = state->velocity[2];
+//     // TODO: Append Current to the state msg
+//     state_msg.header.stamp = ros::Time::now();
+//     state_publisher.publish(state_msg);
+
+//     // Publish the JointState msg
+//     sensor_msgs::JointState joint_state;
+//     joint_state.header.stamp = ros::Time::now();
+//     joint_state.name.resize(6);
+//     joint_state.position.resize(6);
+//     joint_state.name[0] = "waist";
+//     joint_state.position[0] = -state->thetas[1];
+//     joint_state.name[1] = "shoulder";
+//     joint_state.position[1] = state->thetas[2];
+//     joint_state.name[2] = "elbow";
+//     joint_state.position[2] = state->thetas[3];
+//     joint_state.name[3] = "yaw";
+//     joint_state.position[3] = -state->thetas[4] + M_PI;
+//     joint_state.name[4] = "pitch";
+//     joint_state.position[4] = -state->thetas[5] - 3*M_PI/4;
+//     joint_state.name[5] = "roll";
+//     joint_state.position[5] = -state->thetas[6] - M_PI;
+//     joint_publisher.publish(joint_state);
+
+//     // // Build the pose msg
+//     // geometry_msgs::PoseStamped pose_msg;
+//     // pose_msg.header = state_msg.header;
+//     // pose_msg.header.frame_id = ref_frame;
+//     // pose_msg.pose = state_msg.pose;
+//     // pose_msg.pose.position.x /= 1000.0;
+//     // pose_msg.pose.position.y /= 1000.0;
+//     // pose_msg.pose.position.z /= 1000.0;
+//     // pose_publisher.publish(pose_msg);
+
+//     // 以六维数组模式发布pose 
+//     robot_set::TCPState pose_msg; 
+//     pose_msg.header = state_msg.header; 
+//     pose_msg.header.frame_id = ref_frame; 
+//     // 位置转换：单位 m 
+//     pose_msg.position.resize(6); 
+//     pose_msg.position[0] = state_msg.pose.position.x / 1000.0; 
+//     pose_msg.position[1] = state_msg.pose.position.y / 1000.0; 
+//     pose_msg.position[2] = state_msg.pose.position.z / 1000.0; 
+//     // 姿态转换：Quaternion -> (rx, ry, rz) 
+//     hduVector3Dd axis; 
+//     double angle; 
+//     state->rot.toAxisAngle(axis, angle); 
+//     pose_msg.position[3] = axis[0] * angle; // rx 
+//     pose_msg.position[4] = axis[1] * angle; // ry 
+//     pose_msg.position[5] = axis[2] * angle; // rz 
+//     // tcp速度只发布xyz，因为角速度难以估计 
+//     pose_msg.velocity.resize(6); 
+//     pose_msg.velocity[0] = state->velocity[0] / 1000.0; 
+//     pose_msg.velocity[1] = state->velocity[1] / 1000.0; 
+//     pose_msg.velocity[2] = state->velocity[2] / 1000.0; 
+//     pose_msg.velocity[3] = 0.0 / 1000.0; 
+//     pose_msg.velocity[4] = 0.0 / 1000.0; 
+//     pose_msg.velocity[5] = 0.0 / 1000.0; 
+//     pose_publisher.publish(pose_msg);
+
+//     if ((state->buttons[0] != state->buttons_prev[0]) or (state->buttons[1] != state->buttons_prev[1]))
+//     {
+//       if (state->buttons[0] == 1) {
+//         state->close_gripper = !(state->close_gripper);
+//       }
+//       if (state->buttons[1] == 1) {
+//         state->lock = !(state->lock);
+//       }
+//       touch_set::OmniButtonEvent button_event;
+//       button_event.grey_button = state->buttons[0];
+//       button_event.white_button = state->buttons[1];
+//       state->buttons_prev[0] = state->buttons[0];
+//       state->buttons_prev[1] = state->buttons[1];
+//       button_publisher.publish(button_event);
+//     }
+//   }
+// };
+
+// // OpenHaptics 调度器中的回调函数（与ROS无关）
+// // 用于从设备读取状态并向设备写力
+// HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
+// {
+//   OmniState *omni_state = static_cast<OmniState *>(pUserData);
+
+//   if (hdCheckCalibration() == HD_CALIBRATION_NEEDS_UPDATE) {
+//     ROS_DEBUG("Updating calibration...");
+//     hdUpdateCalibration(calibrationStyle);
+//   }
+//   // 锁定一个实时帧，确保以下读取的数据都是在同一帧中读取的
+//   hdBeginFrame(hdGetCurrentDevice());
+
+//   // 读取原始 HD 数据
+//   hduMatrix transform;
+//   hdGetDoublev(HD_CURRENT_TRANSFORM, transform);    // 读取位姿
+//   hdGetDoublev(HD_CURRENT_JOINT_ANGLES, omni_state->joints);    //读取关节角
+//   hduVector3Dd gimbal_angles;
+//   hdGetDoublev(HD_CURRENT_GIMBAL_ANGLES, gimbal_angles);    //读取万向节角
+
+//   // HD → ROS 基坐标系 B
+//   hduVector3Dd p_B(transform[3][0], -transform[3][2], transform[3][1]);
+//   p_B /= omni_state->units_ratio;   //比例转换
+
+//   hduMatrix R_HD(transform);
+//   R_HD.getRotationMatrix(R_HD);
+
+//   hduMatrix R_HD_to_ROS(
+//      0.0, -1.0, 0.0, 0.0,
+//      1.0,  0.0, 0.0, 0.0,
+//      0.0,  0.0, 1.0, 0.0,
+//      0.0,  0.0, 0.0, 1.0
+//   );
+//   R_HD_to_ROS.getRotationMatrix(R_HD_to_ROS);
+
+//   hduMatrix R_B = R_HD_to_ROS * R_HD;
+
+//   // 3. B → B′变基坐标系
+//   // 参考系变换：x_B' = Rᵀ (x_B - t)
+//   hduMatrix Rz = Rz_base;
+//   hduMatrix Rz_T = Rz;
+//   Rz_T.transpose();
+
+//   omni_state->position = Rz_T * (p_B - BASE_TRANS / omni_state->units_ratio);
+
+//   // 姿态：R_B'T = Rᵀ * R_BT
+//   hduMatrix R_Bp = Rz_T * R_B;
+//   omni_state->rot = hduQuaternion(R_Bp * R_tool);
+
+//   // 速度估计（仍在 B′）
+//   hduVector3Dd vel_buff =
+//       (omni_state->position * 3
+//      - 4 * omni_state->pos_hist1
+//      + omni_state->pos_hist2) / 0.002;
+
+//   omni_state->velocity =
+//       (.2196 * (vel_buff + omni_state->inp_vel3)
+//      + .6588 * (omni_state->inp_vel1 + omni_state->inp_vel2)) / 1000.0
+//      - (-2.7488 * omni_state->out_vel1
+//         + 2.5282 * omni_state->out_vel2
+//         - 0.7776 * omni_state->out_vel3);
+
+//   omni_state->pos_hist2 = omni_state->pos_hist1;
+//   omni_state->pos_hist1 = omni_state->position;
+
+//   omni_state->inp_vel3 = omni_state->inp_vel2;
+//   omni_state->inp_vel2 = omni_state->inp_vel1;
+//   omni_state->inp_vel1 = vel_buff;
+
+//   omni_state->out_vel3 = omni_state->out_vel2;
+//   omni_state->out_vel2 = omni_state->out_vel1;
+//   omni_state->out_vel1 = omni_state->velocity;
+
+//   // 力反馈
+//   hduVector3Dd feedback;
+//   feedback[0] = omni_state->force[0];
+//   feedback[1] = omni_state->force[2];
+//   feedback[2] = -omni_state->force[1];
+//   hdSetDoublev(HD_CURRENT_FORCE, feedback);
+
+//   // 按键
+//   int nButtons = 0;
+//   hdGetIntegerv(HD_CURRENT_BUTTONS, &nButtons);
+//   omni_state->buttons[0] = (nButtons & HD_DEVICE_BUTTON_1) ? 1 : 0;
+//   omni_state->buttons[1] = (nButtons & HD_DEVICE_BUTTON_2) ? 1 : 0;
+
+//   hdEndFrame(hdGetCurrentDevice());
+
+//   // 关节角
+//   float t[7] = {
+//     0.,
+//     omni_state->joints[0],
+//     omni_state->joints[1],
+//     omni_state->joints[2] - omni_state->joints[1],
+//     gimbal_angles[0],
+//     gimbal_angles[1],
+//     gimbal_angles[2]
+//   };
+//   for (int i = 0; i < 7; i++)
+//     omni_state->thetas[i] = t[i];
+
+//   return HD_CALLBACK_CONTINUE;
+// }
+
+
+// // 设备自动校准，由于touch使用增量编码器
+// void HHD_Auto_Calibration() {
+//   int supportedCalibrationStyles;
+//   HDErrorInfo error;
+
+//   // 查询支持校准方式
+//   hdGetIntegerv(HD_CALIBRATION_STYLE, &supportedCalibrationStyles);
+//   if (supportedCalibrationStyles & HD_CALIBRATION_ENCODER_RESET) {
+//     calibrationStyle = HD_CALIBRATION_ENCODER_RESET;
+//     ROS_INFO("HD_CALIBRATION_ENCODER_RESET..");
+//   }
+//   // touch-usb支持该方式：放入 inkwell 触发光学/磁参考
+//   if (supportedCalibrationStyles & HD_CALIBRATION_INKWELL) {
+//     calibrationStyle = HD_CALIBRATION_INKWELL;
+//     ROS_INFO("HD_CALIBRATION_INKWELL..");
+//   }
+//   if (supportedCalibrationStyles & HD_CALIBRATION_AUTO) {
+//     calibrationStyle = HD_CALIBRATION_AUTO;
+//     ROS_INFO("HD_CALIBRATION_AUTO..");
+//   }
+//   if (calibrationStyle == HD_CALIBRATION_ENCODER_RESET) {
+//     do {
+//       hdUpdateCalibration(calibrationStyle);
+//       ROS_INFO("Calibrating.. (put stylus in well)");
+//       if (HD_DEVICE_ERROR(error = hdGetError())) {
+//         hduPrintError(stderr, &error, "Reset encoders reset failed.");
+//         break;
+//       }
+//     } while (hdCheckCalibration() != HD_CALIBRATION_OK);
+//     ROS_INFO("Calibration complete.");
+//   }
+//   while(hdCheckCalibration() != HD_CALIBRATION_OK) {
+//     usleep(1e6);
+//     if (hdCheckCalibration() == HD_CALIBRATION_NEEDS_MANUAL_INPUT)
+//       ROS_INFO("Please place the device into the inkwell for calibration");
+//     else if (hdCheckCalibration() == HD_CALIBRATION_NEEDS_UPDATE) {
+//       ROS_INFO("Calibration updated successfully");
+//       hdUpdateCalibration(calibrationStyle);
+//     }
+//     else
+//       ROS_FATAL("Unknown calibration status");
+//   }
+// }
+
+// void *ros_publish(void *ptr) {
+//   PhantomROS *omni_ros = (PhantomROS *) ptr;
+//   int publish_rate = default_publish_rate;
+//   ROS_INFO("Publishing PHaNTOM state at [%d] Hz", publish_rate);
+//   ros::Rate loop_rate(publish_rate);
+//   ros::AsyncSpinner spinner(2);
+//   spinner.start();
+
+//   while (ros::ok()) {
+//     omni_ros->publish_omni_state();
+//     loop_rate.sleep();
+//   }
+//   return NULL;
+// }
+
+// int main(int argc, char** argv) {
+//   // 初始化ros
+//   ros::init(argc, argv, "touch_usb");
+//   OmniState state;
+//   PhantomROS omni_ros;
+
+//   // 初始化设备
+//   HDErrorInfo error;
+//   HHD hHD;
+  
+//   // 传入参数 ~ 用于私有化命名空间，所有通过该nh发布的话题名称都会加一个节点名的前缀
+//   ros::NodeHandle nh("~");
+// //   // getparam用于从参数服务器（第一个参数）获得值赋予变量（第二个参数）
+// //   std::string device_name;
+// //   nh.getParam("device_name", device_name);
+// //   HDstring target_dev = device_name.c_str();
+// //   hHD = hdInitDevice(target_dev);
+//   std::string device_name = default_device_name;
+//   hHD = hdInitDevice(device_name.c_str());
+//   if (HD_DEVICE_ERROR(error = hdGetError())) {
+//     //hduPrintError(stderr, &error, "Failed to initialize haptic device");
+//     ROS_ERROR("Failed to initialize haptic device"); //: %s", &error);
+//     return -1;
+//   }
+//   ROS_INFO("Found %s.", hdGetString(HD_DEVICE_MODEL_TYPE));
+//   hdEnable(HD_FORCE_OUTPUT);
+//   hdStartScheduler();
+//   if (HD_DEVICE_ERROR(error = hdGetError())) {
+//     ROS_ERROR("Failed to start the scheduler"); //, &error);
+//     return -1;
+//   }
+//   HHD_Auto_Calibration();
+
+//   omni_ros.init(&state);
+//   // 注册设备调度器
+//   hdScheduleAsynchronous(omni_state_callback, &state,
+//       HD_MAX_SCHEDULER_PRIORITY);
+
+  
+//   ////////////////////////////////////////////////////////////////
+//   // Loop and publish
+//   ////////////////////////////////////////////////////////////////
+//   pthread_t publish_thread;
+//   pthread_create(&publish_thread, NULL, ros_publish, (void*) &omni_ros);
+//   pthread_join(publish_thread, NULL);
+
+//   ROS_INFO("Ending Session....");
+//   hdStopScheduler();
+//   hdDisableDevice(hHD);
+
+//   return 0;
+// }
+
+
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Wrench.h>
@@ -50,7 +574,7 @@ static const hduMatrix Rz_base(
 );
 
 
-static const double TOOL_RX =  90.0 * M_PI / 180.0;
+static const double TOOL_RX =  -24.0 * M_PI / 180.0;
 static const double TOOL_RZ =  -90.0 * M_PI / 180.0;
 static const double TOOL_RY = -60.0 * M_PI / 180.0;
 static const hduMatrix R_tool =
@@ -72,14 +596,22 @@ static const hduMatrix R_tool =
     0,             0,            1, 0,
     0, 0, 0, 1
   )
-  // * hduMatrix(
-  //    cos(TOOL_RY), 0, sin(TOOL_RY), 0,
-  //    0,            1, 0,            0,
-  //   -sin(TOOL_RY), 0, cos(TOOL_RY), 0,
-  //    0, 0, 0, 1
-  // )
+  * hduMatrix(
+     cos(TOOL_RY), 0, sin(TOOL_RY), 0,
+     0,            1, 0,            0,
+    -sin(TOOL_RY), 0, cos(TOOL_RY), 0,
+     0, 0, 0, 1
+  )
   ;
 
+// 翻转手柄z轴，使其触控笔朝向为+
+static const hduMatrix R_tool_z =
+  hduMatrix(
+     cos(M_PI), 0, sin(M_PI), 0,
+     0,            1, 0,            0,
+    -sin(M_PI), 0, cos(M_PI), 0,
+     0, 0, 0, 1
+  ) ;
 
 struct OmniState {
   hduVector3Dd position;  //3x1 vector of position
@@ -269,13 +801,33 @@ public:
     pose_msg.position[0] = state_msg.pose.position.x / 1000.0; 
     pose_msg.position[1] = state_msg.pose.position.y / 1000.0; 
     pose_msg.position[2] = state_msg.pose.position.z / 1000.0; 
-    // 姿态转换：Quaternion -> (rx, ry, rz) 
+
+    // 姿态转换：Quaternion -> (rx, ry, rz) 旋转向量
     hduVector3Dd axis; 
     double angle; 
     state->rot.toAxisAngle(axis, angle); 
     pose_msg.position[3] = axis[0] * angle; // rx 
     pose_msg.position[4] = axis[1] * angle; // ry 
     pose_msg.position[5] = axis[2] * angle; // rz 
+
+    // // 姿态转换：Quaternion -> Euler (rpy)
+    // // hduQuaternion -> Eigen quaternion
+    // Eigen::Quaterniond q_eig(
+    //     state->rot.s(),
+    //     state->rot.v()[0],
+    //     state->rot.v()[1],
+    //     state->rot.v()[2]
+    // );
+    // q_eig.normalize();
+    // // Quaternion -> rotation matrix
+    // Eigen::Matrix3d R = q_eig.toRotationMatrix();
+    // // Rotation matrix -> Euler angles (base frame, ZYX / RPY)
+    // Eigen::Vector3d rpy = R.eulerAngles(2, 1, 0);
+    // // 发布 [x, y, z, roll, pitch, yaw]
+    // pose_msg.position[3] = rpy[2];  // roll
+    // pose_msg.position[4] = rpy[1];  // pitch
+    // pose_msg.position[5] = rpy[0];  // yaw
+
     // tcp速度只发布xyz，因为角速度难以估计 
     pose_msg.velocity.resize(6); 
     pose_msg.velocity[0] = state->velocity[0] / 1000.0; 
@@ -285,6 +837,9 @@ public:
     pose_msg.velocity[4] = 0.0 / 1000.0; 
     pose_msg.velocity[5] = 0.0 / 1000.0; 
     pose_publisher.publish(pose_msg);
+
+
+
 
     if ((state->buttons[0] != state->buttons_prev[0]) or (state->buttons[1] != state->buttons_prev[1]))
     {
@@ -351,7 +906,7 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 
   // 姿态：R_B'T = Rᵀ * R_BT
   hduMatrix R_Bp = Rz_T * R_B;
-  omni_state->rot = hduQuaternion(R_Bp * R_tool);
+  omni_state->rot = hduQuaternion(R_tool_z * R_Bp * R_tool);
 
   // 速度估计（仍在 B′）
   hduVector3Dd vel_buff =

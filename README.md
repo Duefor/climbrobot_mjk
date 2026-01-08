@@ -47,3 +47,6 @@ robot_set包的cmakelist中改include_directories的路径
 注释掉touch_set包中cmakelist的catkin_package    
 进入root操作    
 编译时使用catkin_make_pkg.sh
+
+## 26/1/7
+手柄第六轴旋转的时候注意不要转到另一侧去了，否则机械臂会翻转一圈，怀疑是ik节点的问题

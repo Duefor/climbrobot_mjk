@@ -149,8 +149,6 @@
 //   return 0;
 // }
 
-
-
 #include <ros/ros.h>
 // #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Dense>
@@ -169,8 +167,8 @@ Matrix3d Kp_lin = 2.5 * Matrix3d::Identity();
 Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
 Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
 
-Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
-Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();   // 姿态只用 P，这里用0表示位姿速度恒为0
+Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();
+Matrix3d Kd_rot = 0.0 * Matrix3d::Identity();
 
 VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
@@ -192,24 +190,32 @@ ros::Subscriber sub_actual;
 ros::Subscriber sub_desired;
 ros::Publisher pub_cmd;
 
-
-Matrix3d rotvecToRot(double rx, double ry, double rz)
+// 期望位姿（旋转向量 → R）
+Matrix3d rotvecToRot(const Vector3d& r)
 {
-  Vector3d w(rx, ry, rz);
-  double theta = w.norm();
+  double theta = r.norm();
   if (theta < 1e-8)
     return Matrix3d::Identity();
-  return AngleAxisd(theta, w / theta).toRotationMatrix();
+  return AngleAxisd(theta, r / theta).toRotationMatrix();
 }
 
-
-Matrix4d poseToHomog(const VectorXd &p)
+// 实际位姿（XYZ 欧拉角 → R）
+Matrix3d eulerXYZToRot(double rx, double ry, double rz)
 {
-  Matrix4d T = Matrix4d::Identity();
-  T.block<3,3>(0,0) = rotvecToRot(p[3], p[4], p[5]);
-  T.block<3,1>(0,3) = p.head<3>();
-  return T;
+  AngleAxisd Rx(rx, Vector3d::UnitX());
+  AngleAxisd Ry(ry, Vector3d::UnitY());
+  AngleAxisd Rz(rz, Vector3d::UnitZ());
+  return (Rz * Ry * Rx).toRotationMatrix();   // 固定轴 XYZ
 }
+
+
+// Matrix4d poseToHomog(const VectorXd &p)
+// {
+//   Matrix4d T = Matrix4d::Identity();
+//   T.block<3,3>(0,0) = rotvecToRot(p[3], p[4], p[5]);
+//   T.block<3,1>(0,3) = p.head<3>();
+//   return T;
+// }
 
 
 // 李代数误差公式，求出位姿误差向量
@@ -289,10 +295,23 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     v_d = desired_vel;
   }
 
-  Matrix4d T_a = poseToHomog(a);
-  Matrix4d T_d = poseToHomog(d);
+  Matrix4d T_d = Matrix4d::Identity();
+  T_d.block<3,3>(0,0) = rotvecToRot(d.tail<3>());
+  T_d.block<3,1>(0,3) = d.head<3>();
+  Matrix4d T_a = Matrix4d::Identity();
+  T_a.block<3,3>(0,0) = eulerXYZToRot(a[3], a[4], a[5]);
+  T_a.block<3,1>(0,3) = a.head<3>();
+
   Matrix4d E = T_d * T_a.inverse();
-  VectorXd xi = se3Log(E);
+  VectorXd debug_print = se3Log(E);
+
+
+  VectorXd xi(6);
+  xi.head<3>() = T_d.block<3,1>(0,3) - T_a.block<3,1>(0,3);   // 位置误差直接相减得到
+  
+  auto xi_rot = T_d.block<3,3>(0,0) * T_a.block<3,3>(0,0).transpose();
+  xi.tail<3>() = AngleAxisd(xi_rot).axis() * AngleAxisd(xi_rot).angle();   // 姿态误差
+  
   double dt = (now - last_ctl_time).toSec();
   last_ctl_time = now;
   if (dt <= 1e-6 || dt > 0.05) return;
@@ -303,7 +322,8 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   // std::cout<<"-----------------------------------------"<<std::endl;
   // std::cout << "当前位姿指令为：" << "[" << a[0] << "," << a[1] << "," << a[2] << "," 
   //     << a[3] << "," << a[4] << "," << a[5] << "]" << std::endl;
-  auto xii = xi;
+
+  auto xii = debug_print;
   for(int i = 0; i<6; ++i)
   {
     xii[i]=std::round(xii[i]*1e7)/1e7;
@@ -339,8 +359,29 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     + Ki_lin * error_integral.head<3>()
     + Kd_lin * error_derivative.head<3>();
 
+
+
+  static Matrix3d R_d_prev = Matrix3d::Identity();
+  static bool R_d_init = false;
+  static Vector3d omega_d = Vector3d::Zero();
+  if (R_d_init)
+  {
+    Matrix3d R_delta = T_d.block<3,3>(0,0) * R_d_prev.transpose();
+    AngleAxisd aa(R_delta);
+    omega_d = aa.axis() * aa.angle() / dt;
+  }
+  else
+  {
+    R_d_init = true;
+  }
+
+  R_d_prev = T_d.block<3,3>(0,0);
+  
+
   // 姿态：P
-  v_cmd.tail<3>() =
+  Kp_rot.diagonal() << 1.5, -1.5, -1.5;
+  Kd_rot.diagonal() << 0.1, -0.1, -0.1;
+  v_cmd.tail<3>() = omega_d +
       Kp_rot * xi.tail<3>();
 
   // // --- 姿态误差 ---
