@@ -1,0 +1,52 @@
+<launch>
+    <node pkg="touch_set" type="touch_pub" name="touch_pub" output="screen" />
+    <node pkg="controller_set" type="pose_converter_m" name="pose_converter_m" output="screen" />
+    <node pkg="robot_set" type="pose_error_controller_m" name="pose_error_controller_m" output="screen" />
+    <node pkg="robot_set" type="ik_velocity_solver_m" name="ik_velocity_solver_m" output="screen" >
+        <!-- 最大关节速度比值，与robot_main中一致 -->
+        <param name="MAX_QDOT_SCALE_1" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_2" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_3" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_4" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_5" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_6" value="0.2"/>
+
+        <!-- 最大关节加速度，略小于robot_main中的 -->
+        <param name="MAX_QDDOT_1" value="1.0"/>
+        <param name="MAX_QDDOT_2" value="1.0"/>
+        <param name="MAX_QDDOT_3" value="1.0"/>
+        <param name="MAX_QDDOT_4" value="1.0"/>
+        <param name="MAX_QDDOT_5" value="1.0"/>
+        <param name="MAX_QDDOT_6" value="1.0"/>
+    </node>
+
+    <include file="$(find robot_set)/launch/robot.launch">
+        <arg name="robot_ip" value="192.168.1.199"/>
+        <arg name="pc_ip" value="192.168.1.150"/>
+        <arg name="external_control" value="$(find robot_sdk_wrapper)/resource/external_control.script"/>
+        <arg name="output_recipe" value="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
+        <arg name="input_recipe" value="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
+        <arg name="task_file" value="mjktest.task"/>
+
+        <arg name="root_joint_1" value="0.0"/>
+        <arg name="root_joint_2" value="-1.18"/>
+        <arg name="root_joint_3" value="-2.44"/>
+        <arg name="root_joint_4" value="-1.1"/>
+        <arg name="root_joint_5" value="1.57"/>
+        <arg name="root_joint_6" value="-1.57"/>
+
+        <arg name="max_qdot_scale_1" value="0.2"/>
+        <arg name="max_qdot_scale_2" value="0.2"/>
+        <arg name="max_qdot_scale_3" value="0.2"/>
+        <arg name="max_qdot_scale_4" value="0.2"/>
+        <arg name="max_qdot_scale_5" value="0.2"/>
+        <arg name="max_qdot_scale_6" value="0.2"/>
+
+        <arg name="max_qddot_1" value="1.2"/>
+        <arg name="max_qddot_2" value="1.2"/>
+        <arg name="max_qddot_3" value="1.2"/>
+        <arg name="max_qddot_4" value="1.2"/>
+        <arg name="max_qddot_5" value="1.2"/>
+        <arg name="max_qddot_6" value="1.2"/>
+    </include>
+</launch>

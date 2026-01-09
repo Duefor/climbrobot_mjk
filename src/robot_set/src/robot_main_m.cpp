@@ -15,15 +15,14 @@
 const double robot_pub_rate = 100; // 机械臂发布状态频率，注意不能大于sdk带宽，最好小于带宽的1/2
 const double robot_sdk_rate = 250; // 机械臂sdk调用频率
 
-const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
-// const std::string DEFAULT_ROBOT_IP = "192.168.1.200";
-const std::string DEFAULT_PC_IP    = "192.168.1.150";
-const std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
-const std::string output_recipe_file_address    = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
-const std::string input_recipe_file_address     = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
-const std::string task_file_address              = "mjktest.task";
+std::string DEFAULT_ROBOT_IP;   // 机械臂ip
+std::string DEFAULT_PC_IP;  // PCip
+std::string external_control_file_address;  // 外部控制文件
+std::string output_recipe_file_address; // 外部控制文件
+std::string input_recipe_file_address;  // 外部控制文件
+std::string task_file_address;    // 机械臂配置/任务文件名
 
-const ELITE::vector6d_t root_joint_pose{0.0,-1.18,-2.44,-1.1,1.57,-1.57};   // 关节初始位置
+ELITE::vector6d_t root_joint_pose;   // 关节初始位置
 
 const ELITE::vector6d_t joint_zero_speed{0.0,0.0,0.0,0.0,0.0,0.0};  // 关节速度置零
 
@@ -33,14 +32,11 @@ const double SDK_MAX_QDOT[6] = {
     23*M_PI/18, 23*M_PI/18, 23*M_PI/18
 };
 
-// 实际使用速度（1/20）
-const double MAX_QDOT[6] = {
-    SDK_MAX_QDOT[0]/10.0, SDK_MAX_QDOT[1]/10.0, SDK_MAX_QDOT[2]/10.0,
-    SDK_MAX_QDOT[3]/10.0, SDK_MAX_QDOT[4]/10.0, SDK_MAX_QDOT[5]/10.0
-};
+// 实际使用速度
+std::vector<double> MAX_QDOT(6);
 
-// 最大关节加速度
-const double MAX_QDDOT[6] = {0.8,0.8,0.8,0.8,0.8,0.8};
+// 最大关节加速度（比ik稍微大一点）
+std::vector<double> MAX_QDDOT(6);
 
 // 安全保护
 std::atomic<double> last_cmd_time{0.0};
@@ -203,6 +199,45 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(2);
     spinner.start();
     ros::NodeHandle nh;
+    std::vector<double> MAX_QDOT_SCALE(6);  // 实际使用速度的比例
+
+    ros::param::param(std::string("~DEFAULT_ROBOT_IP"), DEFAULT_ROBOT_IP, std::string("192.168.1.199"));
+    ros::param::param(std::string("~DEFAULT_PC_IP"), DEFAULT_PC_IP, std::string("192.168.1.150"));
+    ros::param::param(std::string("~external_control_file_address"), external_control_file_address, std::string("external_control.script"));
+    ros::param::param(std::string("~output_recipe_file_address"), output_recipe_file_address, std::string("output_recipe.txt"));
+    ros::param::param(std::string("~input_recipe_file_address"), input_recipe_file_address, std::string("input_recipe.txt"));
+    ros::param::param(std::string("~task_file_address"), task_file_address, std::string("mjktest.task"));
+    
+    // 机械臂初始位姿
+    for (int i = 0; i < 6; i++) {
+        double default_val = 0.0;
+        if (i == 1) default_val = -1.18;
+        if (i == 2) default_val = -2.44;
+        if (i == 3) default_val = -1.1;
+        if (i == 4) default_val = 1.57;
+        if (i == 5) default_val = -1.57;
+        ros::param::param(std::string("~root_joint_") + std::to_string(i+1), root_joint_pose[i], default_val);
+    }
+
+    // 机械臂最大关节速度比例
+    for (int i = 0; i < 6; i++) {
+        ros::param::param(std::string("~MAX_QDOT_SCALE_") + std::to_string(i+1), MAX_QDOT_SCALE[i], 0.05);
+    }
+    MAX_QDOT = {
+    SDK_MAX_QDOT[0] * MAX_QDOT_SCALE[0], 
+    SDK_MAX_QDOT[1] * MAX_QDOT_SCALE[1], 
+    SDK_MAX_QDOT[2] * MAX_QDOT_SCALE[2],
+    SDK_MAX_QDOT[3] * MAX_QDOT_SCALE[3], 
+    SDK_MAX_QDOT[4] * MAX_QDOT_SCALE[4], 
+    SDK_MAX_QDOT[5] * MAX_QDOT_SCALE[5]
+    };
+
+    // 机械臂最大关节加速度
+    for (int i = 0; i < 6; i++) {
+        ros::param::param(std::string("~MAX_QDDOT_") + std::to_string(i+1), MAX_QDDOT[i], 0.8);
+    }
+
+    
 
     EliteCSRobotSDK cs66robot(
         DEFAULT_ROBOT_IP,

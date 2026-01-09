@@ -1,0 +1,20 @@
+<launch>
+    <node pkg="touch_set" type="touch_pub" name="touch_pub" output="screen" />
+    <node pkg="controller_set" type="pose_converter_m" name="pose_converter_m" output="screen" />
+    <node pkg="robot_set" type="pose_error_controller_m" name="pose_error_controller_m" output="screen" />
+    <node pkg="robot_set" type="ik_velocity_solver_m" name="ik_velocity_solver_m" output="screen" >
+        <param name="MAX_QDOT_SCALE_1" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_2" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_3" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_4" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_5" value="0.2"/>
+        <param name="MAX_QDOT_SCALE_6" value="0.2"/>
+
+        <param name="MAX_QDDOT_1" value="1.0"/>
+        <param name="MAX_QDDOT_2" value="1.0"/>
+        <param name="MAX_QDDOT_3" value="1.0"/>
+        <param name="MAX_QDDOT_4" value="1.0"/>
+        <param name="MAX_QDDOT_5" value="1.0"/>
+        <param name="MAX_QDDOT_6" value="1.0"/>
+    </node>
+</launch>

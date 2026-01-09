@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="touch_set" type="touch_pub" name="touch_pub" output="screen" />
-    <node pkg="controller_set" type="pose_converter_m" name="pose_converter_m" output="screen" />
-    <node pkg="robot_set" type="pose_error_controller_m" name="pose_error_controller_m" output="screen" />
-    <node pkg="robot_set" type="ik_velocity_solver_test" name="ik_velocity_solver_test" output="screen" />
-</launch>

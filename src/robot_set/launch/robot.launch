@@ -1,0 +1,61 @@
+<launch>
+    <arg name="robot_ip" default="192.168.1.199"/>
+    <arg name="pc_ip" default="192.168.1.150"/>
+    <arg name="external_control" default="$(find robot_sdk_wrapper)/resource/external_control.script"/>
+    <arg name="output_recipe" default="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
+    <arg name="input_recipe" default="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
+    <arg name="task_file" default="mjktest.task"/>
+
+    <arg name="root_joint_1" default="0.0"/>
+    <arg name="root_joint_2" default="-1.18"/>
+    <arg name="root_joint_3" default="-2.44"/>
+    <arg name="root_joint_4" default="-1.1"/>
+    <arg name="root_joint_5" default="1.57"/>
+    <arg name="root_joint_6" default="-1.57"/>
+
+    <arg name="max_qdot_scale_1" default="0.2"/>
+    <arg name="max_qdot_scale_2" default="0.2"/>
+    <arg name="max_qdot_scale_3" default="0.2"/>
+    <arg name="max_qdot_scale_4" default="0.2"/>
+    <arg name="max_qdot_scale_5" default="0.2"/>
+    <arg name="max_qdot_scale_6" default="0.2"/>
+
+    <arg name="max_qddot_1" default="1.2"/>
+    <arg name="max_qddot_2" default="1.2"/>
+    <arg name="max_qddot_3" default="1.2"/>
+    <arg name="max_qddot_4" default="1.2"/>
+    <arg name="max_qddot_5" default="1.2"/>
+    <arg name="max_qddot_6" default="1.2"/>
+
+
+
+    <node pkg="robot_set" type="robot_main_m" name="robot_main_m" output="screen">
+        <param name="DEFAULT_ROBOT_IP" value="$(arg robot_ip)"/>
+        <param name="DEFAULT_PC_IP" value="$(arg pc_ip)"/>
+        <param name="external_control_file_address" value="$(arg external_control)"/>
+        <param name="output_recipe_file_address" value="$(arg output_recipe)"/>
+        <param name="input_recipe_file_address" value="$(arg input_recipe)"/>
+        <param name="task_file_address" value="$(arg task_file)"/>
+
+        <param name="root_joint_1" value="$(arg root_joint_1)"/>
+        <param name="root_joint_2" value="$(arg root_joint_2)"/>
+        <param name="root_joint_3" value="$(arg root_joint_3)"/>
+        <param name="root_joint_4" value="$(arg root_joint_4)"/>
+        <param name="root_joint_5" value="$(arg root_joint_5)"/>
+        <param name="root_joint_6" value="$(arg root_joint_6)"/>
+
+        <param name="MAX_QDOT_SCALE_1" value="$(arg max_qdot_scale_1)"/>
+        <param name="MAX_QDOT_SCALE_2" value="$(arg max_qdot_scale_2)"/>
+        <param name="MAX_QDOT_SCALE_3" value="$(arg max_qdot_scale_3)"/>
+        <param name="MAX_QDOT_SCALE_4" value="$(arg max_qdot_scale_4)"/>
+        <param name="MAX_QDOT_SCALE_5" value="$(arg max_qdot_scale_5)"/>
+        <param name="MAX_QDOT_SCALE_6" value="$(arg max_qdot_scale_6)"/>
+
+        <param name="MAX_QDDOT_1" value="$(arg max_qddot_1)"/>
+        <param name="MAX_QDDOT_2" value="$(arg max_qddot_2)"/>
+        <param name="MAX_QDDOT_3" value="$(arg max_qddot_3)"/>
+        <param name="MAX_QDDOT_4" value="$(arg max_qddot_4)"/>
+        <param name="MAX_QDDOT_5" value="$(arg max_qddot_5)"/>
+        <param name="MAX_QDDOT_6" value="$(arg max_qddot_6)"/>
+    </node>
+</launch>

@@ -137,7 +137,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${ELITE_LIB_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIRS}
-  /home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/include
+  # /home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../robot_sdk_wrapper/include
   # /home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/include
   # robot_sdk
 )

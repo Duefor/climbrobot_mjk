@@ -9,10 +9,8 @@
         "/opt/ros/noetic/include/**",
         "/usr/include/**",
         "/usr/local/include/**",
-        "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/include/**",
-        // "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/include/**",
-        "/home/duefor/climbrobot_mjk/devel/include/**"
-        // "/home/barry/workspace/climbrobot_mjk/devel/include/**"
+        "${workspaceFolder}/src/robot_sdk_wrapper/include/**",
+        "${workspaceFolder}/devel/include/**"
       ],
       "name": "ROS",
       "intelliSenseMode": "gcc-x64",

@@ -39,7 +39,6 @@
 订阅话题：`/velocity_ik/joint_vel`  
 > 该节点按照订阅话题的关节速度执行命令  
 > **该节点强停可以强制停止机械臂**
-
 ## 26/1/6
 在barry电脑中需要做的操作： 
 c_cpp_properties文件改路径名    
@@ -47,6 +46,7 @@ robot_set包的cmakelist中改include_directories的路径
 注释掉touch_set包中cmakelist的catkin_package    
 进入root操作    
 编译时使用catkin_make_pkg.sh
-
 ## 26/1/7
 手柄第六轴旋转的时候注意不要转到另一侧去了，否则机械臂会翻转一圈，怀疑是ik节点的问题
+## 26/1/8
+新想法：虽然是通过tcp遥操作的，但是可以加入关节角做辅助，让机械臂看起来和手柄更相似，否则就容易出现同一tcp位姿但是机械臂转到另一侧去了，特别是手柄大角度转动的时候

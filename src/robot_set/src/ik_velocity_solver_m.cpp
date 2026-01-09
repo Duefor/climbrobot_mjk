@@ -25,19 +25,13 @@ const double alpha[6] = {0, M_PI/2, 0, 0, M_PI/2, -M_PI/2};
 static bool ik_initialized = false;
 static Eigen::VectorXd last_qdot_ik = Eigen::VectorXd::Zero(6);
 static ros::Time last_time_ik;
-const double MAX_QDDOT[6] = {0.6, 0.6, 0.6, 0.6, 0.6, 0.6};   // 关节角加速度限额
+
+std::vector<double> MAX_QDDOT(6);   // 关节角加速度限额
 
 // sdk中关节角速度最大值，为[150，150，180，230，230，230] （°/s）
 const double SDK_MAX_QDOT[6] = {5*M_PI/6, 5*M_PI/6, M_PI, 23*M_PI/18, 23*M_PI/18, 23*M_PI/18};
 // 使用手册中最大速度的1/10
-const double M_MAX_QDOT[6] = {
-    SDK_MAX_QDOT[0] / 10.0,
-    SDK_MAX_QDOT[1] / 10.0,
-    SDK_MAX_QDOT[2] / 10.0,
-    SDK_MAX_QDOT[3] / 10.0,
-    SDK_MAX_QDOT[4] / 10.0,
-    SDK_MAX_QDOT[5] / 10.0
-};
+std::vector<double> M_MAX_QDOT(6);
 
 
 Vector3d so3Log(const Matrix3d &R)
@@ -255,6 +249,26 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ik_velocity_solver");
     ros::NodeHandle nh;
+    std::vector<double> MAX_QDOT_SCALE(6);  // 实际使用速度的比例
+
+    // 机械臂最大关节加速度
+    for (int i = 0; i < 6; i++) {
+        ros::param::param(std::string("~MAX_QDDOT_") + std::to_string(i+1), MAX_QDDOT[i], 0.6);
+    }
+
+    // 机械臂最大关节速度比例
+    for (int i = 0; i < 6; i++) {
+        ros::param::param(std::string("~MAX_QDOT_SCALE_") + std::to_string(i+1), MAX_QDOT_SCALE[i], 0.05);
+    }
+    M_MAX_QDOT = {
+    SDK_MAX_QDOT[0] * MAX_QDOT_SCALE[0], 
+    SDK_MAX_QDOT[1] * MAX_QDOT_SCALE[1], 
+    SDK_MAX_QDOT[2] * MAX_QDOT_SCALE[2],
+    SDK_MAX_QDOT[3] * MAX_QDOT_SCALE[3], 
+    SDK_MAX_QDOT[4] * MAX_QDOT_SCALE[4], 
+    SDK_MAX_QDOT[5] * MAX_QDOT_SCALE[5]
+    };
+
     pub = nh.advertise<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1);
     ros::Subscriber sub_vel = nh.subscribe("/controller/cartesian_vel", 1, cartVelCallback);
     ros::Subscriber sub_joint = nh.subscribe("/cs66/joint_states", 1, jointStateCallback);
