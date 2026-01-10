@@ -150,6 +150,8 @@ foreach(SRC_FILE ${SRC_FILES})
     # 获取文件名（不包括路径和扩展名）
     get_filename_component(FILENAME ${SRC_FILE} NAME_WE)
     add_executable(${FILENAME} ${SRC_FILE})
+    # 如果无法编译生成自定义消息可以放开这个注释
+    # add_dependencies(${FILENAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
     target_link_libraries(${FILENAME} 
         ${catkin_LIBRARIES}
         robot_sdk

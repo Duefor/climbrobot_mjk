@@ -111,6 +111,7 @@ generate_messages(
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES touch_set
+#  某些环境中只能保留这一行
  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs tf message_runtime
  DEPENDS system_lib
 )
