@@ -86,7 +86,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: base_link
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -147,4 +147,4 @@ Window Geometry:
     collapsed: false
   Width: 1200
   X: 715
-  Y: 51
+  Y: 27

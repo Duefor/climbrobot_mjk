@@ -10,6 +10,9 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+int g_sock;
+struct sockaddr_can g_addr;
+
 // 发送can帧
 void sendCanFrame(int s, struct sockaddr_can addr, int can_id, unsigned char data[], int len = 8)
 {
@@ -106,9 +109,6 @@ void motorInit(int s, struct sockaddr_can addr)
 }
 
 // ros回调函数
-int g_sock;
-struct sockaddr_can g_addr;
-
 void wheelSpeedCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
     if (msg->data.size() < 2) return;
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub = nh.subscribe("/wheel_speed_cmd", 10, wheelSpeedCallback);
     ROS_INFO("Listening /wheel_speed_cmd ...");
 
-    ros::spin();
+    ros::waitForShutdown();
 
     // 停止电机
     unsigned char stop_data[8];

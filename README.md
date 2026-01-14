@@ -40,11 +40,12 @@
 > 该节点按照订阅话题的关节速度执行命令  
 > **该节点强停可以强制停止机械臂**
 ## 26/1/6
-在barry电脑中需要做的操作： 
-c_cpp_properties文件改路径名    
-robot_set包的cmakelist中改include_directories的路径 
+在barry电脑中需要做的操作：     
+~~c_cpp_properties文件改路径名~~    
+~~robot_set包的cmakelist中改include_directories的路径~~     
 注释掉touch_set包中cmakelist的catkin_package    
-进入root操作    
+~~进入root操作~~    
+放开robot_set包的cmakelist中的add_dependencies，保证自定义msg可以被正常编译    
 编译时使用catkin_make_pkg.sh
 ## 26/1/7
 手柄第六轴旋转的时候注意不要转到另一侧去了，否则机械臂会翻转一圈，怀疑是ik节点的问题
