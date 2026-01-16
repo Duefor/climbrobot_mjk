@@ -128,6 +128,7 @@ void wheelSpeedCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "can_wheel_controller");
+    ros::NodeHandle nh;
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
