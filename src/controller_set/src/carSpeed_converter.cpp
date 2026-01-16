@@ -5,10 +5,10 @@
 #include <algorithm>
 
 // 最大速度
-constexpr double MAX_FRONT_SPEED = 1500.0;
+constexpr double MAX_FRONT_SPEED = 1000.0;
 constexpr double MAX_BACK_SPEED  = 150.0;
 
-constexpr double MAX_TURN_SPEED  = 1500.0;
+constexpr double MAX_TURN_SPEED  = 1000.0;
 
 // 转向（joint0）
 constexpr double STEER_DEADZONE = 15.0;

@@ -25,3 +25,5 @@ sudo ip link set can0 type can bitrate 500000
 启动 can0  
 sudo ip link set up can0  
 **写了一个自动化脚本，可以直接开**  
+
+## 26/1/16

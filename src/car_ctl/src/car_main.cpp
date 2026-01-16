@@ -33,7 +33,7 @@ void sendCanFrame(int s, struct sockaddr_can addr, int can_id, unsigned char dat
 void makeSpeedCommand(unsigned char *data, int rpm)
 {
     // 对象索引 0x60FF00，速度 = rpm * 500 / 3
-    int value = rpm * 500 / 3;
+    int value = rpm * 10000 / 60;
     data[0] = 0x23; data[1] = 0xFF; data[2] = 0x60; data[3] = 0x00;
     memcpy(&data[4], &value, 4);
 }
@@ -128,7 +128,8 @@ void wheelSpeedCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "can_wheel_controller");
-    ros::NodeHandle nh;
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
 
     g_sock = setupCanSocket(g_addr);
     if (g_sock < 0)

@@ -36,7 +36,7 @@ std::string default_device_name = "Default Device";   // 逻辑设备名，如�
 std::string default_omni_name = "phantom";  // 所有话题前缀
 std::string default_ref_frame = "map";  // 位姿所属坐标系
 std::string default_units = "mm";   // 决定基础单位是什么。可选mm，cm，dm，m
-int default_publish_rate = 1000;    // ros发布频率
+int default_publish_rate = 200;    // ros发布频率
 
 // 新基坐标系：B -> B'
 static const double BASE_YAW = -M_PI / 2.0;  // 绕 z 轴旋转
