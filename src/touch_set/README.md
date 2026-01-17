@@ -7,4 +7,18 @@ touch的活动范围：x[-0.21,0.21] y[-0.08,0.08] z[-0.11,0.18]
 手柄翻转轴，保证其中心与机械臂中心重合
 
 ## 26/1/16
-touch只能在x86电脑上运行，故只能使用ros分布式通讯了，touch发布频率改成了200
+touch只能在x86电脑上运行，故只能使用ros分布式通讯了，touch发布频率改成了200  
+1. 香橙派作为主控机  
+```bash
+export ROS_MASTER_URI=http://<master_ip>:11311
+export ROS_IP=<master_ip>
+# 其中master_ip为主控机ip
+roscore
+```
+2. 上位机作为从控机  
+```bash
+export ROS_MASTER_URI=http://<master_ip>:11311
+export ROS_IP=<pc_ip>
+# 其中pc_ip为本机ip
+```
+设置好后上位机连接touch设备发布话题香橙派即可看到。
