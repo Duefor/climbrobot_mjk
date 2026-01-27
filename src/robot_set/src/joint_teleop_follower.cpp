@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "joint_teleop_follower_node");
     ros::NodeHandle nh;
 
-    EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,external_control_file_address,output_recipe_file_address,input_recipe_file_address,task_file_address,250);
+    EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,output_recipe_file_address,input_recipe_file_address,task_file_address,250);
 
     if(!cs66robot.init()){
         std::cout << "Robot init false" << std::endl;

@@ -397,6 +397,7 @@ int main(int argc, char** argv)
     EliteCSRobotSDK cs66robot(
         DEFAULT_ROBOT_IP,
         DEFAULT_PC_IP,
+        true,
         external_control_file_address,
         output_recipe_file_address,
         input_recipe_file_address,

@@ -22,11 +22,12 @@ private:
     double frequency;
     std::string task_file;  //用于加载的任务（外部控制）
     bool is_move_finish;
+    ELITE::EliteDriverConfig DriverConfig;
     
 
 public:
-    // 构造函数，指定机器人IP和电脑IP，外部控制文件，rtsi文件，频率，加载任务名，部分有默认值
-    EliteCSRobotSDK(const std::string& robot_ip = "192.168.1.200", const std::string& pc_ip = "192.168.1.150",
+    // 构造函数，指定机器人IP和电脑IP，mode为false时需要外部加载taskfile。外部控制文件，rtsi文件，频率，加载任务名，部分有默认值
+    EliteCSRobotSDK(const std::string& robot_ip, const std::string& pc_ip, bool mode,
     const std::string& external_control_script = "external_control.script",
     const std::string& output_recipe = "output_recipe.txt",
     const std::string& input_recipe = "input_recipe.txt",
@@ -57,11 +58,17 @@ public:
     // 获取当前末端笛卡尔速度，单位m/s
     ELITE::vector6d_t getCurrentTCPVelocity();
 
-    // 关节移动，暂用轨迹跟踪控制实现，单位rad，注意实际运行时间可能会有变化，比如说机械臂运行一段时间后的时间运行时间比time长
+    // 关节移动，暂用轨迹跟踪控制实现，单位rad
     bool moveJoint(const ELITE::vector6d_t& joint, float time = 30.0, float blend_radius = 0.05);
 
-    // 笛卡尔空间直线运动，输入末端位姿移动，单位m，rad，注意实际运行时间可能会有变化，比如说机械臂运行一段时间后的时间运行时间比time长
+    // 关节移动（使用servo），目标关节角，到达时间s，控制周期
+    bool moveJoint_servo(const ELITE::vector6d_t& joint, float arrive_time = 30.0, float servo_period = 0.004);
+
+    // 笛卡尔空间直线运动，输入末端位姿移动，单位m，rad
     bool moveLine(const ELITE::vector6d_t& pose, float time = 30.0, float blend_radius = 0.05);
+
+    // 笛卡尔空间直线运动（使用servo），目标tcp，到达时间s，控制周期
+    bool moveLine_servo(const ELITE::vector6d_t& joint, float arrive_time = 30.0, float servo_period = 0.004);
 
     // 停止运动
     bool stopMove();

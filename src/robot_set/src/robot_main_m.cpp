@@ -17,6 +17,7 @@ const double robot_sdk_rate = 250; // 机械臂sdk调用频率
 
 std::string DEFAULT_ROBOT_IP;   // 机械臂ip
 std::string DEFAULT_PC_IP;  // PCip
+bool MODE;
 std::string external_control_file_address;  // 外部控制文件
 std::string output_recipe_file_address; // 外部控制文件
 std::string input_recipe_file_address;  // 外部控制文件
@@ -203,6 +204,7 @@ int main(int argc, char** argv)
 
     ros::param::param(std::string("~DEFAULT_ROBOT_IP"), DEFAULT_ROBOT_IP, std::string("192.168.1.199"));
     ros::param::param(std::string("~DEFAULT_PC_IP"), DEFAULT_PC_IP, std::string("192.168.1.150"));
+    ros::param::param(std::string("~MODE"), MODE, true);
     ros::param::param(std::string("~external_control_file_address"), external_control_file_address, std::string("external_control.script"));
     ros::param::param(std::string("~output_recipe_file_address"), output_recipe_file_address, std::string("output_recipe.txt"));
     ros::param::param(std::string("~input_recipe_file_address"), input_recipe_file_address, std::string("input_recipe.txt"));
@@ -242,6 +244,7 @@ int main(int argc, char** argv)
     EliteCSRobotSDK cs66robot(
         DEFAULT_ROBOT_IP,
         DEFAULT_PC_IP,
+        MODE,
         external_control_file_address,
         output_recipe_file_address,
         input_recipe_file_address,
@@ -264,7 +267,8 @@ int main(int argc, char** argv)
         max_joint = std::max(abs(root_joint_pose[i] - current_joint_pose[i]) , max_joint);
     }
     arrive_time = std::max(max_joint / MAX_QDOT[0], 3.0);
-    cs66robot.moveJoint(root_joint_pose, arrive_time);
+    // cs66robot.moveJoint(root_joint_pose, arrive_time);
+    cs66robot.moveJoint_servo(root_joint_pose, arrive_time);
     std::cout << "机械臂已移动到初始位置" << std::endl;
 
     ros::Subscriber sub = nh.subscribe<sensor_msgs::JointState>("/velocity_ik/joint_vel", 1, jointCallback);

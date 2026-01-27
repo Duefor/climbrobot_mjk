@@ -1,6 +1,7 @@
 <launch>
     <arg name="robot_ip" default="192.168.1.199"/>
     <arg name="pc_ip" default="192.168.1.150"/>
+    <arg name="mode" default="true"/>
     <arg name="external_control" default="$(find robot_sdk_wrapper)/resource/external_control.script"/>
     <arg name="output_recipe" default="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
     <arg name="input_recipe" default="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
@@ -32,6 +33,7 @@
     <node pkg="robot_set" type="robot_main_m" name="robot_main_m" output="screen">
         <param name="DEFAULT_ROBOT_IP" value="$(arg robot_ip)"/>
         <param name="DEFAULT_PC_IP" value="$(arg pc_ip)"/>
+        <param name="MODE" value="$(arg mode)"/>
         <param name="external_control_file_address" value="$(arg external_control)"/>
         <param name="output_recipe_file_address" value="$(arg output_recipe)"/>
         <param name="input_recipe_file_address" value="$(arg input_recipe)"/>

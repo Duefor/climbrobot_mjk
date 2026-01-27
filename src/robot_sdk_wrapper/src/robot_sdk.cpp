@@ -1,13 +1,63 @@
 #include "robot_sdk_wrapper/robot_sdk.h"
 #include <iostream>
+#include <cmath>
+#include <chrono>
 
 // 构造函数
-EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string& pc_ip, const std::string& external_control_script,
-                         const std::string& output_recipe, const std::string& input_recipe, const std::string& task_file ,double frequency) :
-        robot_ip(robot_ip), pc_ip(pc_ip), external_control_script(external_control_script),
-        output_recipe(output_recipe), input_recipe(input_recipe), task_file(task_file), frequency(frequency) {
+// EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string& pc_ip, const std::string& external_control_script, double mode,
+//                          const std::string& output_recipe, const std::string& input_recipe, const std::string& task_file ,double frequency) :
+//         robot_ip(robot_ip), pc_ip(pc_ip), external_control_script(external_control_script),
+//         output_recipe(output_recipe), input_recipe(input_recipe), task_file(task_file), frequency(frequency) {
+//     // 初始化成员变量
+//     is_move_finish = false;
+//     DriverConfig.robot_ip = robot_ip;
+//     DriverConfig.local_ip = pc_ip;
+//     DriverConfig.script_file_path = external_control_script;
+//     DriverConfig.headless_mode = false;
+//     // 剩余参数用默认
+//     DriverConfig.script_sender_port = 50002;
+//     DriverConfig.reverse_port = 50001;
+//     DriverConfig.trajectory_port = 50003;
+//     DriverConfig.script_command_port = 50004;
+//     DriverConfig.servoj_time = 0.008;
+//     DriverConfig.servoj_lookahead_time = 0.1;
+//     DriverConfig.servoj_gain = 300;
+//     DriverConfig.stopj_acc = 8;
+//     DriverConfig.servoj_queue_pre_recv_size = 10;
+//     DriverConfig.servoj_queue_pre_recv_timeout = -1;
+// }
+
+EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string& pc_ip, bool mode,
+    const std::string& external_control_script,
+    const std::string& output_recipe,
+    const std::string& input_recipe,
+    const std::string& task_file,
+    double frequency):
+    robot_ip(robot_ip),
+    pc_ip(pc_ip), 
+    external_control_script(external_control_script),
+    output_recipe(output_recipe), 
+    input_recipe(input_recipe), 
+    task_file(task_file), 
+    frequency(frequency) {
     // 初始化成员变量
     is_move_finish = false;
+    DriverConfig.robot_ip = robot_ip;
+    DriverConfig.local_ip = pc_ip;
+    DriverConfig.script_file_path = external_control_script;
+    DriverConfig.headless_mode = mode;
+    // 剩余参数用默认
+    DriverConfig.script_sender_port = 50002;
+    DriverConfig.reverse_port = 50001;
+    DriverConfig.trajectory_port = 50003;
+    DriverConfig.script_command_port = 50004;
+    DriverConfig.servoj_time = 0.008;
+    DriverConfig.servoj_lookahead_time = 0.1;
+    DriverConfig.servoj_gain = 300;
+    DriverConfig.stopj_acc = 8;
+    DriverConfig.servoj_queue_pre_recv_size = 10;
+    DriverConfig.servoj_queue_pre_recv_timeout = -1;
+
 }
 
 // 析构函数
@@ -30,7 +80,8 @@ EliteCSRobotSDK::~EliteCSRobotSDK() {
 // 执行初始化操作
 bool EliteCSRobotSDK::init() {
     std::cout << "Initializing..." << std::endl;
-    s_driver = std::make_unique<ELITE::EliteDriver>(robot_ip, pc_ip, external_control_script);
+    // s_driver = std::make_unique<ELITE::EliteDriver>(robot_ip, pc_ip, external_control_script);
+    s_driver = std::make_unique<ELITE::EliteDriver>(DriverConfig);
     s_rtsi_io = std::make_unique<ELITE::RtsiIOInterface>(output_recipe, input_recipe, frequency);
     s_dashboard = std::make_unique<ELITE::DashboardClient>();
     s_rtsi_client = std::make_unique<ELITE::RtsiClientInterface>();
@@ -84,12 +135,21 @@ bool EliteCSRobotSDK::start() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    // 执行外部控制文件
-    if (!s_dashboard->playProgram()) {
-        std::cout << "Program run false" << std::endl;
-        return false;
+    if (DriverConfig.headless_mode) {
+        if (!s_driver->isRobotConnected()) {
+            if (!s_driver->sendExternalControlScript()) {
+                std::cout << "Fail to send external control script" << std::endl;
+                return false;
+            }
+        }
+    } else {
+        if (!DriverConfig.headless_mode && !s_dashboard->playProgram()) {
+            std::cout << "Fail to play program" << std::endl;
+            return false;
+        }
     }
-    std::cout << "Program run" << std::endl;
+
+    std::cout << "ExternalControl Running" << std::endl;
 
     // 循环不断尝试连接驱动，program run后才能连接驱动
     while (!s_driver->isRobotConnected()) {
@@ -179,6 +239,48 @@ bool EliteCSRobotSDK::moveJoint(const ELITE::vector6d_t& joint, float time, floa
     }
 
     std::cout << "Robot Joint Move Finished" << std::endl;
+    return true;
+}
+
+bool EliteCSRobotSDK::moveJoint_servo(const ELITE::vector6d_t& joint, float arrive_time, float servo_period){
+    ELITE::vector6d_t q_start = s_rtsi_io->getActualJointPositions();
+
+    int N = std::ceil(arrive_time / servo_period);
+    if (N <= 0) return false;
+
+    auto next = std::chrono::steady_clock::now();
+    auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(servo_period));
+
+    for (int i = 1; i <= N; ++i) {
+        double t = i * servo_period;
+        double tau = t / arrive_time;
+        if (tau > 1.0) tau = 1.0;
+
+        // 三次时间标定（推荐）
+        double s = 3 * tau * tau - 2 * tau * tau * tau;
+
+        ELITE::vector6d_t q_cmd;
+        for (int j = 0; j < 6; ++j) {
+            q_cmd[j] = q_start[j] + s * (joint[j] - q_start[j]);
+        }
+
+        if (!s_driver->writeServoj(q_cmd, 100)) {
+            return false;
+        }
+
+        next += period;
+        std::this_thread::sleep_until(next);
+    }
+
+    for (int i = 1; i <= 15; ++i) {
+        if (!s_driver->writeServoj(joint, 100)) {
+            return false;
+        }
+
+        next += period;
+        std::this_thread::sleep_until(next);
+    }
+
     return true;
 }
 

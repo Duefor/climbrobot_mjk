@@ -23,7 +23,7 @@ const std::string task_file_address = "mjktest.task";
 int main(int argc, char** argv)
 {
 
-    EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,external_control_file_address,
+    EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
                     output_recipe_file_address,input_recipe_file_address,task_file_address,250);
 
     if(!cs66robot.init()){

@@ -21,4 +21,4 @@ export ROS_MASTER_URI=http://<master_ip>:11311
 export ROS_IP=<pc_ip>
 # 其中pc_ip为本机ip
 ```
-设置好后上位机连接touch设备发布话题香橙派即可看到。
+设置好后上位机连接touch设备发布话题香橙派即可看到。   
