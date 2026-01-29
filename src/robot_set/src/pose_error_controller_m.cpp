@@ -201,6 +201,17 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   else {
     beta = 1.0; // 机械臂已经可以合理跟随手柄，将权重置1
   }
+  std::cout << "当前跟随权重：" << beta << std::endl;
+  //////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////
+  static double alpha;   // 前馈权重（0~1）=
+  static double E_FF_ON  = 0.15;   // 误差大于这个，前馈全开
+
+  if (e_norm >= E_FF_ON)
+    alpha = 1.0;
+  else
+    alpha = (e_norm) / (E_FF_ON);
   //////////////////////////////////////////////////////
 
   // std::cout<<xi<<std::endl;
@@ -239,7 +250,7 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   VectorXd v_cmd = VectorXd::Zero(6);
   // 平移：PID
   v_cmd.head<3>() =
-      beta * (v_d.head<3>()
+      beta * (alpha * v_d.head<3>()
     + Kp_lin * xi.head<3>()
     + Ki_lin * error_integral.head<3>()
     + Kd_lin * error_derivative.head<3>());
