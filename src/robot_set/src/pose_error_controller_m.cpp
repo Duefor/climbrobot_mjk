@@ -8,16 +8,22 @@
 
 using namespace Eigen;
 
-
-// 0.5, 0.5, 0.5, 0.5, 0.5, 0.5;
-// 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
 // 临时pid参数
-Matrix3d Kp_lin = 2.5 * Matrix3d::Identity();
-Matrix3d Ki_lin = 0.01 * Matrix3d::Identity();
-Matrix3d Kd_lin = 0.3 * Matrix3d::Identity();
+double Kp_lin_n;
+double Ki_lin_n;
+double Kd_lin_n;
+Matrix3d Kp_lin;
+Matrix3d Ki_lin;
+Matrix3d Kd_lin;
 
-Matrix3d Kp_rot = 0.0 * Matrix3d::Identity();
-Matrix3d Kvir_rot = 0.0 * Matrix3d::Identity();
+double Kp_rot_n;
+double Kvir_rot_n;
+Matrix3d Kp_rot;
+Matrix3d Kvir_rot;
+
+double beta = 0.0;  // 误差权重参数
+double Equal1;
+double Equal2;
 
 VectorXd desired_pose(6); // 期望tcp位姿
 VectorXd desired_vel(6);  // 期望tcp速度
@@ -140,6 +146,7 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
     error_prev.setZero();
     last_ctl_time = now;
     R_d_init = false;
+    beta = 0.0;
     return;
   }
 
@@ -172,21 +179,43 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   last_ctl_time = now;
   if (dt <= 1e-6 || dt > 0.05) return;
   
+  ///////////////////////////////////////////////////////
+  // 机械臂权重跟随，防止机械臂初始化时失控
+  double e_norm = xi.head<3>().norm();   // 只用平移误差
+  std::cout << "平移误差为：" << e_norm << std::endl;
 
+  if(beta < 0.99) {
+    double beta_target;
+    if (e_norm <= Equal1)
+      beta_target = 1.0;
+    else if (e_norm >= Equal2)
+      beta_target = 0.0;
+    else
+      beta_target = (Equal2 - e_norm) / (Equal2 - Equal1);
+
+    double tau = 0.3;   // 对齐时间常数（秒，0.2~0.5 很合适）
+    double beta_dot = (beta_target - beta) / tau;
+    beta += beta_dot * dt;
+    beta = std::clamp(beta, 0.0, 1.0);
+  }
+  else {
+    beta = 1.0; // 机械臂已经可以合理跟随手柄，将权重置1
+  }
+  //////////////////////////////////////////////////////
 
   // std::cout<<xi<<std::endl;
   // std::cout<<"-----------------------------------------"<<std::endl;
   // std::cout << "当前位姿指令为：" << "[" << a[0] << "," << a[1] << "," << a[2] << "," 
   //     << a[3] << "," << a[4] << "," << a[5] << "]" << std::endl;
 
-  auto xii = debug_print;
-  for(int i = 0; i<6; ++i)
-  {
-    xii[i]=std::round(xii[i]*1e7)/1e7;
-  }
-  std::cout<<std::fixed<<std::setprecision(7);
-  std::cout<<"原始误差:"<<std::endl<<xii<<std::endl;
-  std::cout<<"-----------------------------------------"<<std::endl;
+  // auto xii = debug_print;
+  // for(int i = 0; i<6; ++i)
+  // {
+  //   xii[i]=std::round(xii[i]*1e7)/1e7;
+  // }
+  // std::cout<<std::fixed<<std::setprecision(7);
+  // std::cout<<"原始误差:"<<std::endl<<xii<<std::endl;
+  // std::cout<<"-----------------------------------------"<<std::endl;
   
 
   // 积分项（只对平移）
@@ -210,10 +239,10 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   VectorXd v_cmd = VectorXd::Zero(6);
   // 平移：PID
   v_cmd.head<3>() =
-      v_d.head<3>()
+      beta * (v_d.head<3>()
     + Kp_lin * xi.head<3>()
     + Ki_lin * error_integral.head<3>()
-    + Kd_lin * error_derivative.head<3>();
+    + Kd_lin * error_derivative.head<3>());
 
   // 制造虚拟角速度（tcp空间），因为touch无法发布角速度
   if (R_d_init)
@@ -231,10 +260,8 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   
 
   // 姿态：虚拟加速度 + P
-  Kvir_rot.diagonal() << 1.0, 1.0, 1.0;
-  Kp_rot.diagonal() << 1.5, 1.5, 1.5;
-  v_cmd.tail<3>() = Kvir_rot * virtual_rotVel +
-      Kp_rot * xi.tail<3>();
+  v_cmd.tail<3>() = beta * (Kvir_rot * virtual_rotVel +
+      Kp_rot * xi.tail<3>());
 
   // // --- 姿态误差 ---
   // Matrix3d R_a = T_a.block<3,3>(0,0);
@@ -264,6 +291,24 @@ int main(int argc, char** argv)
 
   ros::init(argc, argv, "pose_error_controller");
   ros::NodeHandle nh;
+
+  ros::param::param(std::string("~KP_LIN_N"), Kp_lin_n, double(2.5));
+  ros::param::param(std::string("~KI_LIN_N"), Ki_lin_n, double(0.01));
+  ros::param::param(std::string("~KD_LIN_N"), Kd_lin_n, double(0.3));
+
+  ros::param::param(std::string("~KP_ROT_N"), Kp_rot_n, double(1.5));
+  ros::param::param(std::string("~KVIR_ROT_N"), Kvir_rot_n, double(1.0));
+
+  // 对齐阈值，tcp末端与期望末端的距离（误差）
+  ros::param::param(std::string("~EQUAL1"), Equal1, double(0.02));
+  ros::param::param(std::string("~EQUAL2"), Equal2, double(0.43));
+
+  Kp_lin = Kp_lin_n * Matrix3d::Identity();
+  Ki_lin = Ki_lin_n * Matrix3d::Identity();
+  Kd_lin = Kd_lin_n * Matrix3d::Identity();
+
+  Kp_rot = Kp_rot_n * Matrix3d::Identity();
+  Kvir_rot = Kvir_rot_n * Matrix3d::Identity();
 
   desired_pose.setZero();
   desired_vel.setZero();

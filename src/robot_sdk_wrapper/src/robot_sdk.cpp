@@ -106,19 +106,39 @@ bool EliteCSRobotSDK::init() {
 
 // 启动机械臂相关服务
 bool EliteCSRobotSDK::start() {
-    // 加载任务文件
-    if (!s_dashboard->loadTask(task_file)) {
-        std::cout << "Could not load  " << task_file.c_str() << std::endl;
-        return false;
+    if(DriverConfig.headless_mode)
+    {
+        if(!EliteCSRobotSDK::startMode1())
+        {
+            std::cout << "Mode 1 (external) start error" << std::endl;
+        }
     }
-    std::string task = s_dashboard->getTaskPath();
-    if (task!= task_file) {
-        std::cout << "Not load right task" << std::endl;
-        return false;
-    } else {
-        std::cout << "Load task:" << task << std::endl;
+    else
+    {
+        if(!EliteCSRobotSDK::startMode2())
+        {
+            std::cout << "Mode 2 (task) start error" << std::endl;
+        }
     }
 
+    // 循环不断尝试连接驱动，program run后才能连接驱动
+    while (!s_driver->isRobotConnected()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "Connecting Driver..." << std::endl;
+    }
+    std::cout << "Driver connected" << std::endl;
+
+    // 设置轨迹跟踪回调函数。机械臂是否移动完成
+    s_driver->setTrajectoryResultCallback([&](ELITE::TrajectoryMotionResult result) {
+        if (result == ELITE::TrajectoryMotionResult::SUCCESS) {
+            is_move_finish = true;
+        }
+    });
+
+    return true;
+}
+
+bool EliteCSRobotSDK::startMode1() {
     // 开机
     if (!s_dashboard->powerOn()) {
         std::cout << "Robot power on false" << std::endl;
@@ -135,35 +155,51 @@ bool EliteCSRobotSDK::start() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    if (DriverConfig.headless_mode) {
-        if (!s_driver->isRobotConnected()) {
-            if (!s_driver->sendExternalControlScript()) {
-                std::cout << "Fail to send external control script" << std::endl;
-                return false;
-            }
-        }
-    } else {
-        if (!DriverConfig.headless_mode && !s_dashboard->playProgram()) {
-            std::cout << "Fail to play program" << std::endl;
+    // 发送外部控制文件
+    if (!s_driver->isRobotConnected()) {
+        if (!s_driver->sendExternalControlScript()) {
+            std::cout << "Fail to send external control script" << std::endl;
             return false;
         }
     }
+    return true;
+}
 
-    std::cout << "ExternalControl Running" << std::endl;
-
-    // 循环不断尝试连接驱动，program run后才能连接驱动
-    while (!s_driver->isRobotConnected()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "Connecting Driver..." << std::endl;
+bool EliteCSRobotSDK::startMode2() {
+    // 加载任务文件
+    if (!s_dashboard->loadTask(task_file)) {
+        std::cout << "Could not load  " << task_file.c_str() << std::endl;
+        return false;
     }
-    std::cout << "Driver connected" << std::endl;
+    std::string task = s_dashboard->getTaskPath();
+    if (task!= task_file) {
+        std::cout << "Not load right task" << std::endl;
+        return false;
+    } else {
+        std::cout << "Load task:" << task << std::endl;
+    }
+    // 开机
+    if (!s_dashboard->powerOn()) {
+        std::cout << "Robot power on false" << std::endl;
+        return false;
+    }
+    std::cout << "Robot power on" << std::endl;
 
-    // 设置轨迹跟踪回调函数。机械臂是否移动完成
-    s_driver->setTrajectoryResultCallback([&](ELITE::TrajectoryMotionResult result) {
-        if (result == ELITE::TrajectoryMotionResult::SUCCESS) {
-            is_move_finish = true;
-        }
-    });
+    // 释放抱闸
+    if (!s_dashboard->brakeRelease()) {
+        std::cout << "Robot brake released false" << std::endl;
+        return false;
+    }
+    std::cout << "Robot brake released" << std::endl;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    if (!s_dashboard->playProgram()) {
+        std::cout << "Robot playProgram false" << std::endl;
+        return false;
+    }
+
+    std::cout << "Robot playProgram" << std::endl;
 
     return true;
 }

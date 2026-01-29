@@ -87,4 +87,7 @@ public:
 
     void test();
 
+private:
+    bool startMode1();
+    bool startMode2();
 };

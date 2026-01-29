@@ -1,7 +1,44 @@
 <launch>
     <node pkg="touch_set" type="touch_pub" name="touch_pub" output="screen" />
-    <node pkg="controller_set" type="pose_converter_m" name="pose_converter_m" output="screen" />
-    <node pkg="robot_set" type="pose_error_controller_m" name="pose_error_controller_m" output="screen" />
+    <node pkg="controller_set" type="pose_converter_m" name="pose_converter_m" output="screen" >
+        <!-- 手柄初始位姿和极限位姿 -->
+        <param name="H_INIT_1" value="0.0018713378906249911"/>
+        <param name="H_INIT_2" value="0.0"/>
+        <param name="H_INIT_3" value="-0.06545825958251954"/>
+
+        <param name="H_MAX_1" value="0.18"/>
+        <param name="H_MAX_2" value="0.21"/>
+        <param name="H_MAX_3" value="0.18"/>
+
+        <param name="H_MIN_1" value="0.0018713378906249911"/>
+        <param name="H_MIN_2" value="-0.21"/>
+        <param name="H_MIN_3" value="-0.1"/>
+        <!-- 机械臂初始位姿和极限位姿 -->
+        <param name="R_INIT_1" value="0.28"/>
+        <param name="R_INIT_2" value="-0.15"/>
+        <param name="R_INIT_3" value="0.28"/>
+
+        <param name="R_MAX_1" value="0.63"/>
+        <param name="R_MAX_2" value="0.26"/>
+        <param name="R_MAX_3" value="0.65"/>
+
+        <param name="R_MIN_1" value="0.28"/>
+        <param name="R_MIN_2" value="-0.63"/>
+        <param name="R_MIN_3" value="0.18"/>
+        <!-- 模式0：机械臂姿态保持垂直工作姿态；模式1：机械臂姿态跟随 -->
+        <param name="CONTROL_MODE" value="0"/>
+    </node>
+    <node pkg="robot_set" type="pose_error_controller_m" name="pose_error_controller_m" output="screen" >
+        <!-- 位置和姿态的pid参数 -->
+        <param name="KP_LIN_N" value="2.5"/>
+        <param name="KI_LIN_N" value="0.01"/>
+        <param name="KD_LIN_N" value="0.3"/>
+        <param name="KP_ROT_N" value="1.5"/>
+        <param name="KVIR_ROT_N" value="1.0"/>
+        <!-- 对齐阈值，tcp末端与期望末端的距离（误差） -->
+        <param name="EQUAL1" value="0.18"/>
+        <param name="EQUAL2" value="0.18"/>
+    </node>
     <node pkg="robot_set" type="ik_velocity_solver_m" name="ik_velocity_solver_m" output="screen" >
         <!-- 最大关节速度比值，与robot_main中一致 -->
         <param name="MAX_QDOT_SCALE_1" value="0.2"/>

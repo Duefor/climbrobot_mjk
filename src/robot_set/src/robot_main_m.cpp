@@ -266,7 +266,8 @@ int main(int argc, char** argv)
     {
         max_joint = std::max(abs(root_joint_pose[i] - current_joint_pose[i]) , max_joint);
     }
-    arrive_time = std::max(max_joint / MAX_QDOT[0], 3.0);
+    arrive_time = std::max(2.0 * max_joint / MAX_QDOT[0], 3.0);
+    std::cout << "运行到初始位姿时间为：" << arrive_time << std::endl;
     // cs66robot.moveJoint(root_joint_pose, arrive_time);
     cs66robot.moveJoint_servo(root_joint_pose, arrive_time);
     std::cout << "机械臂已移动到初始位置" << std::endl;

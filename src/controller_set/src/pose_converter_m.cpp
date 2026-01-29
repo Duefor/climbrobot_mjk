@@ -10,14 +10,16 @@ using Eigen::Vector3d;
 const double EPS = 1e-6;
 
 // 手柄初始位置，极限位置
-Vector3d H_INIT(0.0018713378906249911,  0.0, -0.06545825958251954);
-Vector3d H_MAX( 0.18,  0.21,  0.18);
-Vector3d H_MIN(0.0018713378906249911, -0.21, -0.1);
+Vector3d H_INIT;
+Vector3d H_MAX;
+Vector3d H_MIN;
 
 // 机械臂初始位置，极限位置
-Vector3d R_INIT(0.28, -0.15, 0.28);
-Vector3d R_MAX(0.63,  0.26,  0.65);
-Vector3d R_MIN(0.28, -0.63,  0.18);
+Vector3d R_INIT;
+Vector3d R_MAX;
+Vector3d R_MIN;
+
+int CONTROL_MODE;
 
 ros::Publisher robot_pub;
 
@@ -93,12 +95,23 @@ void hapticCallback(const robot_set::TCPState::ConstPtr& msg)
     out.position[0] = r_pos[0];
     out.position[1] = r_pos[1];
     out.position[2] = r_pos[2];
-    // out.position[3] = 3.14;
-    // out.position[4] = 0.0;
-    // out.position[5] = 0.0;
-    out.position[3] = h_rot[0];
-    out.position[4] = h_rot[1];
-    out.position[5] = h_rot[2];
+    switch (CONTROL_MODE) {
+        case 0:
+            out.position[3] = 3.14;
+            out.position[4] = 0.0;
+            out.position[5] = 0.0;
+            break;
+        case 1:
+            out.position[3] = h_rot[0];
+            out.position[4] = h_rot[1];
+            out.position[5] = h_rot[2];
+            break;
+        default:
+            out.position[3] = 3.14;
+            out.position[4] = 0.0;
+            out.position[5] = 0.0;
+            break;
+    }
 
     // velocity（只映射 xyz，其余清零）
     out.velocity[0] = r_vel[0];
@@ -118,6 +131,52 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "haptic_to_robot_mapping");
     ros::NodeHandle nh;
+
+    // 手柄初始位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.0018713378906249911;
+        if (i == 1) default_val = 0.0;
+        if (i == 2) default_val = -0.06545825958251954;
+        ros::param::param(std::string("~H_INIT_") + std::to_string(i+1), H_INIT(i), default_val);
+    }
+    // 手柄极限最大位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.18;
+        if (i == 1) default_val = 0.21;
+        if (i == 2) default_val = 0.18;
+        ros::param::param(std::string("~H_MAX_") + std::to_string(i+1), H_MAX(i), default_val);
+    }
+    // 手柄极限最小位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.0018713378906249911;
+        if (i == 1) default_val = -0.21;
+        if (i == 2) default_val = -0.1;
+        ros::param::param(std::string("~H_MIN_") + std::to_string(i+1), H_MIN(i), default_val);
+    }
+    // 机械臂初始位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.28;
+        if (i == 1) default_val = -0.15;
+        if (i == 2) default_val = 0.28;
+        ros::param::param(std::string("~R_INIT_") + std::to_string(i+1), R_INIT(i), default_val);
+    }
+    // 机械臂极限最大位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.63;
+        if (i == 1) default_val = 0.26;
+        if (i == 2) default_val = 0.65;
+        ros::param::param(std::string("~R_MAX_") + std::to_string(i+1), R_MAX(i), default_val);
+    }
+    // 机械臂极限最小位姿
+    for (int i = 0; i < 3; i++) {
+        double default_val = 0.28;
+        if (i == 1) default_val = -0.63;
+        if (i == 2) default_val = 0.18;
+        ros::param::param(std::string("~R_MIN_") + std::to_string(i+1), R_MIN(i), default_val);
+    }
+    // 映射模式
+    ros::param::param(std::string("~CONTROL_MODE"), CONTROL_MODE, int(0));
+
 
     ros::Subscriber haptic_sub = nh.subscribe("/phantom/pose", 10, hapticCallback);
 

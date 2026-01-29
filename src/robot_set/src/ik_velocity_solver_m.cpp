@@ -198,6 +198,28 @@ void cartVelCallback(const robot_set::TCPState::ConstPtr &msg)
     // 防止异常 dt
     if (dt < 1e-4) dt = 1e-4;
 
+    // /////////////////////////////////////////////////////
+    // // 关节速度一阶低通滤波
+    // static bool qdot_filt_initialized = false;
+    // static Eigen::VectorXd qdot_filt = Eigen::VectorXd::Zero(6);
+    // double fc = 6.0;                 // 截止频率 Hz（5~8 推荐）
+    // double omega = 2.0 * M_PI * fc;
+    // double alpha = omega * dt / (1.0 + omega * dt);
+
+    // if (!qdot_filt_initialized)
+    // {
+    //     qdot_filt = qdot;
+    //     qdot_filt_initialized = true;
+    // }
+    // else
+    // {
+    //     qdot_filt = qdot_filt + alpha * (qdot - qdot_filt);
+    // }
+
+    // // 用滤波后的速度替换
+    // qdot = qdot_filt;
+    // //////////////////////////////////////////////////
+
 
     // 整体关节速度缩放，这一步是为了保证整体关节速度缩放，不会导致最终tcp速度扭曲
     auto MAX_QDOT = M_MAX_QDOT;
