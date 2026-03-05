@@ -37,6 +37,47 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
+    // 读取当前关节角
+    auto current = cs66robot.getCurrentJoint();
+
+    if (current.size() != 6)
+    {
+        std::cout << "Joint read failed\n";
+        return 0;
+    }
+
+    // 构造轨迹
+    std::vector<EliteCSRobotSDK::TrajectoryPoint> traj;
+
+    EliteCSRobotSDK::TrajectoryPoint p0;
+    p0.positions = current;
+    ELITE::vector6d_t zero;
+    p0.velocities = zero;
+    p0.accelerations = zero;
+    p0.time_from_start = 0.0;
+
+    EliteCSRobotSDK::TrajectoryPoint p1;
+    p1.positions = current;
+
+    // 目标：第一个关节 +20度
+    p1.positions[0] += 20.0 * M_PI / 180.0;
+
+    p1.velocities = zero;
+    p1.accelerations = zero;
+    p1.time_from_start = 4.0;   // 4秒到达
+
+    traj.push_back(p0);
+    traj.push_back(p1);
+
+    std::cout << "Start trajectory execution...\n";
+
+    bool ok = cs66robot.ExecuteJointTrajectory(traj, 200.0);
+
+    if (ok)
+        std::cout << "Trajectory finished successfully\n";
+    else
+        std::cout << "Trajectory failed\n";
+
     // auto start = std::chrono::steady_clock::now();
     // ELITE::vector6d_t startline = cs66robot.getCurrentTCPPose();
     // startline[2] += 0.05;
@@ -45,18 +86,20 @@ int main(int argc, char** argv)
     // std::chrono::duration<double> elapsed_seconds = end - start;
     // std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
 
-    ELITE::vector6d_t vec{0.0,0.0,0.01,0.0,0.0,0.0};
-    cs66robot.lineSpeed(vec);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    auto actualvec = cs66robot.getCurrentTCPVelocity();
-    std::cout << "当前tcp速度为：";
-    for(int i=0; i<6; i++)
-    {
-        std::cout << actualvec[i] << ",";
-    }
-    std::cout << std::endl;
+    // ELITE::vector6d_t vec{0.0,0.0,0.01,0.0,0.0,0.0};
+    // cs66robot.lineSpeed(vec);
+    // std::this_thread::sleep_for(std::chrono::seconds(2));
+    // auto actualvec = cs66robot.getCurrentTCPVelocity();
+    // std::cout << "当前tcp速度为：";
+    // for(int i=0; i<6; i++)
+    // {
+    //     std::cout << actualvec[i] << ",";
+    // }
+    // std::cout << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // std::this_thread::sleep_for(std::chrono::seconds(2));
+
+
     cs66robot.disconnect();
 
     return 0;

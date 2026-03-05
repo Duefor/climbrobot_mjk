@@ -449,3 +449,79 @@ bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, 
     if(!s_driver->writeServoj(pos,timeout_ms,cartesian,queue_mode)) return false;
     return true;
 }
+
+bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq)
+{
+    if (traj.empty())
+        return false;
+
+    double period = 1.0 / control_freq;
+
+    auto start = std::chrono::steady_clock::now();
+
+    while (true)
+    {
+        auto now = std::chrono::steady_clock::now();
+        double t = std::chrono::duration<double>(now - start).count();
+
+        if (t >= traj.back().time_from_start)
+            break;
+
+        ELITE::vector6d_t cmd;
+        if (!sampleHermite(traj, t, cmd))
+            return false;
+
+        if (!s_driver->writeServoj(cmd, 5, false, false))
+            return false;
+
+        std::this_thread::sleep_for(
+            std::chrono::duration<double>(period));
+    }
+
+    return true;
+}
+
+bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
+{
+    if (t >= traj.back().time_from_start)
+    {
+        q_out = traj.back().positions;
+        return true;
+    }
+
+    for (size_t i = 1; i < traj.size(); ++i)
+    {
+        if (t <= traj[i].time_from_start)
+        {
+            const auto& p0 = traj[i-1];
+            const auto& p1 = traj[i];
+
+            double t0 = p0.time_from_start;
+            double t1 = p1.time_from_start;
+            double dt = t1 - t0;
+            double tau = (t - t0) / dt;
+
+            double h00 = 2*tau*tau*tau - 3*tau*tau + 1;
+            double h10 = tau*tau*tau - 2*tau*tau + tau;
+            double h01 = -2*tau*tau*tau + 3*tau*tau;
+            double h11 = tau*tau*tau - tau*tau;
+
+
+            for (size_t j = 0; j < 6; ++j)
+            {
+                double q0 = p0.positions[j];
+                double q1 = p1.positions[j];
+                double v0 = p0.velocities.empty() ? 0 : p0.velocities[j];
+                double v1 = p1.velocities.empty() ? 0 : p1.velocities[j];
+
+                q_out[j] =
+                    h00*q0 +
+                    h10*dt*v0 +
+                    h01*q1 +
+                    h11*dt*v1;
+            }
+            return true;
+        }
+    }
+    return false;
+}

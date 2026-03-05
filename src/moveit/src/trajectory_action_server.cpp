@@ -8,9 +8,9 @@
 std::string DEFAULT_ROBOT_IP = "192.168.1.199";   // 机械臂ip
 std::string DEFAULT_PC_IP = "192.168.1.150";  // PCip
 bool MODE = true;
-std::string external_control_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";  // 外部控制文件
-std::string output_recipe_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt"; // 外部控制文件
-std::string input_recipe_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";  // 外部控制文件
+std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";  // 外部控制文件
+std::string output_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt"; // 外部控制文件
+std::string input_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";  // 外部控制文件
 std::string task_file_address = "mjktest.task";    // 机械臂配置/任务文件名
 
 class ArmTrajectoryActionServer
@@ -19,7 +19,7 @@ public:
   ArmTrajectoryActionServer(ros::NodeHandle& nh, EliteCSRobotSDK& robot) : nh_(nh), robot_(robot), action_server_(nh_, "planning_group_controller/follow_joint_trajectory", boost::bind(&ArmTrajectoryActionServer::executeCB, this, _1), false)
   {
     // 读取关节名称参数
-    if (!nh_.getParam("joints", joint_names_))
+    if (!nh_.getParam("/move_group/planning_group_controller/joints", joint_names_))
     {
       ROS_ERROR("No joint names specified in parameter 'joints'");
       ros::shutdown();

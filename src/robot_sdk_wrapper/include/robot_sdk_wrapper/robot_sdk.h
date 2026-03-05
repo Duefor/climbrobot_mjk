@@ -23,7 +23,17 @@ private:
     std::string task_file;  //用于加载的任务（外部控制）
     bool is_move_finish;
     ELITE::EliteDriverConfig DriverConfig;
+
     
+public:
+    // 轨迹消息类型
+    struct TrajectoryPoint
+    {
+        ELITE::vector6d_t positions;  // 当前点位置
+        ELITE::vector6d_t velocities; // 当前点速度
+        ELITE::vector6d_t accelerations;  // 当前点加速度
+        double time_from_start; // 当前点距离上一个点的运行时间
+    };
 
 public:
     // 构造函数，指定机器人IP和电脑IP，mode为false时需要外部加载taskfile。外部控制文件，rtsi文件，频率，加载任务名，部分有默认值
@@ -89,7 +99,13 @@ public:
 
     bool writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian = false, bool queue_mode = false);
 
+    // 轨迹跟随，通过各个轨迹点的关节角位置，速度，加速度，到达时间 实现。control_freq为控制频率
+    bool ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq = 200.0);
+
 private:
     bool startMode1();
     bool startMode2();
+
+    // 轨迹插值函数
+    bool sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
 };
