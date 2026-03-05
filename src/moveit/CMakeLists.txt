@@ -1,22 +1,29 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(touch_set)
+project(moveit)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
   roscpp
   rospy
-  sensor_msgs
   std_msgs
-  message_generation
-  tf
+  hardware_interface
+  controller_manager
+  joint_state_controller
+  position_controllers
+
+  actionlib
+  control_msgs
+  trajectory_msgs
+  sensor_msgs
+
+  robot_sdk_wrapper
 )
-find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -52,12 +59,11 @@ find_package(Eigen3 REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  OmniFeedback.msg 
-  OmniButtonEvent.msg 
-  OmniState.msg
-)
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -74,10 +80,10 @@ add_message_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  geometry_msgs sensor_msgs std_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -110,9 +116,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES touch_set
-#  某些环境中只能保留这一行
- CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs tf message_runtime
+#  LIBRARIES moveit
+ CATKIN_DEPENDS roscpp rospy std_msgs hardware_interface controller_manager actionlib control_msgs trajectory_msgs sensor_msgs robot_sdk_wrapper
 #  DEPENDS system_lib
 )
 
@@ -125,16 +130,12 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIR}
-  ${EIGEN3_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../robot_sdk_wrapper/include
 )
-
-# 查找openhatics库
-find_path(OPENHAPTICS_INCLUDE_DIR NAMES HD/hd.h HL/hl.h HDU/hdu.h)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/touch_set.cpp
+#   src/${PROJECT_NAME}/moveit.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -145,8 +146,9 @@ find_path(OPENHAPTICS_INCLUDE_DIR NAMES HD/hd.h HL/hl.h HDU/hdu.h)
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(touch_pub src/touch_pub.cpp)
-add_executable(touch_pub_test src/touch_pub_test.cpp)
+# add_executable(${PROJECT_NAME}_node src/moveit_node.cpp)
+add_executable(my_robot_hw_node src/my_robot_hw_node.cpp)
+add_executable(trajectory_action_server src/trajectory_action_server.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,26 +158,22 @@ add_executable(touch_pub_test src/touch_pub_test.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(touch_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(touch_pub_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(touch_pub
-  HD
-  HDU
-  rt
-  ncurses
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
+
+target_link_libraries(my_robot_hw_node
   ${catkin_LIBRARIES}
+  robot_sdk
 )
 
-target_link_libraries(touch_pub_test
-  HD
-  HDU
-  rt
-  ncurses
+target_link_libraries(trajectory_action_server
   ${catkin_LIBRARIES}
+  robot_sdk
 )
-
 #############
 ## Install ##
 #############
@@ -223,7 +221,7 @@ target_link_libraries(touch_pub_test
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_touch_set.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_moveit.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

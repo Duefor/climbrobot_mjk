@@ -1,5 +1,5 @@
 <launch>
-    <param name="robot_description" command="$(find xacro)/xacro $(find robot_simulation)/urdf/xacro/cs66arm.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro /home/duefor/ws_moveit/cs66arm.xacro" />
 
     <!-- <node pkg="rviz" type="rviz" name="rviz" /> -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" />

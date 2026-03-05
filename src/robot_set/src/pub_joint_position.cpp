@@ -12,7 +12,7 @@
 
 const double JOINT_MIN[6] = {-1.0, -1.2, -1.5, -2.0, -1.0, -1.5};  // 每个关节的最小角度
 const double JOINT_MAX[6] = { 1.0,  1.2,  1.5,  2.0,  1.0,  1.5};  // 每个关节的最大角度
-const int PUBLISH_RATE_HZ = 2;   // 发布频率 (Hz)
+const int PUBLISH_RATE_HZ = 100;   // 发布频率 (Hz)
 
 
 int main(int argc, char** argv)
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
         {
             // 随机生成 [JOINT_MIN[i], JOINT_MAX[i]] 的弧度值
             double val = JOINT_MIN[i] + (std::rand() / (double)RAND_MAX) * (JOINT_MAX[i] - JOINT_MIN[i]);
-            msg.position[i] = val;
+            msg.position[i] = 0.0;
             // msg.velocity[i] = val;
         }
 

@@ -205,6 +205,7 @@ void actualCB(const robot_set::TCPState::ConstPtr &msg)
   //////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////
+  // 速度前馈权重
   static double alpha;   // 前馈权重（0~1）=
   static double E_FF_ON  = 0.15;   // 误差大于这个，前馈全开
 

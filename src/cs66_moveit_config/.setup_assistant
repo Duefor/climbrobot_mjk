@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: robot_simulation
+    relative_path: urdf/xacro/cs66arm.xacro
+    xacro_args: ""
+  SRDF:
+    relative_path: config/cs66arm.srdf
+  CONFIG:
+    author_name: Duefor
+    author_email: 3137008110@qq.com
+    generated_timestamp: 1772682237
