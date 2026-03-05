@@ -452,30 +452,32 @@ bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, 
 
 bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq)
 {
-    if (traj.empty())
+    if (traj.size() < 2)
         return false;
 
-    double period = 1.0 / control_freq;
+    double servo_period = 1.0 / control_freq;
 
-    auto start = std::chrono::steady_clock::now();
+    auto next = std::chrono::steady_clock::now();
+    auto period = std::chrono::duration<double>(servo_period);
+
+    double total_time = traj.back().time_from_start;
 
     while (true)
     {
-        auto now = std::chrono::steady_clock::now();
-        double t = std::chrono::duration<double>(now - start).count();
+        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - next + period).count();
 
-        if (t >= traj.back().time_from_start)
+        if (t > total_time)
             break;
 
         ELITE::vector6d_t cmd;
         if (!sampleHermite(traj, t, cmd))
             return false;
 
-        if (!s_driver->writeServoj(cmd, 5, false, false))
+        if (!s_driver->writeServoj(cmd, 100, false, false))
             return false;
 
-        std::this_thread::sleep_for(
-            std::chrono::duration<double>(period));
+        next += std::chrono::duration_cast<std::chrono::steady_clock::duration>(period);
+        std::this_thread::sleep_until(next);
     }
 
     return true;
