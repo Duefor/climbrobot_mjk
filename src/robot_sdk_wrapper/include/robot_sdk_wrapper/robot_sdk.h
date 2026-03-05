@@ -87,6 +87,8 @@ public:
 
     void test();
 
+    bool writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian = false, bool queue_mode = false);
+
 private:
     bool startMode1();
     bool startMode2();

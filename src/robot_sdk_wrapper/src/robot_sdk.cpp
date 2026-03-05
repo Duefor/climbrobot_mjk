@@ -443,3 +443,9 @@ bool EliteCSRobotSDK::lineSpeed(const ELITE::vector6d_t& speed, int timeout_ms) 
 }
 
 void EliteCSRobotSDK::test() {std::cout<<"successful"<<std::endl;}
+
+bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian, bool queue_mode)
+{
+    if(!s_driver->writeServoj(pos,timeout_ms,cartesian,queue_mode)) return false;
+    return true;
+}
