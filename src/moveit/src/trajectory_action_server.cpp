@@ -53,94 +53,9 @@ private:
   std::thread joint_state_thread_;
   std::atomic<bool> running_;
 
-  std::vector<trajectory_msgs::JointTrajectoryPoint> traj_points_;
-  ros::Time traj_start_time_;
-  std::atomic<bool> executing_;
-  std::thread control_thread_;
-  double control_frequency_ = 100.0;
-
   /* =========================
      你需要实现的硬件接口函数
      ========================= */
-
-//   bool sendJointCommand(const std::vector<double>& positions, double times)
-//   {
-//     // TODO: 在这里发送关节角到真实机械臂
-//     // 返回 true 表示成功
-//     ELITE::vector6d_t AimPosition;
-//     for(int i = 0; i < positions.size(); i++)
-//     {
-//         AimPosition[i] = positions[i];
-//     }
-//     if(!robot_.moveJoint_servo(AimPosition, times)) return false;
-//     return true;
-//   }
-  bool sampleTrajectory(double t, std::vector<double>& q_out)
-  {
-    if (traj_points_.empty())
-        return false;
-
-    // 轨迹结束
-    if (t >= traj_points_.back().time_from_start.toSec())
-    {
-        q_out = traj_points_.back().positions;
-        return true;
-    }
-
-    // 找到当前时间在哪两个点之间
-    for (size_t i = 1; i < traj_points_.size(); ++i)
-    {
-        double t1 = traj_points_[i-1].time_from_start.toSec();
-        double t2 = traj_points_[i].time_from_start.toSec();
-
-        if (t >= t1 && t <= t2)
-        {
-            double ratio = (t - t1) / (t2 - t1);
-
-            size_t dof = traj_points_[i].positions.size();
-            q_out.resize(dof);
-
-            for (size_t j = 0; j < dof; ++j)
-            {
-                double q1 = traj_points_[i-1].positions[j];
-                double q2 = traj_points_[i].positions[j];
-                q_out[j] = q1 + ratio * (q2 - q1);
-            }
-            return true;
-        }
-    }
-
-    return false;
-  }
-
-  void controlLoop()
-  {
-    ros::Rate rate(control_frequency_);
-
-    while (executing_ && ros::ok())
-    {
-        double t = (ros::Time::now() - traj_start_time_).toSec();
-
-        std::vector<double> q;
-
-        if (!sampleTrajectory(t, q))
-            break;
-
-        ELITE::vector6d_t cmd;
-        for (size_t i = 0; i < q.size(); ++i)
-            cmd[i] = q[i];
-
-        robot_.writeservoj(cmd, 5, false, false);
-
-        // 轨迹结束
-        if (t >= traj_points_.back().time_from_start.toSec())
-            break;
-
-        rate.sleep();
-    }
-
-    executing_ = false;
-  }
 
   bool readJointState(std::vector<double>& positions)
   {
@@ -182,36 +97,34 @@ private:
 
     if (!validateGoal(goal))
     {
-      result_.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL; 
-      action_server_.setAborted(result_);
+      result_.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL; action_server_.setAborted(result_);
       return;
     }
 
-    // 保存轨迹
-    traj_points_ = goal->trajectory.points;
-    traj_start_time_ = ros::Time::now();
-    executing_ = true;
-
-    // 启动控制线程
-    control_thread_ = std::thread(&ArmTrajectoryActionServer::controlLoop, this);
-
-    // 等待执行结束
-    while (executing_ && ros::ok())
+    // 构造sdk中适配的轨迹点
+    std::vector<EliteCSRobotSDK::TrajectoryPoint> traj;
+    for(size_t i = 0; i < goal->trajectory.points.size(); ++i)
     {
-        if (action_server_.isPreemptRequested())
+        EliteCSRobotSDK::TrajectoryPoint p;
+        for(int j = 0; j < goal->trajectory.joint_names.size(); ++j)
         {
-            executing_ = false;
-            action_server_.setPreempted();
-            return;
+            p.positions[j] = goal->trajectory.points[i].positions[j];
+            p.velocities[j] = goal->trajectory.points[i].velocities[j];
+            p.accelerations[j] = goal->trajectory.points[i].accelerations[j];
+            p.time_from_start = goal->trajectory.points[i].time_from_start.toSec();
         }
-
-        publishFeedback(goal);
-        ros::Duration(0.02).sleep();  // 50Hz反馈
+        traj.push_back(p);
     }
 
-    if (control_thread_.joinable())
-        control_thread_.join();
+    if(!robot_.ExecuteJointTrajectory(traj))
+    {
+        ROS_ERROR("Hardware command failed");
+        result_.error_code = control_msgs::FollowJointTrajectoryResult::PATH_TOLERANCE_VIOLATED;
+        action_server_.setAborted(result_);
+        return;
+    }
 
+    ROS_INFO("Trajectory execution completed");
     result_.error_code = control_msgs::FollowJointTrajectoryResult::SUCCESSFUL;
     action_server_.setSucceeded(result_);
   }

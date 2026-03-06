@@ -458,13 +458,14 @@ bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>&
     double servo_period = 1.0 / control_freq;
 
     auto next = std::chrono::steady_clock::now();
+    auto start = std::chrono::steady_clock::now();
     auto period = std::chrono::duration<double>(servo_period);
 
     double total_time = traj.back().time_from_start;
 
     while (true)
     {
-        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - next + period).count();
+        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start + period).count();
 
         if (t > total_time)
             break;
@@ -479,9 +480,55 @@ bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>&
         next += std::chrono::duration_cast<std::chrono::steady_clock::duration>(period);
         std::this_thread::sleep_until(next);
     }
+    s_driver->writeIdle(0);
 
     return true;
 }
+
+// bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
+// {
+//     if (t >= traj.back().time_from_start)
+//     {
+//         q_out = traj.back().positions;
+//         return true;
+//     }
+
+//     for (size_t i = 1; i < traj.size(); ++i)
+//     {
+//         if (t <= traj[i].time_from_start)
+//         {
+//             const auto& p0 = traj[i-1];
+//             const auto& p1 = traj[i];
+
+//             double t0 = p0.time_from_start;
+//             double t1 = p1.time_from_start;
+//             double dt = t1 - t0;
+//             double tau = (t - t0) / dt;
+
+//             double h00 = 2*tau*tau*tau - 3*tau*tau + 1;
+//             double h10 = tau*tau*tau - 2*tau*tau + tau;
+//             double h01 = -2*tau*tau*tau + 3*tau*tau;
+//             double h11 = tau*tau*tau - tau*tau;
+
+
+//             for (size_t j = 0; j < 6; ++j)
+//             {
+//                 double q0 = p0.positions[j];
+//                 double q1 = p1.positions[j];
+//                 double v0 = p0.velocities.empty() ? 0 : p0.velocities[j];
+//                 double v1 = p1.velocities.empty() ? 0 : p1.velocities[j];
+
+//                 q_out[j] =
+//                     h00*q0 +
+//                     h10*dt*v0 +
+//                     h01*q1 +
+//                     h11*dt*v1;
+//             }
+//             return true;
+//         }
+//     }
+//     return false;
+// }
 
 bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
 {
@@ -503,27 +550,41 @@ bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, do
             double dt = t1 - t0;
             double tau = (t - t0) / dt;
 
-            double h00 = 2*tau*tau*tau - 3*tau*tau + 1;
-            double h10 = tau*tau*tau - 2*tau*tau + tau;
-            double h01 = -2*tau*tau*tau + 3*tau*tau;
-            double h11 = tau*tau*tau - tau*tau;
+            double tau2 = tau*tau;
+            double tau3 = tau2*tau;
+            double tau4 = tau3*tau;
+            double tau5 = tau4*tau;
 
+            double h0 = 1 - 10*tau3 + 15*tau4 - 6*tau5;
+            double h1 = tau - 6*tau3 + 8*tau4 - 3*tau5;
+            double h2 = 0.5*tau2 - 1.5*tau3 + 1.5*tau4 - 0.5*tau5;
+            double h3 = 10*tau3 - 15*tau4 + 6*tau5;
+            double h4 = -4*tau3 + 7*tau4 - 3*tau5;
+            double h5 = 0.5*tau3 - tau4 + 0.5*tau5;
 
             for (size_t j = 0; j < 6; ++j)
             {
                 double q0 = p0.positions[j];
                 double q1 = p1.positions[j];
+
                 double v0 = p0.velocities.empty() ? 0 : p0.velocities[j];
                 double v1 = p1.velocities.empty() ? 0 : p1.velocities[j];
 
+                double a0 = p0.accelerations.empty() ? 0 : p0.accelerations[j];
+                double a1 = p1.accelerations.empty() ? 0 : p1.accelerations[j];
+
                 q_out[j] =
-                    h00*q0 +
-                    h10*dt*v0 +
-                    h01*q1 +
-                    h11*dt*v1;
+                    h0*q0 +
+                    h1*dt*v0 +
+                    h2*dt*dt*a0 +
+                    h3*q1 +
+                    h4*dt*v1 +
+                    h5*dt*dt*a1;
             }
+
             return true;
         }
     }
+
     return false;
 }

@@ -60,14 +60,31 @@ int main(int argc, char** argv)
     p1.positions = current;
 
     // 目标：第一个关节 +20度
-    p1.positions[0] += 20.0 * M_PI / 180.0;
+    p1.positions[0] -= 20.0 * M_PI / 180.0;
 
     p1.velocities = zero;
     p1.accelerations = zero;
-    p1.time_from_start = 4.0;   // 4秒到达
+    p1.time_from_start = 2.0;   // 4秒到达
+
+    EliteCSRobotSDK::TrajectoryPoint p2;
+    p2.positions = p1.positions;
+
+    // 目标：第一个关节 +20度
+    p2.positions[0] += 20.0 * M_PI / 180.0;
+
+    p2.velocities = zero;
+    p2.accelerations = zero;
+    p2.time_from_start = 4.0;   // 4秒到达
 
     traj.push_back(p0);
     traj.push_back(p1);
+    traj.push_back(p2);
+
+    // auto start = std::chrono::steady_clock::now();
+    // cs66robot.moveJoint_servo(p1.positions,p1.time_from_start);
+    // auto end = std::chrono::steady_clock::now();
+    // std::chrono::duration<double> elapsed_seconds = end - start;
+    // std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
 
     std::cout << "Start trajectory execution...\n";
 
@@ -77,7 +94,9 @@ int main(int argc, char** argv)
         std::cout << "Trajectory finished successfully\n";
     else
         std::cout << "Trajectory failed\n";
-
+    
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    
     // auto start = std::chrono::steady_clock::now();
     // ELITE::vector6d_t startline = cs66robot.getCurrentTCPPose();
     // startline[2] += 0.05;
