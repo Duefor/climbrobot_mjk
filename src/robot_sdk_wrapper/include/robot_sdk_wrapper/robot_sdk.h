@@ -24,6 +24,8 @@ private:
     bool is_move_finish;
     ELITE::EliteDriverConfig DriverConfig;
 
+    // 伺服控制终止
+    std::atomic<bool> stop_requested_{false};
     
 public:
     // 轨迹消息类型
@@ -99,13 +101,17 @@ public:
 
     bool writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian = false, bool queue_mode = false);
 
-    // 轨迹跟随，通过各个轨迹点的关节角位置，速度，加速度，到达时间 实现。control_freq为控制频率
-    bool ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq = 200.0);
+    // 轨迹跟随，通过各个轨迹点的关节角位置，速度，加速度，到达时间 实现。control_freq为控制频率。IA为插值算法，0是三次插值，1是五次插值（加速度）
+    bool ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq = 200.0, int IA = 1);
+
+    // 停止轨迹跟随
+    void ExecuteJointTrajectoryStop();
 
 private:
     bool startMode1();
     bool startMode2();
 
     // 轨迹插值函数
-    bool sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
+    bool CubicInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
+    bool QuinticInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
 };

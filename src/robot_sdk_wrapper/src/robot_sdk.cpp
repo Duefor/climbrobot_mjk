@@ -450,8 +450,9 @@ bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, 
     return true;
 }
 
-bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq)
+bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq, int IA)
 {
+    stop_requested_ = false;
     if (traj.size() < 2)
         return false;
 
@@ -465,14 +466,34 @@ bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>&
 
     while (true)
     {
-        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start + period).count();
+        if (stop_requested_)
+        {
+            s_driver->writeIdle(0);
+            return false;
+        }
+        // double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start + period).count();
+        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start ).count();
 
         if (t > total_time)
             break;
 
         ELITE::vector6d_t cmd;
-        if (!sampleHermite(traj, t, cmd))
+
+        if (IA == 0)
+        {
+            if (!CubicInterpolation(traj, t, cmd))
+                return false;
+        }
+        else if (IA == 1)
+        {
+            if (!QuinticInterpolation(traj, t, cmd))
+                return false;
+        }
+        else
+        {
+            std::cout << "未定义插值算法" << std::endl;
             return false;
+        }
 
         if (!s_driver->writeServoj(cmd, 100, false, false))
             return false;
@@ -485,52 +506,52 @@ bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>&
     return true;
 }
 
-// bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
-// {
-//     if (t >= traj.back().time_from_start)
-//     {
-//         q_out = traj.back().positions;
-//         return true;
-//     }
+bool EliteCSRobotSDK::CubicInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
+{
+    if (t >= traj.back().time_from_start)
+    {
+        q_out = traj.back().positions;
+        return true;
+    }
 
-//     for (size_t i = 1; i < traj.size(); ++i)
-//     {
-//         if (t <= traj[i].time_from_start)
-//         {
-//             const auto& p0 = traj[i-1];
-//             const auto& p1 = traj[i];
+    for (size_t i = 1; i < traj.size(); ++i)
+    {
+        if (t <= traj[i].time_from_start)
+        {
+            const auto& p0 = traj[i-1];
+            const auto& p1 = traj[i];
 
-//             double t0 = p0.time_from_start;
-//             double t1 = p1.time_from_start;
-//             double dt = t1 - t0;
-//             double tau = (t - t0) / dt;
+            double t0 = p0.time_from_start;
+            double t1 = p1.time_from_start;
+            double dt = t1 - t0;
+            double tau = (t - t0) / dt;
 
-//             double h00 = 2*tau*tau*tau - 3*tau*tau + 1;
-//             double h10 = tau*tau*tau - 2*tau*tau + tau;
-//             double h01 = -2*tau*tau*tau + 3*tau*tau;
-//             double h11 = tau*tau*tau - tau*tau;
+            double h00 = 2*tau*tau*tau - 3*tau*tau + 1;
+            double h10 = tau*tau*tau - 2*tau*tau + tau;
+            double h01 = -2*tau*tau*tau + 3*tau*tau;
+            double h11 = tau*tau*tau - tau*tau;
 
 
-//             for (size_t j = 0; j < 6; ++j)
-//             {
-//                 double q0 = p0.positions[j];
-//                 double q1 = p1.positions[j];
-//                 double v0 = p0.velocities.empty() ? 0 : p0.velocities[j];
-//                 double v1 = p1.velocities.empty() ? 0 : p1.velocities[j];
+            for (size_t j = 0; j < 6; ++j)
+            {
+                double q0 = p0.positions[j];
+                double q1 = p1.positions[j];
+                double v0 = p0.velocities.empty() ? 0 : p0.velocities[j];
+                double v1 = p1.velocities.empty() ? 0 : p1.velocities[j];
 
-//                 q_out[j] =
-//                     h00*q0 +
-//                     h10*dt*v0 +
-//                     h01*q1 +
-//                     h11*dt*v1;
-//             }
-//             return true;
-//         }
-//     }
-//     return false;
-// }
+                q_out[j] =
+                    h00*q0 +
+                    h10*dt*v0 +
+                    h01*q1 +
+                    h11*dt*v1;
+            }
+            return true;
+        }
+    }
+    return false;
+}
 
-bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
+bool EliteCSRobotSDK::QuinticInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out)
 {
     if (t >= traj.back().time_from_start)
     {
@@ -587,4 +608,9 @@ bool EliteCSRobotSDK::sampleHermite(const std::vector<TrajectoryPoint>& traj, do
     }
 
     return false;
+}
+
+void EliteCSRobotSDK::ExecuteJointTrajectoryStop()
+{
+    stop_requested_ = true;
 }

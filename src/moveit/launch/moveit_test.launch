@@ -1,0 +1,34 @@
+<launch>
+  <arg name="robot_ip" default="192.168.1.199"/>
+  <arg name="pc_ip" default="192.168.1.150"/>
+  <arg name="mode" default="true"/>
+  <arg name="external_control" default="$(find robot_sdk_wrapper)/resource/external_control.script"/>
+  <arg name="output_recipe" default="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
+  <arg name="input_recipe" default="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
+  <arg name="task_file" default="mjktest.task"/>
+  <!-- 读取的关节参数服务器名称，这里直接用规划器里的 -->
+  <arg name="jointNames_topic" default="/move_group/planning_group_controller/joints"/>
+  <!-- 发布关节的话题名 -->
+  <arg name="joint_state_pubTopic" default="/joint_states"/>
+  <!-- 机械臂轨迹跟随控制频率 -->
+  <arg name="control_freq" default="200.0"/>
+  <!-- 机械臂轨迹插值算法，0是三次插值，1是五次插值 -->
+  <arg name="IA" default="1"/>
+
+  <node name="trajectory_action_server" pkg="moveit" type="trajectory_action_server" output="screen">
+    <param name="DEFAULT_ROBOT_IP" value="$(arg robot_ip)"/>
+    <param name="DEFAULT_PC_IP" value="$(arg pc_ip)"/>
+    <param name="MODE" value="$(arg mode)"/>
+    <param name="external_control_file_address" value="$(arg external_control)"/>
+    <param name="output_recipe_file_address" value="$(arg output_recipe)"/>
+    <param name="input_recipe_file_address" value="$(arg input_recipe)"/>
+    <param name="task_file_address" value="$(arg task_file)"/>
+    <param name="jointNames_topic" value="$(arg jointNames_topic)"/>
+    
+    <param name="joint_state_pubTopic" value="$(arg joint_state_pubTopic)"/>
+    <param name="control_freq" value="$(arg control_freq)"/>
+    <param name="IA" value="$(arg IA)"/>
+
+  </node>
+
+</launch>
