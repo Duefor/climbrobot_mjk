@@ -6,6 +6,8 @@
 
 #include <robot_sdk_wrapper/robot_sdk.h>
 
+std::string action_server_name; // 动作服务器话题名称
+
 std::string DEFAULT_ROBOT_IP;   // 机械臂ip
 std::string DEFAULT_PC_IP;  // PCip
 bool MODE;
@@ -22,7 +24,7 @@ int IA;     // 机械臂轨迹插值算法
 class ArmTrajectoryActionServer
 {
 public:
-  ArmTrajectoryActionServer(ros::NodeHandle& nh, EliteCSRobotSDK& robot) : nh_(nh), robot_(robot), action_server_(nh_, "planning_group_controller/follow_joint_trajectory", boost::bind(&ArmTrajectoryActionServer::executeCB, this, _1), false)
+  ArmTrajectoryActionServer(ros::NodeHandle& nh, EliteCSRobotSDK& robot) : nh_(nh), robot_(robot), action_server_(nh_, action_server_name, boost::bind(&ArmTrajectoryActionServer::executeCB, this, _1), false)
   {
     // 读取关节名称参数
     ros::Time start = ros::Time::now();
@@ -190,6 +192,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "trajectory_action_server");
     ros::NodeHandle nh;
+
+    ros::param::param(std::string("~action_server_name"), action_server_name, std::string("planning_group_controller/follow_joint_trajectory"));
 
     ros::param::param(std::string("~DEFAULT_ROBOT_IP"), DEFAULT_ROBOT_IP, std::string("192.168.1.199"));
     ros::param::param(std::string("~DEFAULT_PC_IP"), DEFAULT_PC_IP, std::string("192.168.1.150"));

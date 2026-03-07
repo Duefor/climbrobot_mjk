@@ -1,4 +1,9 @@
 <launch>
+  <!-- 加载关节名称参数供动作服务器使用，注意需要与机械臂urdf模型中关节名称一致 -->
+  <rosparam file="$(find moveit)/config/joint_name.yaml" />
+
+  <!-- 动作服务器话题名称，注意与moveit里的设置保持一致 -->
+  <arg name="action_server_name" default="planning_group_controller/follow_joint_trajectory"/>
   <arg name="robot_ip" default="192.168.1.199"/>
   <arg name="pc_ip" default="192.168.1.150"/>
   <arg name="mode" default="true"/>
@@ -6,8 +11,8 @@
   <arg name="output_recipe" default="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
   <arg name="input_recipe" default="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
   <arg name="task_file" default="mjktest.task"/>
-  <!-- 读取的关节参数服务器名称，这里直接用规划器里的 -->
-  <arg name="jointNames_topic" default="/move_group/planning_group_controller/joints"/>
+  <!-- 读取的关节名称参数 -->
+  <arg name="jointNames_topic" default="/trajectory_action_server/joints"/>
   <!-- 发布关节的话题名 -->
   <arg name="joint_state_pubTopic" default="/joint_states"/>
   <!-- 机械臂轨迹跟随控制频率 -->
@@ -16,6 +21,7 @@
   <arg name="IA" default="1"/>
 
   <node name="trajectory_action_server" pkg="moveit" type="trajectory_action_server" output="screen">
+    <param name="action_server_name" value="$(arg action_server_name)"/>
     <param name="DEFAULT_ROBOT_IP" value="$(arg robot_ip)"/>
     <param name="DEFAULT_PC_IP" value="$(arg pc_ip)"/>
     <param name="MODE" value="$(arg mode)"/>
@@ -30,5 +36,4 @@
     <param name="IA" value="$(arg IA)"/>
 
   </node>
-
 </launch>

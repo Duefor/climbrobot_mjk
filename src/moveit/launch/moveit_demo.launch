@@ -1,0 +1,6 @@
+<launch>
+  <!-- Launch MoveIt -->
+  <include file="$(find cs66_moveit_config)/launch/demo.launch" >
+    <arg name="moveit_controller_manager" value="simple" />
+  </include>
+</launch>
