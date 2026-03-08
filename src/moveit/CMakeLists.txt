@@ -150,6 +150,8 @@ include_directories(
 add_executable(my_robot_hw_node src/my_robot_hw_node.cpp)
 add_executable(trajectory_action_server src/trajectory_action_server.cpp)
 
+add_executable(moveit_test src/moveit_test.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -175,6 +177,10 @@ target_link_libraries(trajectory_action_server
   robot_sdk
 )
 
+target_link_libraries(moveit_test
+  ${catkin_LIBRARIES}
+  robot_sdk
+)
 #############
 ## Install ##
 #############
