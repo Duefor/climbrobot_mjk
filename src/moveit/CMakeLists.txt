@@ -23,7 +23,11 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
 
   robot_sdk_wrapper
+
+  moveit_ros_planning_interface
 )
+
+find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -130,6 +134,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/../robot_sdk_wrapper/include
 )
 
@@ -179,6 +184,7 @@ target_link_libraries(trajectory_action_server
 
 target_link_libraries(moveit_test
   ${catkin_LIBRARIES}
+  ${Eigen3_LIBRARIES}
   robot_sdk
 )
 #############
