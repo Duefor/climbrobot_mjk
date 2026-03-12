@@ -473,7 +473,6 @@ bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>&
         }
         // double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start + period).count();
         double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start ).count();
-        t = std::min(t, total_time);
 
         if (t > total_time)
             break;

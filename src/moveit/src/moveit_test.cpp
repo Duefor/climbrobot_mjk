@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <geometry_msgs/Pose.h>
+#include <tf2/LinearMath/Quaternion.h>
 
 int main(int argc, char** argv)
 {
@@ -10,31 +11,45 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    // 创建 MoveGroup（名称与SRDF中的planning group一致）
     moveit::planning_interface::MoveGroupInterface move_group("planning_group");
 
-    // 设置目标位姿
-    geometry_msgs::Pose target_pose;
-    target_pose.position.x = 0.4;
-    target_pose.position.y = 0.2;
-    target_pose.position.z = 0.3;
+    geometry_msgs::Pose pose;
 
-    target_pose.orientation.w = 1.0;
-    target_pose.orientation.x = 0.0;
-    target_pose.orientation.y = 0.0;
-    target_pose.orientation.z = 0.0;
+    pose.position.x = 0.4;
+    pose.position.y = 0.2;
+    pose.position.z = 0.3;
 
-    move_group.setPoseTarget(target_pose);
+    double rx = 3.14;
+    double ry = 0.0;
+    double rz = 0.0;
 
-    // 规划
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    bool success = (move_group.plan(plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    double angle = sqrt(rx*rx + ry*ry + rz*rz);
 
-    if(success)
+    tf2::Quaternion q;
+
+    if(angle < 1e-6)
     {
-        move_group.execute(plan);
+        q.setRPY(0,0,0);
+    }
+    else
+    {
+        q.setRotation(tf2::Vector3(rx/angle, ry/angle, rz/angle), angle);
     }
 
-    ros::shutdown();
-    return 0;
+    pose.orientation.x = q.x();
+    pose.orientation.y = q.y();
+    pose.orientation.z = q.z();
+    pose.orientation.w = q.w();
+
+    move_group.setPoseTarget(pose);
+
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    bool success =
+        (move_group.plan(plan) ==
+        moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+    if(success)
+        ROS_INFO("Plan success");
+
+    // move_group.execute(plan);
 }
