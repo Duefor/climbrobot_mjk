@@ -37,65 +37,73 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
-    // 读取当前关节角
-    auto current = cs66robot.getCurrentJoint();
-
-    if (current.size() != 6)
+    while (true)
     {
-        std::cout << "Joint read failed\n";
-        return 0;
+        auto force = cs66robot.s_rtsi_io->getAcutalTCPForce();
+        std::cout << "当前tcp力：" << force[0] << "," << force[1] << "," << force[2] << "," << force[3] << "," << force[4] << "," << force[5] << std::endl;
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
-
-    // 构造轨迹
-    std::vector<EliteCSRobotSDK::TrajectoryPoint> traj;
-
-    EliteCSRobotSDK::TrajectoryPoint p0;
-    p0.positions = current;
-    ELITE::vector6d_t zero;
-    p0.velocities = zero;
-    p0.accelerations = zero;
-    p0.time_from_start = 0.0;
-
-    EliteCSRobotSDK::TrajectoryPoint p1;
-    p1.positions = current;
-
-    // 目标：第一个关节 +20度
-    p1.positions[0] -= 20.0 * M_PI / 180.0;
-
-    p1.velocities = zero;
-    p1.accelerations = zero;
-    p1.time_from_start = 2.0;   // 4秒到达
-
-    EliteCSRobotSDK::TrajectoryPoint p2;
-    p2.positions = p1.positions;
-
-    // 目标：第一个关节 +20度
-    p2.positions[0] += 20.0 * M_PI / 180.0;
-
-    p2.velocities = zero;
-    p2.accelerations = zero;
-    p2.time_from_start = 4.0;   // 4秒到达
-
-    traj.push_back(p0);
-    traj.push_back(p1);
-    traj.push_back(p2);
-
-    // auto start = std::chrono::steady_clock::now();
-    // cs66robot.moveJoint_servo(p1.positions,p1.time_from_start);
-    // auto end = std::chrono::steady_clock::now();
-    // std::chrono::duration<double> elapsed_seconds = end - start;
-    // std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
-
-    std::cout << "Start trajectory execution...\n";
-
-    bool ok = cs66robot.ExecuteJointTrajectory(traj, 200.0);
-
-    if (ok)
-        std::cout << "Trajectory finished successfully\n";
-    else
-        std::cout << "Trajectory failed\n";
     
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    // // 读取当前关节角
+    // auto current = cs66robot.getCurrentJoint();
+
+    // if (current.size() != 6)
+    // {
+    //     std::cout << "Joint read failed\n";
+    //     return 0;
+    // }
+
+    // // 构造轨迹
+    // std::vector<EliteCSRobotSDK::TrajectoryPoint> traj;
+
+    // EliteCSRobotSDK::TrajectoryPoint p0;
+    // p0.positions = current;
+    // ELITE::vector6d_t zero;
+    // p0.velocities = zero;
+    // p0.accelerations = zero;
+    // p0.time_from_start = 0.0;
+
+    // EliteCSRobotSDK::TrajectoryPoint p1;
+    // p1.positions = current;
+
+    // // 目标：第一个关节 +20度
+    // p1.positions[0] -= 20.0 * M_PI / 180.0;
+
+    // p1.velocities = zero;
+    // p1.accelerations = zero;
+    // p1.time_from_start = 2.0;   // 4秒到达
+
+    // EliteCSRobotSDK::TrajectoryPoint p2;
+    // p2.positions = p1.positions;
+
+    // // 目标：第一个关节 +20度
+    // p2.positions[0] += 20.0 * M_PI / 180.0;
+
+    // p2.velocities = zero;
+    // p2.accelerations = zero;
+    // p2.time_from_start = 4.0;   // 4秒到达
+
+    // traj.push_back(p0);
+    // traj.push_back(p1);
+    // traj.push_back(p2);
+
+    // // auto start = std::chrono::steady_clock::now();
+    // // cs66robot.moveJoint_servo(p1.positions,p1.time_from_start);
+    // // auto end = std::chrono::steady_clock::now();
+    // // std::chrono::duration<double> elapsed_seconds = end - start;
+    // // std::cout << "阻塞时间: " << elapsed_seconds.count() << " 秒" << std::endl;
+
+    // std::cout << "Start trajectory execution...\n";
+
+    // bool ok = cs66robot.ExecuteJointTrajectory(traj, 200.0);
+
+    // if (ok)
+    //     std::cout << "Trajectory finished successfully\n";
+    // else
+    //     std::cout << "Trajectory failed\n";
+    
+    // std::this_thread::sleep_for(std::chrono::seconds(10));
     
     // auto start = std::chrono::steady_clock::now();
     // ELITE::vector6d_t startline = cs66robot.getCurrentTCPPose();
