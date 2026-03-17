@@ -118,7 +118,7 @@ void cb(const sensor_msgs::JointState::ConstPtr& msg)
             {
                 side_state = FORWARD;
                 state_start = now;
-                SIDE_TURN_time = t;
+                SIDE_TURN_time = t - 1/200;
             }
 
             if(t > SIDE_TURN_TIME)
