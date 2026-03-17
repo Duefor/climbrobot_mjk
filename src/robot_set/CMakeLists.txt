@@ -19,8 +19,6 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 
   robot_sdk_wrapper
-
-  touch_set
 )
 
 find_package(elite-cs-series-sdk REQUIRED)
@@ -124,7 +122,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robot_set
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime robot_sdk_wrapper touch_set
+ CATKIN_DEPENDS roscpp rospy std_msgs message_runtime robot_sdk_wrapper
 #  DEPENDS system_lib
 )
 

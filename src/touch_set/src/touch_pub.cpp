@@ -29,6 +29,8 @@
 #include <iostream>
 #include <Eigen/Dense>
 
+#include <std_msgs/Float64MultiArray.h>
+
 float prev_time;
 int calibrationStyle;
 
@@ -214,14 +216,14 @@ public:
   }
 
   // 接收外部力的回调
-  void force_callback(const touch_set::OmniFeedbackConstPtr& omnifeed) {
+  void force_callback(const std_msgs::Float64MultiArray& omnifeed) {
     ////////////////////Some people might not like this extra damping, but it
     ////////////////////helps to stabilize the overall force feedback. It isn't
     ////////////////////like we are getting direct impedance matching from the
     ////////////////////omni anyway
-    double fx = omnifeed->force.x;
-    double fy = omnifeed->force.y;
-    double fz = omnifeed->force.z;
+    double fx = omnifeed.data[0];
+    double fy = omnifeed.data[1];
+    double fz = omnifeed.data[2];
 
     double norm = sqrt(fx*fx + fy*fy + fz*fz);
 
@@ -247,9 +249,9 @@ public:
     state->force[1] = fy_out - 0.001 * state->velocity[1];
     state->force[2] = fz_out - 0.001 * state->velocity[2];
 
-    state->lock_pos[0] = omnifeed->position.x;
-    state->lock_pos[1] = omnifeed->position.y;
-    state->lock_pos[2] = omnifeed->position.z;
+    // state->lock_pos[0] = omnifeed->position.x;
+    // state->lock_pos[1] = omnifeed->position.y;
+    // state->lock_pos[2] = omnifeed->position.z;
   }
 
   // 发布touch的各种数据

@@ -11,7 +11,7 @@
 #include <iostream>
 #include <cmath>
 
-#include <touch_set/OmniFeedback.h>
+#include <std_msgs/Float64MultiArray.h>
 
 // 配置
 const double robot_pub_rate = 100; // 机械臂发布状态频率，注意不能大于sdk带宽，最好小于带宽的1/2
@@ -201,15 +201,16 @@ void tcpStatePublisher(ros::Publisher* pub)
 void forceStatePublisher(ros::Publisher* pub)
 {
     ros::Rate rate(robot_pub_rate);
-    touch_set::OmniFeedback msg;
+    std_msgs::Float64MultiArray msg;
+    msg.data.resize(6);
 
     while (ros::ok())
     {
         {
             std::lock_guard<std::mutex> lock(state_mtx);
-            msg.force.x = force_cache[0];
-            msg.force.y = force_cache[1];
-            msg.force.z = force_cache[2];
+            msg.data[0] = force_cache[0];
+            msg.data[1] = force_cache[1];
+            msg.data[2] = force_cache[2];
         }
         pub->publish(msg);
         rate.sleep();
@@ -301,7 +302,7 @@ int main(int argc, char** argv)
 
     ros::Publisher tcp_pub = nh.advertise<robot_set::TCPState>("/cs66/tcp_state", 10);
 
-    ros::Publisher force_pub = nh.advertise<touch_set::OmniFeedback>("/phantom/force_feedback",10);
+    ros::Publisher force_pub = nh.advertise<std_msgs::Float64MultiArray>("/phantom/force_feedback",10);
 
     std::thread sdk_thread(sdkIOThread, &cs66robot);
     std::thread pub_joint_thread(jointStatePublisher, &joint_pub);

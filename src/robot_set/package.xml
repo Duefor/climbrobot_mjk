@@ -74,8 +74,6 @@
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
 
-  <build_depend>touch_set</build_depend>
-  <exec_depend>touch_set</exec_depend>
 
   <!-- 声明一下自己封装的依赖 -->
   <depend>robot_sdk_wrapper</depend>
