@@ -219,9 +219,33 @@ public:
     ////////////////////helps to stabilize the overall force feedback. It isn't
     ////////////////////like we are getting direct impedance matching from the
     ////////////////////omni anyway
-    state->force[0] = omnifeed->force.x - 0.001 * state->velocity[0];
-    state->force[1] = omnifeed->force.y - 0.001 * state->velocity[1];
-    state->force[2] = omnifeed->force.z - 0.001 * state->velocity[2];
+    double fx = omnifeed->force.x;
+    double fy = omnifeed->force.y;
+    double fz = omnifeed->force.z;
+
+    double norm = sqrt(fx*fx + fy*fy + fz*fz);
+
+    double fx_out = 0.0, fy_out = 0.0, fz_out = 0.0;
+
+    if (norm > 1e-6) {
+        // 归一化比例（最大按20N算）
+        double scale = norm / 20.0;
+        if (scale > 1.0) scale = 1.0;
+
+        // 输出力大小 = scale * 2N
+        double target_norm = scale * 2.0;
+
+        // 按方向缩放
+        double ratio = target_norm / norm;
+
+        fx_out = fx * ratio;
+        fy_out = fy * ratio;
+        fz_out = fz * ratio;
+    }
+
+    state->force[0] = fx_out - 0.001 * state->velocity[0];
+    state->force[1] = fy_out - 0.001 * state->velocity[1];
+    state->force[2] = fz_out - 0.001 * state->velocity[2];
 
     state->lock_pos[0] = omnifeed->position.x;
     state->lock_pos[1] = omnifeed->position.y;
