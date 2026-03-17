@@ -37,11 +37,12 @@ int main(int argc, char** argv)
     }
     std::cout << "Robot start successful" << std::endl;
 
+
+    ELITE::vector6d_t exforce = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
     while (true)
     {
-        auto force = cs66robot.getTCPforce();
-        std::cout << "当前tcp力：" << force[0] << "," << force[1] << "," << force[2] << "," << force[3] << "," << force[4] << "," << force[5] << std::endl;
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
+        cs66robot.test(exforce);
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
     
 

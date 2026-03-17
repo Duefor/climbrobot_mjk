@@ -442,7 +442,10 @@ bool EliteCSRobotSDK::lineSpeed(const ELITE::vector6d_t& speed, int timeout_ms) 
     return true;
 }
 
-void EliteCSRobotSDK::test() {std::cout<<"successful"<<std::endl;}
+bool EliteCSRobotSDK::test(const ELITE::vector6d_t& ex_force)
+{
+    return s_rtsi_io->setExternalForceTorque(ex_force);
+}
 
 bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian, bool queue_mode)
 {

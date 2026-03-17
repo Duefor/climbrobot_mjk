@@ -97,7 +97,7 @@ public:
     // 控制末端点速度，{x,y,z,rx,ry,rz} m/s,rad/s
     bool lineSpeed(const ELITE::vector6d_t& speed, int timeout_ms = 0);
 
-    void test();
+    bool test(const ELITE::vector6d_t& ex_force);
 
     bool writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian = false, bool queue_mode = false);
 
