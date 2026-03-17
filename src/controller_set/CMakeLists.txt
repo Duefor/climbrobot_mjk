@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(controller_set)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -144,6 +144,7 @@ add_executable(pub_controller_pose src/pub_controller_pose.cpp)
 add_executable(Cal_scaleANDoffset src/Cal_scaleANDoffset.cpp)
 
 add_executable(carSpeed_converter src/carSpeed_converter.cpp)
+add_executable(carSpeed_converter_m src/carSpeed_converter_m.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -159,6 +160,7 @@ add_dependencies(pub_controller_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catki
 add_dependencies(Cal_scaleANDoffset ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_dependencies(carSpeed_converter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(carSpeed_converter_m ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(pose_converter_m
@@ -178,6 +180,10 @@ target_link_libraries(Cal_scaleANDoffset
 )
 
 target_link_libraries(carSpeed_converter
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(carSpeed_converter_m
   ${catkin_LIBRARIES}
 )
 #############

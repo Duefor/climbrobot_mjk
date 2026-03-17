@@ -126,6 +126,8 @@ public:
   ros::Publisher pose_publisher;
   ros::Publisher button_publisher;
   ros::Publisher joint_publisher;
+  ros::Publisher joint_publisher_car;
+  bool control_car = false;
   ros::Subscriber haptic_sub;
   std::string omni_name, ref_frame, units;
 
@@ -169,6 +171,12 @@ public:
     stream5 << omni_name << "/joint_states";
     std::string joint_topic_name = std::string(stream5.str());
     joint_publisher = n.advertise<sensor_msgs::JointState>(joint_topic_name.c_str(), 1);
+
+    //Publish on NAME for car/joint_states_car
+    std::ostringstream stream6;
+    stream6 << omni_name << "/joint_states_car";
+    std::string joint_topic_name_car = std::string(stream6.str());
+    joint_publisher_car = n.advertise<sensor_msgs::JointState>(joint_topic_name_car.c_str(), 1);
 
     state = s;
     state->buttons[0] = 0;
@@ -262,7 +270,9 @@ public:
     joint_state.position[4] = -state->thetas[5] - 3*M_PI/4;
     joint_state.name[5] = "roll";
     joint_state.position[5] = -state->thetas[6] - M_PI;
-    joint_publisher.publish(joint_state);
+
+    if(control_car) joint_publisher_car.publish(joint_state);
+    else joint_publisher.publish(joint_state);
 
     // // Build the pose msg
     // geometry_msgs::PoseStamped pose_msg;
@@ -318,10 +328,16 @@ public:
     pose_msg.velocity[3] = 0.0 / 1000.0; 
     pose_msg.velocity[4] = 0.0 / 1000.0; 
     pose_msg.velocity[5] = 0.0 / 1000.0; 
-    pose_publisher.publish(pose_msg);
+    if(!control_car) pose_publisher.publish(pose_msg);
 
 
+    if (state->buttons[0] == 1 && state->buttons_prev[0] == 0)
+    {
+        state->close_gripper = !state->close_gripper;
+        control_car = !control_car;
 
+        ROS_INFO("Switch control to %s", control_car ? "CAR" : "ARM");
+    }
 
     if ((state->buttons[0] != state->buttons_prev[0]) or (state->buttons[1] != state->buttons_prev[1]))
     {

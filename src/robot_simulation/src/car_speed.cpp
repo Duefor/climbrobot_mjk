@@ -35,6 +35,7 @@ void wheelSpeedCb(const std_msgs::Float64MultiArray::ConstPtr& msg)
 
     double dt = (now - last_time).toSec();
     last_time = now;
+    if(dt > 0.03) return;
 
     double w_l = msg->data[0]/500.0;
     double w_r = msg->data[1]/500.0;
