@@ -11,6 +11,8 @@
 #include <iostream>
 #include <cmath>
 
+#include <touch_set/OmniFeedback.h>
+
 // 配置
 const double robot_pub_rate = 100; // 机械臂发布状态频率，注意不能大于sdk带宽，最好小于带宽的1/2
 const double robot_sdk_rate = 250; // 机械臂sdk调用频率
@@ -53,6 +55,7 @@ ELITE::vector6d_t qdot_cmd{0,0,0,0,0,0};
 // 状态缓存（SDK IO → 发布线程）
 ELITE::vector6d_t joint_cache{0,0,0,0,0,0};
 ELITE::vector6d_t tcp_cache{0,0,0,0,0,0};
+ELITE::vector6d_t force_cache{0,0,0,0,0,0};
 std::mutex state_mtx;
 
 
@@ -139,11 +142,13 @@ void sdkIOThread(EliteCSRobotSDK* robot)
         /* 读取状态 */
         ELITE::vector6d_t joints = robot->getCurrentJoint();
         ELITE::vector6d_t tcp    = robot->getCurrentTCPPose();
+        ELITE::vector6d_t force  = robot->getTCPforce();
 
         {
             std::lock_guard<std::mutex> lock(state_mtx);
             joint_cache = joints;
             tcp_cache   = tcp;
+            force_cache = force;
         }
 
         rate.sleep();
@@ -188,6 +193,24 @@ void tcpStatePublisher(ros::Publisher* pub)
         }
 
         msg.header.stamp = ros::Time::now();
+        pub->publish(msg);
+        rate.sleep();
+    }
+}
+
+void forceStatePublisher(ros::Publisher* pub)
+{
+    ros::Rate rate(robot_pub_rate);
+    touch_set::OmniFeedback msg;
+
+    while (ros::ok())
+    {
+        {
+            std::lock_guard<std::mutex> lock(state_mtx);
+            msg.force.x = force_cache[0];
+            msg.force.y = force_cache[1];
+            msg.force.z = force_cache[2];
+        }
         pub->publish(msg);
         rate.sleep();
     }
@@ -278,9 +301,12 @@ int main(int argc, char** argv)
 
     ros::Publisher tcp_pub = nh.advertise<robot_set::TCPState>("/cs66/tcp_state", 10);
 
+    ros::Publisher force_pub = nh.advertise<touch_set::OmniFeedback>("/phantom/force_feedback",10);
+
     std::thread sdk_thread(sdkIOThread, &cs66robot);
     std::thread pub_joint_thread(jointStatePublisher, &joint_pub);
     std::thread pub_tcp_thread(tcpStatePublisher, &tcp_pub);
+    std::thread pub_force_thread(forceStatePublisher, &force_pub);
 
     ros::waitForShutdown();
     std::cout << "已断开机械臂控制" << std::endl;
@@ -288,6 +314,7 @@ int main(int argc, char** argv)
     sdk_thread.join();
     pub_joint_thread.join();
     pub_tcp_thread.join();
+    pub_force_thread.join();
 
     cs66robot.jointSpeed(joint_zero_speed,0);
     cs66robot.disconnect();

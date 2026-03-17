@@ -6,7 +6,7 @@
 
 // 控制cs机械臂的类，需要指定机械臂IP和电脑IP，外部控制脚本，rtsi文件，频率，有默认值
 class EliteCSRobotSDK {
-public:
+private:
     // 机械臂相关对象
     std::unique_ptr<ELITE::EliteDriver> s_driver;
     std::unique_ptr<ELITE::RtsiIOInterface> s_rtsi_io;
@@ -107,6 +107,8 @@ public:
     // 停止轨迹跟随
     void ExecuteJointTrajectoryStop();
 
+    ELITE::vector6d_t getTCPforce();
+
 private:
     bool startMode1();
     bool startMode2();
@@ -114,4 +116,5 @@ private:
     // 轨迹插值函数
     bool CubicInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
     bool QuinticInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
+
 };

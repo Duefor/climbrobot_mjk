@@ -142,6 +142,7 @@ foreach(SRC_FILE ${SRC_FILES})
     # 获取文件名（不包括路径和扩展名）
     get_filename_component(FILENAME ${SRC_FILE} NAME_WE)
     add_executable(${FILENAME} ${SRC_FILE})
+    add_dependencies(${FILENAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
     target_link_libraries(${FILENAME} 
         ${catkin_LIBRARIES}
     )

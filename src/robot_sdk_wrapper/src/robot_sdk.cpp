@@ -614,3 +614,8 @@ void EliteCSRobotSDK::ExecuteJointTrajectoryStop()
 {
     stop_requested_ = true;
 }
+
+ELITE::vector6d_t EliteCSRobotSDK::getTCPforce()
+{
+    return s_rtsi_io->getAcutalTCPForce();
+}

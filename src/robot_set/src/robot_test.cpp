@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
     while (true)
     {
-        auto force = cs66robot.s_rtsi_io->getAcutalTCPForce();
+        auto force = cs66robot.getTCPforce();
         std::cout << "当前tcp力：" << force[0] << "," << force[1] << "," << force[2] << "," << force[3] << "," << force[4] << "," << force[5] << std::endl;
         std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
