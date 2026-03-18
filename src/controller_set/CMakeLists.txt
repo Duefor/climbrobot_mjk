@@ -145,6 +145,7 @@ add_executable(Cal_scaleANDoffset src/Cal_scaleANDoffset.cpp)
 
 add_executable(carSpeed_converter src/carSpeed_converter.cpp)
 add_executable(carSpeed_converter_m src/carSpeed_converter_m.cpp)
+add_executable(carSpeed_converter_1 src/carSpeed_converter_1.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,6 +162,7 @@ add_dependencies(Cal_scaleANDoffset ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin
 
 add_dependencies(carSpeed_converter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(carSpeed_converter_m ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(carSpeed_converter_1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(pose_converter_m
@@ -184,6 +186,10 @@ target_link_libraries(carSpeed_converter
 )
 
 target_link_libraries(carSpeed_converter_m
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(carSpeed_converter_1
   ${catkin_LIBRARIES}
 )
 #############

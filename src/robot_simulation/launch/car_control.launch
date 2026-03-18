@@ -19,7 +19,7 @@
 
   <!-- <node pkg="touch_set" type="touch_pub" name="touch_pub" output="screen"/> -->
   <node pkg="car_ctl" type="keyboard_car" name="keyboard_car" output="screen"/>
-  <node pkg="controller_set" type="carSpeed_converter_m" name="carSpeed_converter_m" output="screen"/>
+  <node pkg="controller_set" type="carSpeed_converter_1" name="carSpeed_converter_1" output="screen"/>
   <node pkg="robot_simulation" type="car_speed" name="car_speed" output="screen"/>
 
 </launch>
