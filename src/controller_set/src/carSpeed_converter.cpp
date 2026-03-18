@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     ros::NodeHandle nh;
 
     car_speed_pub  = nh.advertise<std_msgs::Float64MultiArray>("/wheel_speed_cmd", 10);
-    touch_joint_sub = nh.subscribe("/phantom/joint_states", 10, cb);
+    touch_joint_sub = nh.subscribe("/phantom/joint_states_car", 10, cb);
 
     ROS_INFO("carSpeed_converter running");
     ros::spin();

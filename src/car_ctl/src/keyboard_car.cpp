@@ -99,11 +99,18 @@ int main(int argc, char **argv)
     double joint1 = (j1_pos ? fixed_angle : 0.0) + (j1_neg ? -fixed_angle : 0.0);
     double joint2 = (j2_pos ? fixed_angle : 0.0) + (j2_neg ? -fixed_angle : 0.0);
     double joint4 = (j4_pos ? fixed_angle : 0.0) + (j4_neg ? -fixed_angle : 0.0);
-
     sensor_msgs::JointState msg;
     msg.header.stamp = ros::Time::now();
     msg.name = {"joint1", "joint2","joint3", "joint4","joint5","joint6"};
     msg.position = {joint1, joint2+15.0/180.0*M_PI ,0.0, joint4+3.1414822448183592 ,0.0,0.0};
+
+    // double joint1 = (j1_pos ? fixed_angle : 0.0) + (j1_neg ? -fixed_angle : 0.0);
+    // double joint2 = (j2_pos ? fixed_angle : 0.0) + (j2_neg ? -fixed_angle : 0.0);
+    // sensor_msgs::JointState msg;
+    // msg.header.stamp = ros::Time::now();
+    // msg.name = {"joint1", "joint2","joint3", "joint4","joint5","joint6"};
+    // msg.position = {joint1, joint2+15.0/180.0*M_PI ,0.0, 0.0 ,0.0,0.0};
+
 
     pub.publish(msg);
 
