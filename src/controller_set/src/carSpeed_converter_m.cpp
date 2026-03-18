@@ -6,6 +6,7 @@
 
 // 安全限制
 double heading_est = 0.0;     // 估计朝向
+double current_heading;
 ros::Time last_time;
 double limit = 60.0;
 
@@ -114,18 +115,10 @@ void cb(const sensor_msgs::JointState::ConstPtr& msg)
         if(side_state == TURN)
         {
             w = side_dir * SIDE_TURN_SPEED;
-            if((w > 0 && heading_est > limit) || (w < 0 && heading_est < -limit))
+            if((w > 0 && heading_est > limit) || (w < 0 && heading_est < -limit) || (t > SIDE_TURN_TIME))
             {
                 side_state = FORWARD;
                 state_start = now;
-                SIDE_TURN_time = t - 1/200;
-            }
-
-            if(t > SIDE_TURN_TIME)
-            {
-                side_state = FORWARD;
-                state_start = now;
-                SIDE_TURN_time = SIDE_TURN_TIME;
             }
         }
 
@@ -144,7 +137,7 @@ void cb(const sensor_msgs::JointState::ConstPtr& msg)
         {
             w = -side_dir * SIDE_TURN_SPEED;
 
-            if(t > SIDE_TURN_time)
+            if((side_dir > 0 && heading_est < current_heading+2) || (side_dir < 0 && heading_est > current_heading-2))
             {
                 side_state = IDLE;
             }
@@ -160,6 +153,7 @@ void cb(const sensor_msgs::JointState::ConstPtr& msg)
     {
         side_state = TURN;
         state_start = now;
+        current_heading = heading_est;
         return;
     }
 
