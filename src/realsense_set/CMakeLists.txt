@@ -22,7 +22,12 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   tf2_geometry_msgs
+
+  robot_sdk_wrapper
 )
+find_package(elite-cs-series-sdk REQUIRED)
+find_package(Eigen3 REQUIRED)
+
 find_package(PkgConfig REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -119,7 +124,7 @@ find_package(realsense2 REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES realsense_set
-#  CATKIN_DEPENDS cv_bridge geometry_msgs image_transport message_generation pcl_conversions pcl_ros roscpp rospy sensor_msgs std_msgs
+#  CATKIN_DEPENDS cv_bridge geometry_msgs image_transport message_generation pcl_conversions pcl_ros roscpp rospy sensor_msgs std_msgs robot_sdk_wrapper
 #  DEPENDS system_lib
 )
 
@@ -136,6 +141,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${realsense2_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../robot_sdk_wrapper/include
 )
 
 ## Declare a C++ library
@@ -159,6 +165,9 @@ add_executable(camera_static_tf_broadcaster src/camera_static_tf_broadcaster.cpp
 add_executable(camera_tf_pub src/camera_tf_pub.cpp)
 
 add_executable(imu_cov_republisher src/imu_cov_republisher.cpp)
+
+add_executable(collect_data camera_biaoding/src/collect_data.cpp)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -188,6 +197,14 @@ target_link_libraries(camera_tf_pub
 
 target_link_libraries(imu_cov_republisher
   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(collect_data
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${Eigen3_LIBRARIES}
+  realsense2
+  robot_sdk
 )
 #############
 ## Install ##

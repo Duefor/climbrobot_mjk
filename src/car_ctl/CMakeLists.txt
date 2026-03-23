@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 # 查找 libsocketcan 库
 find_package(PkgConfig REQUIRED)
+find_package(Eigen3 REQUIRED)
 pkg_check_modules(libsocketcan REQUIRED IMPORTED_TARGET)
 
 ## System dependencies are found with CMake's conventions
@@ -124,6 +125,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 # 获取 src 目录下的所有.cpp 文件
@@ -136,6 +138,7 @@ foreach(SRC_FILE ${SRC_FILES})
     add_dependencies(${FILENAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
     target_link_libraries(${FILENAME} 
         ${catkin_LIBRARIES} 
+        ${Eigen3_LIBRARIES}
         PkgConfig::libsocketcan
         rt
     )
