@@ -104,6 +104,33 @@ bool EliteCSRobotSDK::init() {
     return true;
 }
 
+bool EliteCSRobotSDK::init_read_data() {
+    std::cout << "Initializing..." << std::endl;
+    // s_driver = std::make_unique<ELITE::EliteDriver>(robot_ip, pc_ip, external_control_script);
+    // s_driver = std::make_unique<ELITE::EliteDriver>(DriverConfig);
+    s_rtsi_io = std::make_unique<ELITE::RtsiIOInterface>(output_recipe, input_recipe, frequency);
+    // s_dashboard = std::make_unique<ELITE::DashboardClient>();
+    s_rtsi_client = std::make_unique<ELITE::RtsiClientInterface>();
+
+    // if (!s_dashboard->connect(robot_ip)) {
+    //     std::cout << "Dashboard connect false" << std::endl;
+    //     return false;
+    // }
+    // std::cout << "Dashboard connected" << std::endl;
+
+    if (!s_rtsi_io->connect(robot_ip)) {
+        std::cout << "RTSI IO connect false" << std::endl;
+        return false;
+    }
+    std::cout << "RTSI IO connected" << std::endl;
+    
+    s_rtsi_client->connect(robot_ip);
+    std::cout << "RTSI client connected" << std::endl;
+
+    return true;
+}
+
+
 // 启动机械臂相关服务
 bool EliteCSRobotSDK::start() {
     if(DriverConfig.headless_mode)

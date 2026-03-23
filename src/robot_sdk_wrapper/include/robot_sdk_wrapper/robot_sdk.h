@@ -52,6 +52,9 @@ public:
     // 执行连接驱动和接口等初始化操作
     bool init();
 
+    // 仅读取数据，不执行操作的初始化
+    bool init_read_data();
+
     // 启动机械臂相关服务:释放抱闸，连接外部控制驱动等
     bool start();
 

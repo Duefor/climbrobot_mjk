@@ -77,7 +77,7 @@ std::vector<double> getRobotPose(EliteCSRobotSDK& robot)
 int main()
 {
     EliteCSRobotSDK robot("192.168.1.199","192.168.1.199",true,"external_control.script","output_recipe.txt","input_recipe.txt");
-    if (!robot.init())
+    if (!robot.init_read_data())
     {
         std::cerr << "Robot init/start failed" << std::endl;
         return 1;
