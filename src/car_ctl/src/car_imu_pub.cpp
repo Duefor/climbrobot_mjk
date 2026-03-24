@@ -37,6 +37,9 @@ private:
     // 相机相对于第5关节的变换（你填）
     Matrix4d T_joint5_cam = Matrix4d::Identity();
 
+    // 误差旋转矩阵
+    Matrix3d R_err = Matrix3d::Identity();
+
     // =======================
 
     void jointCallback(const sensor_msgs::JointStateConstPtr& msg)
@@ -88,7 +91,10 @@ private:
         Matrix4d T_base_cam = T_base_j5 * T_j5_cam;
 
         // Step 4: 取旋转
-        Matrix3d R_base_cam = T_base_cam.block<3,3>(0,0);
+        Matrix3d R_base_cam_origin = T_base_cam.block<3,3>(0,0);
+
+        // 修正
+        Matrix3d R_base_cam = R_err * R_base_cam_origin;
 
         // ====== IMU数据 ======
         Vector3d acc_cam(msg->linear_acceleration.x,
