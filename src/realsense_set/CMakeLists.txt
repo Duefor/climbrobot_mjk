@@ -166,6 +166,8 @@ add_executable(camera_tf_pub src/camera_tf_pub.cpp)
 
 add_executable(imu_cov_republisher src/imu_cov_republisher.cpp)
 
+add_executable(camera_imu_error src/camera_imu_error.cpp)
+
 add_executable(collect_data camera_biaoding/src/collect_data.cpp)
 
 
@@ -200,6 +202,14 @@ target_link_libraries(imu_cov_republisher
 )
 
 target_link_libraries(collect_data
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${Eigen3_LIBRARIES}
+  realsense2
+  robot_sdk
+)
+
+target_link_libraries(camera_imu_error
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   ${Eigen3_LIBRARIES}

@@ -3,11 +3,11 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <sensor_msgs/JointState.h>
+#include <robot_sdk_wrapper/robot_sdk.h>
 
 Eigen::Matrix3d R_imu_meas = Eigen::Matrix3d::Identity();
 bool imu_ready = false;
 
-std::vector<double> joints;
 
 // 保存误差
 std::vector<Eigen::Matrix3d> error_list;
@@ -64,10 +64,6 @@ Eigen::Matrix3d forwardKinematics_R_base_j5(const std::vector<double>& q)
     return T.block<3,3>(0,0);
 }
 
-void joint_cb(const sensor_msgs::JointState::ConstPtr& msg)
-{
-    joints = {msg->position[0],msg->position[1],msg->position[2],msg->position[3],msg->position[4],msg->position[5]};
-}
 
 double rotationErrorAngle(const Eigen::Matrix3d& R)
 {
@@ -76,13 +72,23 @@ double rotationErrorAngle(const Eigen::Matrix3d& R)
     return angle * 180.0 / M_PI;
 }
 
+std::vector<double> getRobotJoint(EliteCSRobotSDK& robot)
+{
+    auto joint = robot.getCurrentJoint();
+
+    std::vector<double> q(joint.begin(), joint.end());
+
+    return q;
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "imu_check_node");
     ros::NodeHandle nh;
 
     ros::Subscriber sub = nh.subscribe("/camera/imu", 10, imuCallback);
-    ros::Subscriber joint_sub = nh.subscribe("/joint_states",10,joint_cb);
+
+    EliteCSRobotSDK robot("robotip","pcip",true,"external_control.script","output_recipe.txt","input_recipe.txt");
 
 
 
@@ -90,11 +96,13 @@ int main(int argc, char** argv)
 
     // j5 -> cam（手眼标定）
     Eigen::Matrix3d R_j5_cam;
-    R_j5_cam.setIdentity();  // TODO: 替换
+    R_j5_cam << 0.997269, -0.003001, -0.07379,
+  0.073844,  0.053722, 0.995822, 
+ 0.000975, -0.998551,  0.053797  ;  
 
     // cam -> imu（realsense提供）
     Eigen::Matrix3d R_cam_imu;
-    R_cam_imu.setIdentity();  // TODO: 替换
+    R_cam_imu.setIdentity();
 
     // world -> base
     Eigen::Matrix3d R_base_world;
@@ -113,12 +121,7 @@ int main(int argc, char** argv)
         }
 
         // ===== 1. 读取关节角 =====
-        if (joints.size() < 6)
-        {
-            rate.sleep();
-            continue;
-        }
-        std::vector<double> q = joints;
+        std::vector<double> q = getRobotJoint(robot);
 
         // ===== 2. 正运动学 =====
         Eigen::Matrix3d R_base_j5 = forwardKinematics_R_base_j5(q);
