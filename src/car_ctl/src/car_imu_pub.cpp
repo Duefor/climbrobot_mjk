@@ -16,6 +16,26 @@ public:
         pub_imu_ = nh_.advertise<sensor_msgs::Imu>("/car/imu", 10);
 
         joint_positions_.resize(DOF, 0.0);
+        R_err << 
+        -0.714952,  -0.69014,  0.112026,
+ 0.698833, -0.710372, 0.0836948,
+0.0218192,  0.138125,  0.990174;
+        T_joint5_cam << 
+               0.99933871, -0.03441112, -0.01174839, -0.03749693,
+  0.01460956,  0.08411249,  0.99634916, -0.02097434,
+ -0.0332973,  -0.99586192,  0.0845596,   0.06478461,
+  0,          0,          0,          1;  
+            //     T_ee_cam << 
+//      0.997269, -0.003001, -0.07379,  -0.014354,
+//   0.073844,  0.053722 , 0.995822 , 0.033662,
+//   0.000975, -0.998551,  0.053797 , 0.15485 ,
+//   0 ,       0  ,      0    ,    1   ;   
+
+//     T_ee_cam << 
+//    0.99933871, -0.03441112, -0.01174839, -0.03749693,
+//   0.01460956,  0.08411249,  0.99634916, -0.02097434,
+//  -0.0332973,  -0.99586192,  0.0845596,   0.06478461,
+//   0,          0,          0,          1;  
     }
 
 private:
@@ -35,7 +55,8 @@ private:
     std::vector<double> alpha_ = {0, M_PI/2, 0, 0, M_PI/2, -M_PI/2};
 
     // 相机相对于第5关节的变换（你填）
-    Matrix4d T_joint5_cam = Matrix4d::Identity();
+    Matrix4d T_joint5_cam;
+    
 
     // 误差旋转矩阵
     Matrix3d R_err = Matrix3d::Identity();
@@ -91,10 +112,7 @@ private:
         Matrix4d T_base_cam = T_base_j5 * T_j5_cam;
 
         // Step 4: 取旋转
-        Matrix3d R_base_cam_origin = T_base_cam.block<3,3>(0,0);
-
-        // 修正
-        Matrix3d R_base_cam = R_err * R_base_cam_origin;
+        Matrix3d R_base_cam = T_base_cam.block<3,3>(0,0);
 
         // ====== IMU数据 ======
         Vector3d acc_cam(msg->linear_acceleration.x,
@@ -105,9 +123,9 @@ private:
                           msg->angular_velocity.y,
                           msg->angular_velocity.z);
 
-        // Step 5: 转到 base
-        Vector3d acc_base = R_base_cam * acc_cam;
-        Vector3d gyro_base = R_base_cam * gyro_cam;
+        // Step 5: 转到 base 修正误差
+        Vector3d acc_base = R_base_cam * R_err.transpose() * acc_cam;
+        Vector3d gyro_base = R_base_cam * R_err.transpose() * gyro_cam;
 
         // ====== 输出 ======
         sensor_msgs::Imu imu_out = *msg;

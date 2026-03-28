@@ -139,7 +139,8 @@ foreach(SRC_FILE ${SRC_FILES})
     target_link_libraries(${FILENAME} 
         ${catkin_LIBRARIES} 
         ${Eigen3_LIBRARIES}
-        PkgConfig::libsocketcan
+        # PkgConfig::libsocketcan
+        socketcan
         rt
     )
 endforeach()

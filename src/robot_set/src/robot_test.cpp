@@ -14,36 +14,57 @@
 
 const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
 const std::string DEFAULT_PC_IP = "192.168.1.150";
-const std::string external_control_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
-const std::string output_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
-const std::string input_recipe_file_address = "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
+const std::string external_control_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
+const std::string output_recipe_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
+const std::string input_recipe_file_address = "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
 const std::string task_file_address = "mjktest.task";
 
 
 int main(int argc, char** argv)
 {
-
+    ros::init(argc,argv,"test");
+    ros::NodeHandle nh;
     EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
                     output_recipe_file_address,input_recipe_file_address,task_file_address,250);
 
-    if(!cs66robot.init()){
+    if(!cs66robot.init_read_data()){
         std::cout << "Robot init false" << std::endl;
         return 1;
     }
     std::cout << "Robot init successful" << std::endl;
-    if(!cs66robot.start()){
-        std::cout << "Robot start false" << std::endl;
-        return 1;
-    }
-    std::cout << "Robot start successful" << std::endl;
 
-
-    ELITE::vector6d_t exforce = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-    while (true)
+    ros::Publisher pub = nh.advertise<sensor_msgs::JointState>("/cs66/joint_states",10);
+    ros::Rate rate = ros::Rate(200);
+    while(ros::ok())
     {
-        cs66robot.test(exforce);
-        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+        auto joint = cs66robot.getCurrentJoint();
+        sensor_msgs::JointState msg;
+        msg.position = {joint[0],joint[1],joint[2],joint[3],joint[4],joint[5]};
+        pub.publish(msg);
+        rate.sleep();
     }
+
+    // EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
+    //                 output_recipe_file_address,input_recipe_file_address,task_file_address,250);
+
+    // if(!cs66robot.init()){
+    //     std::cout << "Robot init false" << std::endl;
+    //     return 1;
+    // }
+    // std::cout << "Robot init successful" << std::endl;
+    // if(!cs66robot.start()){
+    //     std::cout << "Robot start false" << std::endl;
+    //     return 1;
+    // }
+    // std::cout << "Robot start successful" << std::endl;
+
+
+    // ELITE::vector6d_t exforce = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    // while (true)
+    // {
+    //     cs66robot.test(exforce);
+    //     std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    // }
     
 
     // // 读取当前关节角
@@ -128,7 +149,7 @@ int main(int argc, char** argv)
     // std::this_thread::sleep_for(std::chrono::seconds(2));
 
 
-    cs66robot.disconnect();
+    // cs66robot.disconnect();
 
     return 0;
 }
