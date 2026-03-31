@@ -100,8 +100,8 @@ void carSpeed_converter::publish_speed(double v,double w)
     std::cout << heading_est << std::endl;
 
     // 角度限制
-    if(heading_est > limit && w > 0) w = 0;
-    if(heading_est < -limit && w < 0) w = 0;
+    if(heading_est > limit && w < 0) w = 0;
+    if(heading_est < -limit && w > 0) w = 0;
 
     msg.data[0] = v - w;
     msg.data[1] = v + w;
@@ -244,7 +244,7 @@ void carSpeed_converter::cb(const sensor_msgs::JointState::ConstPtr& msg)
 double carSpeed_converter::computeHeading(const Eigen::Vector3d& acc)
 {
     Eigen::Vector3d g = acc.normalized();
-    Eigen::Vector3d head(1, 0, 0);  // 车头方向,以车头（机械臂基坐标系）x轴朝前为准
+    Eigen::Vector3d head(-1, 0, 0);  // 车头方向,以车头（机械臂基坐标系）x轴朝前为准
 
     double cos_theta = g.dot(head);
     cos_theta = std::clamp(cos_theta, -1.0, 1.0);
@@ -271,6 +271,7 @@ double carSpeed_converter::updateHeading(double heading_est,
 
     // 判断是否静止（抗干扰）
     double norm = acc.norm();
+    // std::cout << norm << std::endl;
 
     if(std::fabs(norm - 9.81) < 0.5)
     {

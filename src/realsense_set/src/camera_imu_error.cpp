@@ -70,8 +70,7 @@ Matrix3d computeRotationBias(
 
 
 // ====== 参数 ======
-const int SAMPLE_NUM = 200;      // 每次平均帧数
-const int POSE_NUM   = 50;       // 采样姿态数
+const int SAMPLE_NUM = 20;      // 每次平均帧数
 
 // ====== 全局变量 ======
 std::vector<Vector3d> imu_buffer;
@@ -145,10 +144,10 @@ int main(int argc, char** argv)
     ros::Subscriber sub = nh.subscribe("/camera/imu", 1000, imuCallback);
 
     Matrix3d R_bias_0 = Matrix3d::Identity();
-//     R_bias_0 << 
-//     -0.714952,  -0.69014,  0.112026,
-//  0.698833, -0.710372, 0.0836948,
-// 0.0218192,  0.138125,  0.990174;
+    R_bias_0 << 
+     0.999406,    0.013592,   0.0316765,
+-0.00856844 ,    0.98809  , -0.153639,
+ -0.0333875 ,   0.153277  ,  0.987619;
 
     // ===== 手眼标定（示例）=====
 //     T_ee_cam << 
@@ -188,7 +187,7 @@ int main(int argc, char** argv)
         if (key == 's')
         {
             ROS_INFO("Move robot to pose %d and keep still...", pose_id);
-            sleep(1);  // 等待稳定
+            // sleep(1);  // 等待稳定
 
             imu_buffer.clear();
             collecting = true;
@@ -218,7 +217,7 @@ int main(int argc, char** argv)
 
             Matrix3d R_base_cam = T_base_cam.block<3,3>(0,0);
 
-            Vector3d g_base(0, 0, -1);
+            Vector3d g_base(1, 0, 0.04436042688);   // 参考重力方向
             Vector3d g_ref = R_base_cam.transpose() * g_base;
             g_ref.normalize();
 
