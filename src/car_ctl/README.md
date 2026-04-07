@@ -26,4 +26,5 @@ sudo ip link set can0 type can bitrate 500000
 sudo ip link set up can0  
 **写了一个自动化脚本，可以直接开**  
 
-## 26/1/16
+## 26/4/7
+cmakelist中的socketcan包可能要改一下链接名

@@ -168,9 +168,9 @@ add_executable(imu_cov_republisher src/imu_cov_republisher.cpp)
 
 add_executable(camera_imu_error src/camera_imu_error.cpp)
 
-add_executable(camera_imu_error_w src/camera_imu_error_w.cpp)
-
 add_executable(collect_data camera_biaoding/src/collect_data.cpp)
+
+add_executable(testC src/testC.cpp)
 
 
 ## Rename C++ executable without prefix
@@ -219,12 +219,10 @@ target_link_libraries(camera_imu_error
   robot_sdk
 )
 
-target_link_libraries(camera_imu_error_w
+
+target_link_libraries(testC
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
-  ${Eigen3_LIBRARIES}
-  realsense2
-  robot_sdk
+  ${PCL_LIBRARIES}
 )
 #############
 ## Install ##
