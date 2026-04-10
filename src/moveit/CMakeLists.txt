@@ -174,18 +174,18 @@ add_executable(moveit_test src/moveit_test.cpp)
 
 target_link_libraries(my_robot_hw_node
   ${catkin_LIBRARIES}
-  robot_sdk
+  # robot_sdk
 )
 
 target_link_libraries(trajectory_action_server
   ${catkin_LIBRARIES}
-  robot_sdk
+  # robot_sdk
 )
 
 target_link_libraries(moveit_test
   ${catkin_LIBRARIES}
   ${Eigen3_LIBRARIES}
-  robot_sdk
+  # robot_sdk
 )
 #############
 ## Install ##

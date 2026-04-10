@@ -93,7 +93,8 @@
         "charconv": "cpp",
         "netfwd": "cpp",
         "tensor": "cpp",
-        "eigenvalues": "cpp"
+        "eigenvalues": "cpp",
+        "geometry": "cpp"
     },
     "ros.distro": "noetic"
 }

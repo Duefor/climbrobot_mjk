@@ -27,4 +27,4 @@ sudo ip link set up can0
 **写了一个自动化脚本，可以直接开**  
 
 ## 26/4/7
-cmakelist中的socketcan包可能要改一下链接名
+cmakelist中的socketcan包可能要改一下链接名，arm64和x86架构链接的包名不一致

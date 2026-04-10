@@ -208,7 +208,7 @@ target_link_libraries(collect_data
   ${OpenCV_LIBS}
   ${Eigen3_LIBRARIES}
   realsense2
-  robot_sdk
+  # robot_sdk
 )
 
 target_link_libraries(camera_imu_error
@@ -216,7 +216,7 @@ target_link_libraries(camera_imu_error
   ${OpenCV_LIBS}
   ${Eigen3_LIBRARIES}
   realsense2
-  robot_sdk
+  # robot_sdk
 )
 
 

@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   tf
+
+  robot_set
 )
 find_package(Eigen3 REQUIRED)
 
@@ -112,7 +114,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES touch_set
 #  某些环境中只能保留这一行
- CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs tf message_runtime
+ CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs tf message_runtime robot_set
 #  DEPENDS system_lib
 )
 

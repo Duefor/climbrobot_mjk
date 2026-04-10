@@ -64,3 +64,6 @@
 ~~无法编译touch包，编译出现错误：宏展开失效或是宏未定义~~     
 ~~考虑如下：在顶层cmakelist中 取消显示指定c++版本 / 显式指定c++版本为14 / 显示指定c++版本为17~~
 由于openhaptics包需要低版本的c++14；而cs66机械臂的sdk需要高版本的c++17。故在全局cmakelist中不能定义整体c++版本，而需要在使用cs66机械臂的sdk的功能包中的cmakelist中设置 `add_compile_options(-std=c++17)`
+
+## 26/4/10
+改用catkin build编译，首先需要安装catkin-tools工具：`sudo apt install python3-catkin-tools`
