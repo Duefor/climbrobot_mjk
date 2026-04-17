@@ -1,0 +1,9 @@
+# Goal: distance in meters to move forward after the first rotation
+float32 distance
+---
+# Result: success and optional message
+bool success
+string message
+---
+# Feedback: fraction of the overall task completed
+float32 progress

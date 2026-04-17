@@ -67,3 +67,36 @@
 
 ## 26/4/10
 改用catkin build编译，首先需要安装catkin-tools工具：`sudo apt install python3-catkin-tools`
+
+---
+
+
+### 一体化节点 `robot_main`（推荐用于新部署）
+
+将手柄订阅、工作空间映射、笛卡尔 PID+前馈、**MoveIt 雅可比阻尼最小二乘速度 IK**、SDK 状态发布与关节速度执行合并为单进程，减少话题延迟与多节点参数重复配置。
+
+启动前需在参数服务器上加载 `robot_description`（与 `cs66_moveit_config` 中 SRDF 一致）。示例：
+
+```bash
+roslaunch robot_set robot_main.launch
+```
+
+在此之前需运行手柄驱动节点（例如 `touch_set`），使其按 `robot_set/TCPState` 发布位姿与线速度（默认订阅话题：`/phantom/pose`）。
+
+**主要私有参数（`~` 命名空间）**
+
+| 参数名 | 含义 |
+|--------|------|
+| `haptic_tcp_topic` | 手柄 TCP 话题（`TCPState`） |
+| `joint_states_pub_topic` / `tcp_state_pub_topic` / `force_pub_topic` | 机械臂关节、TCP、力传感器发布话题 |
+| `robot_sdk_rate` / `robot_pub_rate` | SDK 控制周期与状态发布频率（Hz） |
+| `cmd_timeout` | 有效关节速度指令超时（秒），超时后自动下发零速 |
+| `desired_timeout` | 手柄期望位姿超时（秒），超时后复位积分与 IK 平滑状态 |
+| `planning_group` / `tip_link` | MoveIt 运动组与末端链节名（默认 `planning_group` / `ee_link`） |
+| `ik_svd_threshold` / `ik_damping_gain` | 奇异区域阻尼 IK 阈值与增益 |
+| `MAX_QDOT_SCALE_1` … `6` | 相对 SDK 最大关节速度的执行比例（与 `ik_velocity_solver` 含义一致） |
+| `MAX_QDDOT_1` … `6` | IK 输出关节加速度限幅 |
+| `H_INIT_*` / `H_MAX_*` / `H_MIN_*` / `R_INIT_*` / `R_MAX_*` / `R_MIN_*` / `CONTROL_MODE` | 手柄到机械臂工作空间映射（同原 `pose_converter`） |
+| `KP_LIN_N` / `KI_LIN_N` / `KD_LIN_N` / `KP_ROT_N` / `KVIR_ROT_N` / `EQUAL1` / `EQUAL2` / `E_FF_ON` / `integral_limit` / `beta_tau` | 笛卡尔跟踪与前馈（同原 `pose_error_controller`） |
+
+**发布内容**：关节位置（`sensor_msgs/JointState`）；TCP 位姿与由数值微分得到的线速度、角速度（`TCPState.velocity` 前 3 为 m/s，后 3 为 rad/s）；六维力（`std_msgs/Float64MultiArray`，与 SDK 一致）。

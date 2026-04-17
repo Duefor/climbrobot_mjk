@@ -85,6 +85,7 @@ void wheelSpeedCb(const std_msgs::Float64MultiArray::ConstPtr& msg)
     joint_state.name = {"joint_left" , "joint_right"};
     joint_state.position = {left_wheel_rad, right_wheel_rad};
     joint_state_pub.publish(joint_state);
+    std::cout << "Received wheel speeds: " << w_l << ", " << w_r << std::endl;
 }
 
 int main(int argc, char** argv)

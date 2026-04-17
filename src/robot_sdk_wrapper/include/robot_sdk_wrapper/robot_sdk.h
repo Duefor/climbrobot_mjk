@@ -28,7 +28,7 @@ private:
     std::atomic<bool> stop_requested_{false};
     
 public:
-    // 轨迹消息类型
+    // 轨迹消息类型（关节角描述）
     struct TrajectoryPoint
     {
         ELITE::vector6d_t positions;  // 当前点位置
@@ -110,6 +110,7 @@ public:
     // 停止轨迹跟随
     void ExecuteJointTrajectoryStop();
 
+    // 获取当前末端力传感器数据，单位N
     ELITE::vector6d_t getTCPforce();
 
 private:

@@ -1,0 +1,35 @@
+<launch>
+  <!-- Loads URDF + SRDF + limits for MoveIt Jacobian IK (robot_description must exist before node starts). -->
+  <include file="$(find cs66_moveit_config)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="true"/>
+    <arg name="robot_description" value="robot_description"/>
+  </include>
+
+  <arg name="robot_ip" default="192.168.1.199"/>
+  <arg name="pc_ip" default="192.168.1.150"/>
+  <arg name="mode" default="true"/>
+  <arg name="external_control" default="$(find robot_sdk_wrapper)/resource/external_control.script"/>
+  <arg name="output_recipe" default="$(find robot_sdk_wrapper)/resource/output_recipe.txt"/>
+  <arg name="input_recipe" default="$(find robot_sdk_wrapper)/resource/input_recipe.txt"/>
+  <arg name="task_file" default="mjktest.task"/>
+
+  <arg name="haptic_tcp_topic" default="/phantom/pose"/>
+
+  <node pkg="robot_set" type="robot_main" name="robot_main" output="screen">
+    <param name="DEFAULT_ROBOT_IP" value="$(arg robot_ip)"/>
+    <param name="DEFAULT_PC_IP" value="$(arg pc_ip)"/>
+    <param name="MODE" value="$(arg mode)"/>
+    <param name="external_control_file_address" value="$(arg external_control)"/>
+    <param name="output_recipe_file_address" value="$(arg output_recipe)"/>
+    <param name="input_recipe_file_address" value="$(arg input_recipe)"/>
+    <param name="task_file_address" value="$(arg task_file)"/>
+    <param name="haptic_tcp_topic" value="$(arg haptic_tcp_topic)"/>
+
+    <param name="root_joint_1" value="0.0"/>
+    <param name="root_joint_2" value="-1.18"/>
+    <param name="root_joint_3" value="-2.44"/>
+    <param name="root_joint_4" value="-1.1"/>
+    <param name="root_joint_5" value="1.57"/>
+    <param name="root_joint_6" value="-1.57"/>
+  </node>
+</launch>

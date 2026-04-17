@@ -13,13 +13,17 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
   roslaunch
   actionlib
   control_msgs
   message_generation
-
+  moveit_core
+  moveit_ros_planning
   robot_sdk_wrapper
 )
+
+find_package(Threads REQUIRED)
 
 find_package(elite-cs-series-sdk REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -122,7 +126,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robot_set
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime robot_sdk_wrapper
+ CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs message_runtime robot_sdk_wrapper moveit_core moveit_ros_planning
 #  DEPENDS system_lib
 )
 
@@ -152,9 +156,8 @@ foreach(SRC_FILE ${SRC_FILES})
     add_executable(${FILENAME} ${SRC_FILE})
     # 如果无法编译生成自定义消息可以放开这个注释
     add_dependencies(${FILENAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-    target_link_libraries(${FILENAME} 
+    target_link_libraries(${FILENAME}
         ${catkin_LIBRARIES}
-        # robot_sdk
         ${Eigen3_LIBRARIES}
         Threads::Threads
     )

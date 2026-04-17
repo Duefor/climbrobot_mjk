@@ -1,0 +1,9 @@
+float32 left_value
+float32 right_value
+uint8 control_mode
+float32 timeout
+---
+bool success
+string message
+---
+float32 progress

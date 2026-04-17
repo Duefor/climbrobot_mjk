@@ -27,36 +27,36 @@ int main(int argc, char** argv)
     EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
                     output_recipe_file_address,input_recipe_file_address,task_file_address,250);
 
-    if(!cs66robot.init_read_data()){
-        std::cout << "Robot init false" << std::endl;
-        return 1;
-    }
-    std::cout << "Robot init successful" << std::endl;
-
-    ros::Publisher pub = nh.advertise<sensor_msgs::JointState>("/cs66/joint_states",10);
-    ros::Rate rate = ros::Rate(200);
-    while(ros::ok())
-    {
-        auto joint = cs66robot.getCurrentJoint();
-        sensor_msgs::JointState msg;
-        msg.position = {joint[0],joint[1],joint[2],joint[3],joint[4],joint[5]};
-        pub.publish(msg);
-        rate.sleep();
-    }
-
-    // EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
-    //                 output_recipe_file_address,input_recipe_file_address,task_file_address,250);
-
-    // if(!cs66robot.init()){
+    // if(!cs66robot.init_read_data()){
     //     std::cout << "Robot init false" << std::endl;
     //     return 1;
     // }
     // std::cout << "Robot init successful" << std::endl;
-    // if(!cs66robot.start()){
-    //     std::cout << "Robot start false" << std::endl;
-    //     return 1;
+
+    // ros::Publisher pub = nh.advertise<sensor_msgs::JointState>("/cs66/joint_states",10);
+    // ros::Rate rate = ros::Rate(200);
+    // while(ros::ok())
+    // {
+    //     auto joint = cs66robot.getCurrentJoint();
+    //     sensor_msgs::JointState msg;
+    //     msg.position = {joint[0],joint[1],joint[2],joint[3],joint[4],joint[5]};
+    //     pub.publish(msg);
+    //     rate.sleep();
     // }
-    // std::cout << "Robot start successful" << std::endl;
+
+    // EliteCSRobotSDK cs66robot(DEFAULT_ROBOT_IP,DEFAULT_PC_IP,true, external_control_file_address,
+    //                 output_recipe_file_address,input_recipe_file_address,task_file_address,250);
+
+    if(!cs66robot.init()){
+        std::cout << "Robot init false" << std::endl;
+        return 1;
+    }
+    std::cout << "Robot init successful" << std::endl;
+    if(!cs66robot.start()){
+        std::cout << "Robot start false" << std::endl;
+        return 1;
+    }
+    std::cout << "Robot start successful" << std::endl;
 
 
     // ELITE::vector6d_t exforce = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
     // std::this_thread::sleep_for(std::chrono::seconds(2));
 
 
-    // cs66robot.disconnect();
+    cs66robot.disconnect();
 
     return 0;
 }

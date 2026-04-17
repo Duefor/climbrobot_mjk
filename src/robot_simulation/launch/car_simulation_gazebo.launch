@@ -1,0 +1,21 @@
+<launch>
+  <arg name="world_name" default="$(find robot_simulation)/worlds/box_house.world" />
+  <arg name="gui" default="true" />
+  <arg name="paused" default="false" />
+
+  <param name="robot_description" textfile="$(find robot_simulation)/urdf/urdf/car.urdf" />
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)" />
+  </include>
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" output="screen"
+        args="-param robot_description -urdf -model car -x 0 -y 0 -z 0.1" />
+
+  <node pkg="robot_simulation" type="car_speed" name="car_speed" output="screen" />
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/car.rviz" />
+</launch>
