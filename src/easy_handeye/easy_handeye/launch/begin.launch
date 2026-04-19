@@ -1,0 +1,17 @@
+<launch>
+  <!-- 启动机器人MoveIt!栈（例如包含其moveit_planning_execution.launch） -->
+  <!-- 启动视觉系统驱动（如摄像头或ArUco检测） -->
+ 
+  <include file="$(find easy_handeye)/launch/calibrate.launch">
+    <arg name="eye_on_hand" value="true"/>
+    <!-- 命名空间需唯一，与发布时一致 -->
+    <arg name="namespace_prefix" value="my_eih_calib"/>
+    <!-- 机器人TF帧配置 -->
+    <arg name="robot_base_frame" value="base_link"/>
+    <arg name="robot_effector_frame" value="ee_link"/>
+    <!-- 视觉系统TF帧配置 -->
+    <arg name="tracking_base_frame" value="link_cam"/>
+    <arg name="tracking_marker_frame" value="motion_link"/>
+    <arg name="freehand_robot_movement" value="true"/>
+  </include>
+</launch>

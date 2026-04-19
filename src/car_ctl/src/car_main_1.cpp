@@ -119,6 +119,25 @@ private:
     if (nbytes != sizeof(frame)) {
       perror("CAN send error");
     }
+    else
+    {
+      // // ===== 调试输出 =====
+      // std::cout << "Send CAN Frame | ID: 0x" 
+      //           << std::hex << std::uppercase << can_id 
+      //           << " | Data: {";
+
+      // for (int i = 0; i < len; ++i) {
+      //     std::cout << "0x"
+      //               << std::setw(2)
+      //               << std::setfill('0')
+      //               << static_cast<int>(data[i]);
+      //     if (i != len - 1) std::cout << ", ";
+      // }
+      // std::cout << "}" << std::dec << std::endl;
+      // // ===================
+    }
+    // 添加 10 毫秒的延迟
+    usleep(10000); 
   }
 
   // 仿真模式下发布速度命令
@@ -141,7 +160,8 @@ private:
       publishWheelSpeedCommand(0, 0);
       return;
     }
-    sendZeroSpeed();
+    if(current_mode_ == 0) sendZeroSpeed();
+    else sendstop();
   }
 
   // 下列三个函数用于生成CAN协议中的速度和位置命令
@@ -202,8 +222,9 @@ private:
     unsigned char cw_07[8] = {0x2b, 0x40, 0x60, 0x00, 0x07, 0x00, 0x00, 0x00};
     unsigned char cw_0f[8] = {0x2b, 0x40, 0x60, 0x00, 0x0f, 0x00, 0x00, 0x00};
     unsigned char position_mode[8] = {0x2f, 0x60, 0x60, 0x00, 0x01, 0x00, 0x00, 0x00};
-    unsigned char acc[8] = {0x23, 0x83, 0x60, 0x00, 0x60, 0xE3, 0x16, 0x00};
-    unsigned char dec[8] = {0x23, 0x84, 0x60, 0x00, 0x60, 0xE3, 0x16, 0x00};
+    unsigned char acc[8] = {0x23, 0x83, 0x60, 0x00, 0xc0, 0xd4, 0x01, 0x00};
+    unsigned char dec[8] = {0x23, 0x84, 0x60, 0x00, 0xc0, 0xd4, 0x01, 0x00};
+    unsigned char speed[] = {0x23, 0x81, 0x60, 0x00, 0xc0, 0xd4, 0x01, 0x00};
 
     sendCanFrame(sock_, addr_, can_id, cw_06);
     sendCanFrame(sock_, addr_, can_id, cw_07);
@@ -211,6 +232,7 @@ private:
     sendCanFrame(sock_, addr_, can_id, position_mode);
     sendCanFrame(sock_, addr_, can_id, acc);
     sendCanFrame(sock_, addr_, can_id, dec);
+    sendCanFrame(sock_, addr_, can_id, speed);
   }
 
   void sendPositionMove(int can_id, int32_t target_position)
@@ -231,6 +253,17 @@ private:
     makeSpeedCommand(stop_data, 0);
     sendCanFrame(sock_, addr_, 0x601, stop_data);
     sendCanFrame(sock_, addr_, 0x602, stop_data);
+  }
+
+  void sendstop()
+  {
+    unsigned char halt0[8] = {0x2b, 0x40, 0x60, 0x00, 0x07, 0x00, 0x00, 0x00}; // Halt / Quick Stop
+    unsigned char halt1[8] = {0x2b, 0x40, 0x60, 0x00, 0x06, 0x00, 0x00, 0x00}; // Halt / Quick Stop
+    sendCanFrame(sock_, addr_, 0x601, halt0);
+    sendCanFrame(sock_, addr_, 0x601, halt1);
+    sendCanFrame(sock_, addr_, 0x602, halt0);
+    sendCanFrame(sock_, addr_, 0x602, halt1);
+    position_mode_initialized_ = false;
   }
 
   void ensureSpeedMode()
@@ -261,7 +294,6 @@ private:
   void ensurePositionMode()
   {
     if (current_mode_ != 1 || !position_mode_initialized_) {
-      ROS_INFO("[%s] Initializing position control mode", action_name_.c_str());
       sendResetAndRemoteControl();
       sendPositionSetup(0x601);
       sendPositionSetup(0x602);
@@ -325,7 +357,9 @@ private:
         return;
       }
 
+      ROS_INFO("[%s] Initializing position control mode", action_name_.c_str());
       ensurePositionMode();
+      ROS_INFO("[%s] Initialized", action_name_.c_str());
 
       // goal中的值代表电机转的圈数（revolutions），需要转换为对应的脉冲数（pulses）来发送给电机控制器
       int32_t left_target = static_cast<int32_t>(goal->left_value * pulse_per_rev_ * gear_ratio_);

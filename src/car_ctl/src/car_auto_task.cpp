@@ -72,7 +72,7 @@ private:
   bool sendWheelPositionGoal(double left_revs, double right_revs, double timeout, const ros::Time& deadline)
   {
     car_ctl::CarWheelMotionGoal wheel_goal;
-    wheel_goal.control_mode = 1;
+    wheel_goal.control_mode = 0;
     wheel_goal.left_value = static_cast<float>(left_revs);
     wheel_goal.right_value = static_cast<float>(right_revs);
     wheel_goal.timeout = static_cast<float>(timeout);
@@ -128,7 +128,7 @@ private:
     as_.publishFeedback(feedback);
 
     // 1. Clockwise 90° turn
-    if (!sendWheelPositionGoal(-rotation_revs, rotation_revs, turn_timeout, overall_deadline)) {
+    if (!sendWheelPositionGoal(rotation_revs, -rotation_revs, turn_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during first 90-degree rotation";
       as_.setAborted(result);
@@ -148,7 +148,7 @@ private:
     as_.publishFeedback(feedback);
 
     // 3. Counter-clockwise 90° turn
-    if (!sendWheelPositionGoal(rotation_revs, -rotation_revs, turn_timeout, overall_deadline)) {
+    if (!sendWheelPositionGoal(-rotation_revs, rotation_revs, turn_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during second 90-degree rotation";
       as_.setAborted(result);
