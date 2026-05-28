@@ -17,8 +17,8 @@ public:
       action_name_(name),
       wheel_radius_(0.15),
       wheel_separation_(0.308),
-      base_turn_timeout_(15.0),
-      base_drive_timeout_(30.0)
+      base_turn_timeout_(20.0),
+      base_drive_timeout_(20.0)
   {
     ros::NodeHandle pnh("~");
     pnh.param("wheel_radius", wheel_radius_, wheel_radius_);
@@ -122,7 +122,7 @@ private:
     double distance_revs = computeDistanceRevolutions(goal->distance);
     double turn_timeout = std::max(base_turn_timeout_, std::fabs(rotation_revs) * 10.0);
     double drive_timeout = std::max(base_drive_timeout_, std::fabs(distance_revs) * 10.0);
-    ros::Time overall_deadline = ros::Time::now() + ros::Duration(turn_timeout + drive_timeout + 10.0);
+    ros::Time overall_deadline = ros::Time::now() + ros::Duration(turn_timeout + drive_timeout + 50.0);
 
     feedback.progress = 0.0;
     as_.publishFeedback(feedback);

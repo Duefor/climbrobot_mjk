@@ -20,6 +20,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <visualization_msgs/Marker.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_state/robot_state.h>
@@ -34,6 +35,20 @@ constexpr double kPi = 3.14159265358979323846;
 // 将数值限制到指定范围内，常用于速度、角度等限制。
 inline double clampScalar(double v, double lo, double hi) {
   return std::max(lo, std::min(v, hi));
+}
+
+static Eigen::Matrix3d rotvecToRot(const Eigen::Vector3d& r) {
+  const double theta = r.norm();
+  if (theta < 1e-8) {
+    return Eigen::Matrix3d::Identity();
+  }
+  return Eigen::AngleAxisd(theta, r / theta).toRotationMatrix();
+}
+
+static double unwrapToClosest(double q, double q_ref) {
+  const double delta = q - q_ref;
+  const double k = std::round(delta / (2.0 * kPi));
+  return q - k * 2.0 * kPi;
 }
 
 // 将 XYZ 欧拉角转换为 TCP 末端的旋转矩阵。
@@ -61,20 +76,128 @@ class PoseMapper {
       pnh.param("R_MIN_" + std::to_string(j), r_min_[i], defaultRMin(i));
     }
     pnh.param("CONTROL_MODE", control_mode_, 0);
+    pnh.param("map_mode", map_mode_, std::string("drift"));
+    pnh.param("h_work_radius", h_work_radius_, 0.06);
+    pnh.param("h_drift_radius", h_drift_radius_, 0.12);
+    pnh.param("drift_gain", drift_gain_, 1.0);
+    pnh.param("drift_speed_max", drift_speed_max_, 0.05);
+    pnh.param("map_scale", map_scale_override_, 0.0);
+    pnh.param("work_box_scale", work_box_scale_, 0.85);
+
+    for (int i = 0; i < 3; ++i) {
+      const double denom = std::max(h_max_[i] - h_min_[i], kEps);
+      scale_[i] = (r_max_[i] - r_min_[i]) / denom;
+    }
+    if (map_scale_override_ > 0.0) {
+      scale_ = Eigen::Vector3d::Constant(map_scale_override_);
+    }
+
+    const Eigen::Vector3d drift_pos_default = (h_max_ - h_init_).cwiseMax(0.0);
+    const Eigen::Vector3d drift_neg_default = (h_init_ - h_min_).cwiseMax(0.0);
+    for (int i = 0; i < 3; ++i) {
+      h_drift_pos_[i] = drift_pos_default[i];
+      h_drift_neg_[i] = drift_neg_default[i];
+      h_work_pos_[i] = drift_pos_default[i] * work_box_scale_;
+      h_work_neg_[i] = drift_neg_default[i] * work_box_scale_;
+      if (h_drift_pos_[i] < h_work_pos_[i]) {
+        h_drift_pos_[i] = h_work_pos_[i];
+      }
+      if (h_drift_neg_[i] < h_work_neg_[i]) {
+        h_drift_neg_[i] = h_work_neg_[i];
+      }
+    }
+
+    if (h_drift_radius_ < h_work_radius_) {
+      h_drift_radius_ = h_work_radius_;
+    }
+    h_center_ = h_init_;
+    r_center_ = r_init_;
+    r_radius_ = scale_.mean() * h_work_radius_;
+    last_map_time_ = ros::Time(0.0);
   }
 
-  void map(const robot_set::TCPState& in, robot_set::TCPState& out) const {
+  void map(const robot_set::TCPState& in, robot_set::TCPState& out) {
     if (in.position.size() < 6 || in.velocity.size() < 6) {
       return;
     }
+    std::lock_guard<std::mutex> lk(mtx_);
     Eigen::Vector3d h_pos(in.position[0], in.position[1], in.position[2]);
     Eigen::Vector3d h_rot(in.position[3], in.position[4], in.position[5]);
     Eigen::Vector3d h_vel(in.velocity[0], in.velocity[1], in.velocity[2]);
     Eigen::Vector3d r_pos;
     Eigen::Vector3d r_vel;
-    for (int i = 0; i < 3; ++i) {
-      r_pos[i] = mapAxis(h_pos[i], h_init_[i], h_min_[i], h_max_[i], r_init_[i], r_min_[i], r_max_[i]);
-      r_vel[i] = mapVelocityAxis(h_vel[i], h_init_[i], h_min_[i], h_max_[i], r_init_[i], r_min_[i], r_max_[i]);
+    const ros::Time now = ros::Time::now();
+    double dt = 0.0;
+    if (!last_map_time_.isZero()) {
+      dt = (now - last_map_time_).toSec();
+    }
+    last_map_time_ = now;
+
+    if (map_mode_ == "fixed") {
+      for (int i = 0; i < 3; ++i) {
+        r_pos[i] = mapAxis(h_pos[i], h_init_[i], h_min_[i], h_max_[i], r_init_[i], r_min_[i], r_max_[i]);
+        r_vel[i] = mapVelocityAxis(h_vel[i], h_init_[i], h_min_[i], h_max_[i], r_init_[i], r_min_[i], r_max_[i]);
+      }
+      r_radius_ = scale_.mean() * h_work_radius_;
+    } else if (map_mode_ == "clutch") {
+      const Eigen::Vector3d h_delta = h_pos - h_center_;
+      const double dist = h_delta.norm();
+      if (dist <= h_work_radius_) {
+        r_pos = r_center_ + scale_.cwiseProduct(h_delta);
+      } else {
+        const Eigen::Vector3d dir = h_delta / std::max(dist, kEps);
+        const Eigen::Vector3d h_clamped = h_center_ + dir * h_work_radius_;
+        r_pos = r_center_ + scale_.cwiseProduct(h_clamped - h_center_);
+        const double over = dist - h_work_radius_;
+        r_center_ += scale_.cwiseProduct(dir * over) * drift_gain_;
+        h_center_ += dir * over;
+      }
+      r_vel = scale_.cwiseProduct(h_vel);
+      r_radius_ = scale_.mean() * h_work_radius_;
+    } else if (map_mode_ == "drift") {
+      const Eigen::Vector3d h_delta = h_pos - h_center_;
+      Eigen::Vector3d h_clamped = h_center_;
+      bool in_work = true;
+      for (int i = 0; i < 3; ++i) {
+        const double d = h_delta[i];
+        if (d > h_work_pos_[i] || d < -h_work_neg_[i]) {
+          in_work = false;
+        }
+        h_clamped[i] = h_center_[i] + clampScalar(d, -h_work_neg_[i], h_work_pos_[i]);
+      }
+      if (in_work) {
+        r_pos = r_center_ + scale_.cwiseProduct(h_delta);
+        r_vel = scale_.cwiseProduct(h_vel);
+      } else {
+        r_pos = r_center_ + scale_.cwiseProduct(h_clamped - h_center_);
+        r_vel = scale_.cwiseProduct(h_vel);
+        if (dt > 0.0) {
+          Eigen::Vector3d drift_vel = Eigen::Vector3d::Zero();
+          for (int i = 0; i < 3; ++i) {
+            const double d = h_delta[i];
+            if (d >= 0.0) {
+              const double cap = std::min(d, h_drift_pos_[i]);
+              const double excess = std::max(0.0, cap - h_work_pos_[i]);
+              if (excess > 0.0) {
+                double v = drift_gain_ * excess;
+                v = std::min(v, drift_speed_max_);
+                drift_vel[i] = v;
+              }
+            } else {
+              const double cap = std::max(d, -h_drift_neg_[i]);
+              const double excess = std::max(0.0, -cap - h_work_neg_[i]);
+              if (excess > 0.0) {
+                double v = drift_gain_ * excess;
+                v = std::min(v, drift_speed_max_);
+                drift_vel[i] = -v;
+              }
+            }
+          }
+          r_center_ += drift_vel * dt;
+          r_vel += drift_vel;
+        }
+      }
+      r_radius_ = scale_.mean() * h_work_radius_;
     }
     out.position.resize(6);
     out.velocity.resize(6);
@@ -94,7 +217,31 @@ class PoseMapper {
     out.velocity[1] = r_vel[1];
     out.velocity[2] = r_vel[2];
     out.velocity[3] = out.velocity[4] = out.velocity[5] = 0.0;
-    out.header.stamp = ros::Time::now();
+    out.header.stamp = now;
+  }
+
+  void resetCenters() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    h_center_ = h_init_;
+    r_center_ = r_init_;
+    last_map_time_ = ros::Time(0.0);
+  }
+
+  void getWorkspace(Eigen::Vector3d& center, double& radius) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    center = r_center_;
+    radius = r_radius_;
+  }
+
+  void getWorkspaceBoxes(Eigen::Vector3d& drift_center, Eigen::Vector3d& drift_size,
+                         Eigen::Vector3d& work_center, Eigen::Vector3d& work_size) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    const Eigen::Vector3d drift_offset = 0.5 * (h_drift_pos_ - h_drift_neg_);
+    const Eigen::Vector3d work_offset = 0.5 * (h_work_pos_ - h_work_neg_);
+    drift_center = r_center_ + scale_.cwiseProduct(drift_offset);
+    work_center = r_center_ + scale_.cwiseProduct(work_offset);
+    drift_size = scale_.cwiseProduct(h_drift_pos_ + h_drift_neg_);
+    work_size = scale_.cwiseProduct(h_work_pos_ + h_work_neg_);
   }
 
  private:
@@ -107,7 +254,7 @@ class PoseMapper {
     return d[i];
   }
   static double defaultHMin(int i) {
-    static const double d[3] = {0.0018713378906249911, -0.21, -0.1};
+    static const double d[3] = {-0.030672866821289058, -0.21, -0.1};
     return d[i];
   }
   static double defaultRInit(int i) {
@@ -144,7 +291,24 @@ class PoseMapper {
   Eigen::Vector3d r_init_{Eigen::Vector3d::Zero()};
   Eigen::Vector3d r_max_{Eigen::Vector3d::Zero()};
   Eigen::Vector3d r_min_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d h_center_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d r_center_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d scale_{Eigen::Vector3d::Ones()};
+  double h_work_radius_{0.06};
+  double h_drift_radius_{0.12};
+  Eigen::Vector3d h_work_pos_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d h_work_neg_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d h_drift_pos_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d h_drift_neg_{Eigen::Vector3d::Zero()};
+  double r_radius_{0.0};
+  double drift_gain_{1.0};
+  double drift_speed_max_{0.05};
+  double map_scale_override_{0.0};
+  double work_box_scale_{0.85};
+  std::string map_mode_{"drift"};
   int control_mode_{0};
+  mutable std::mutex mtx_;
+  ros::Time last_map_time_;
 };
 
 // ---- 笛卡尔空间 PID + 前馈控制器 ----
@@ -461,9 +625,80 @@ class MoveItVelocityIk {
   Eigen::VectorXd last_qdot_ik_;
 };
 
+// ---- MoveIt 位姿 IK ----
+// 仅用于仿真模式：目标位姿 -> 关节角。
+class MoveItPoseIk {
+ public:
+  bool init(const std::string& planning_group, const std::string& tip_link, std::string* err) {
+    planning_group_ = planning_group;
+    tip_link_ = tip_link;
+    try {
+      robot_model_loader::RobotModelLoader loader("robot_description");
+      robot_model_ = loader.getModel();
+    } catch (const std::exception& e) {
+      if (err) {
+        *err = e.what();
+      }
+      return false;
+    }
+    if (!robot_model_) {
+      if (err) {
+        *err = "robot_model is null";
+      }
+      return false;
+    }
+    jmg_ = robot_model_->getJointModelGroup(planning_group_);
+    if (!jmg_) {
+      if (err) {
+        *err = "Unknown planning group: " + planning_group_;
+      }
+      return false;
+    }
+    if (!robot_model_->getLinkModel(tip_link_)) {
+      if (err) {
+        *err = "Unknown tip link: " + tip_link_;
+      }
+      return false;
+    }
+    joint_names_ = jmg_->getVariableNames();
+    if (joint_names_.size() < 6) {
+      joint_names_ = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"};
+    }
+    return true;
+  }
+
+  bool solve(const Eigen::Isometry3d& target, const std::vector<double>& seed,
+             std::vector<double>& solution, double timeout) const {
+    if (!robot_model_ || !jmg_) {
+      return false;
+    }
+    moveit::core::RobotState state(robot_model_);
+    state.setToDefaultValues();
+    if (!seed.empty()) {
+      state.setJointGroupPositions(jmg_, seed);
+    }
+    state.update();
+    if (!state.setFromIK(jmg_, target, tip_link_, timeout)) {
+      return false;
+    }
+    state.copyJointGroupPositions(jmg_, solution);
+    return solution.size() >= 6;
+  }
+
+  const std::vector<std::string>& jointNames() const { return joint_names_; }
+
+ private:
+  moveit::core::RobotModelPtr robot_model_;
+  const moveit::core::JointModelGroup* jmg_{nullptr};
+  std::string planning_group_;
+  std::string tip_link_;
+  std::vector<std::string> joint_names_;
+};
+
 // ---- 运行时参数定义 ----
 // 该结构包含节点初始化和运行时可配置的参数，通过 ROS 参数服务器加载。
 struct RuntimeParams {
+  bool use_sim{false};
   std::string robot_ip{"192.168.1.199"};
   std::string pc_ip{"192.168.1.150"};
   bool mode{true};
@@ -476,16 +711,25 @@ struct RuntimeParams {
   double cmd_timeout{0.05};
   std::string haptic_topic{"/phantom/pose"};
   std::string joint_pub_topic{"/cs66/joint_states"};
+  std::string sim_joint_pub_topic{"/joint_states"};
   std::string tcp_pub_topic{"/cs66/tcp_state"};
   std::string force_pub_topic{"/phantom/force_feedback"};
   std::string planning_group{"planning_group"};
   std::string tip_link{"ee_link"};
+  double sim_rate{60.0};
+  double sim_ik_timeout{0.01};
+  bool workspace_viz_enable{false};
+  double workspace_viz_rate{20.0};
+  std::string workspace_viz_frame{"base_link"};
+  std::string workspace_viz_topic{"/workspace_window"};
+  double work_box_scale{0.85};
   ELITE::vector6d_t root_joint_pose{};
   std::vector<double> max_qdot_scale{6, 0.05};
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
 void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
+  pnh.param("use_sim", p.use_sim, p.use_sim);
   pnh.param("DEFAULT_ROBOT_IP", p.robot_ip, p.robot_ip);
   pnh.param("DEFAULT_PC_IP", p.pc_ip, p.pc_ip);
   pnh.param("MODE", p.mode, p.mode);
@@ -498,10 +742,18 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("cmd_timeout", p.cmd_timeout, p.cmd_timeout);
   pnh.param("haptic_tcp_topic", p.haptic_topic, p.haptic_topic);
   pnh.param("joint_states_pub_topic", p.joint_pub_topic, p.joint_pub_topic);
+  pnh.param("sim_joint_states_topic", p.sim_joint_pub_topic, p.sim_joint_pub_topic);
   pnh.param("tcp_state_pub_topic", p.tcp_pub_topic, p.tcp_pub_topic);
   pnh.param("force_pub_topic", p.force_pub_topic, p.force_pub_topic);
   pnh.param("planning_group", p.planning_group, p.planning_group);
   pnh.param("tip_link", p.tip_link, p.tip_link);
+  pnh.param("sim_rate", p.sim_rate, p.sim_rate);
+  pnh.param("sim_ik_timeout", p.sim_ik_timeout, p.sim_ik_timeout);
+  pnh.param("workspace_viz_enable", p.workspace_viz_enable, p.workspace_viz_enable);
+  pnh.param("workspace_viz_rate", p.workspace_viz_rate, p.workspace_viz_rate);
+  pnh.param("workspace_viz_frame", p.workspace_viz_frame, p.workspace_viz_frame);
+  pnh.param("workspace_viz_topic", p.workspace_viz_topic, p.workspace_viz_topic);
+  pnh.param("work_box_scale", p.work_box_scale, p.work_box_scale);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -534,35 +786,55 @@ class RobotMainNode {
     controller_.load(pnh_);
     pnh_.param("desired_timeout", desired_timeout_sec_, 0.1);
     controller_.setDesiredTimeout(desired_timeout_sec_);
-    ik_.loadIkParams(pnh_);
-    std::string ik_err;
-    if (!ik_.init(params_.planning_group, params_.tip_link, &ik_err)) {
-      ROS_FATAL("MoveIt model load failed: %s", ik_err.c_str());
-      throw std::runtime_error(ik_err);
-    }
+    if (params_.use_sim) {
+      std::string ik_err;
+      if (!pose_ik_.init(params_.planning_group, params_.tip_link, &ik_err)) {
+        ROS_FATAL("MoveIt pose IK init failed: %s", ik_err.c_str());
+        throw std::runtime_error(ik_err);
+      }
+      sim_joint_names_ = pose_ik_.jointNames();
+      for (int i = 0; i < 6; ++i) {
+        sim_seed_[i] = params_.root_joint_pose[i];
+      }
+      joint_pub_ = nh_.advertise<sensor_msgs::JointState>(params_.sim_joint_pub_topic, 10);
+      if (params_.workspace_viz_enable) {
+        workspace_marker_pub_ = nh_.advertise<visualization_msgs::Marker>(params_.workspace_viz_topic, 1, true);
+      }
+    } else {
+      ik_.loadIkParams(pnh_);
+      std::string ik_err;
+      if (!ik_.init(params_.planning_group, params_.tip_link, &ik_err)) {
+        ROS_FATAL("MoveIt model load failed: %s", ik_err.c_str());
+        throw std::runtime_error(ik_err);
+      }
 
-    static constexpr double sdk_max[6] = {5 * kPi / 6, 5 * kPi / 6, kPi, 23 * kPi / 18, 23 * kPi / 18, 23 * kPi / 18};
-    for (int i = 0; i < 6; ++i) {
-      max_qdot_exec_[i] = sdk_max[i] * params_.max_qdot_scale[i];
-    }
+      static constexpr double sdk_max[6] = {5 * kPi / 6, 5 * kPi / 6, kPi, 23 * kPi / 18, 23 * kPi / 18, 23 * kPi / 18};
+      for (int i = 0; i < 6; ++i) {
+        max_qdot_exec_[i] = sdk_max[i] * params_.max_qdot_scale[i];
+      }
 
-    robot_ = std::make_unique<EliteCSRobotSDK>(params_.robot_ip, params_.pc_ip, params_.mode, params_.external_control,
+      robot_ = std::make_unique<EliteCSRobotSDK>(params_.robot_ip, params_.pc_ip, params_.mode, params_.external_control,
                                                  params_.output_recipe, params_.input_recipe, params_.task_file,
                                                  static_cast<double>(params_.sdk_hz));
-    if (!robot_->init() || !robot_->start()) {
-      throw std::runtime_error("Robot init/start failed");
+      if (!robot_->init() || !robot_->start()) {
+        throw std::runtime_error("Robot init/start failed");
+      }
+      // 机器人连接后先回到预设根位姿，避免在未初始化的姿态下直接执行遥操作。
+      moveToRootPose();
+
+      joint_pub_ = nh_.advertise<sensor_msgs::JointState>(params_.joint_pub_topic, 10);
+      tcp_pub_ = nh_.advertise<robot_set::TCPState>(params_.tcp_pub_topic, 10);
+      force_pub_ = nh_.advertise<std_msgs::Float64MultiArray>(params_.force_pub_topic, 10);
     }
-    // 机器人连接后先回到预设根位姿，避免在未初始化的姿态下直接执行遥操作。
-    moveToRootPose();
 
     haptic_sub_ = nh_.subscribe<robot_set::TCPState>(params_.haptic_topic, 1, &RobotMainNode::onHaptic, this);
-    joint_pub_ = nh_.advertise<sensor_msgs::JointState>(params_.joint_pub_topic, 10);
-    tcp_pub_ = nh_.advertise<robot_set::TCPState>(params_.tcp_pub_topic, 10);
-    force_pub_ = nh_.advertise<std_msgs::Float64MultiArray>(params_.force_pub_topic, 10);
   }
 
   ~RobotMainNode() {
     shutdown_ = true;
+    if (sim_thread_.joinable()) {
+      sim_thread_.join();
+    }
     if (sdk_thread_.joinable()) {
       sdk_thread_.join();
     }
@@ -582,6 +854,10 @@ class RobotMainNode {
   }
 
   void startThreads() {
+    if (params_.use_sim) {
+      sim_thread_ = std::thread(&RobotMainNode::simLoop, this);
+      return;
+    }
     sdk_thread_ = std::thread(&RobotMainNode::sdkLoop, this);
     pub_joint_thread_ = std::thread(&RobotMainNode::publishJoints, this);
     pub_tcp_thread_ = std::thread(&RobotMainNode::publishTcp, this);
@@ -651,6 +927,9 @@ class RobotMainNode {
       const double age_des = des_ok ? (now - t_des_copy.toSec()) : 999.0;
       // 如果期望命令有效，则计算笛卡尔速度命令并执行 IK。
       const bool feed_ok = des_ok && age_des < desired_timeout_sec_;
+      if (!feed_ok) {
+        pose_mapper_.resetCenters();
+      }
       Eigen::VectorXd v_cmd = controller_.compute(actual6, dpose, dvel, now, feed_ok, age_des);
 
       Eigen::VectorXd qdot6(6);
@@ -687,6 +966,124 @@ class RobotMainNode {
 
       rate.sleep();
     }
+  }
+
+  // 仿真模式：根据手柄目标位姿直接求 IK 并发布 /joint_states。
+  void simLoop() {
+    ros::Rate rate(std::max(1.0, params_.sim_rate));
+    sensor_msgs::JointState js;
+    js.name.assign(sim_joint_names_.begin(), sim_joint_names_.begin() + std::min<size_t>(6, sim_joint_names_.size()));
+    js.position.resize(6);
+    while (ros::ok() && !shutdown_) {
+      robot_set::TCPState desired;
+      ros::Time stamp;
+      bool have_des = false;
+      {
+        std::lock_guard<std::mutex> lk(desired_mtx_);
+        if (desired_valid_) {
+          desired = mapped_desired_;
+          stamp = t_desired_;
+          have_des = true;
+        }
+      }
+      if (!have_des || desired.position.size() < 6) {
+        pose_mapper_.resetCenters();
+        rate.sleep();
+        continue;
+      }
+      if ((ros::Time::now() - stamp).toSec() > desired_timeout_sec_) {
+        pose_mapper_.resetCenters();
+        rate.sleep();
+        continue;
+      }
+
+      Eigen::Isometry3d target = Eigen::Isometry3d::Identity();
+      target.translation() = Eigen::Vector3d(desired.position[0], desired.position[1], desired.position[2]);
+      target.linear() = rotvecToRot(Eigen::Vector3d(desired.position[3], desired.position[4], desired.position[5]));
+
+      std::vector<double> seed(6);
+      if (sim_have_solution_ && sim_last_solution_.size() >= 6) {
+        seed = sim_last_solution_;
+      } else {
+        for (int i = 0; i < 6; ++i) {
+          seed[i] = sim_seed_[i];
+        }
+      }
+
+      std::vector<double> sol;
+      const bool ok = pose_ik_.solve(target, seed, sol, params_.sim_ik_timeout);
+      if (!ok || sol.size() < 6) {
+        ROS_WARN_THROTTLE(1.0, "robot_main(sim): IK failed");
+        rate.sleep();
+        continue;
+      }
+
+      if (sim_have_solution_) {
+        for (size_t i = 0; i < 6 && i < sol.size() && i < sim_last_solution_.size(); ++i) {
+          sol[i] = unwrapToClosest(sol[i], sim_last_solution_[i]);
+        }
+      }
+      sim_last_solution_ = sol;
+      sim_have_solution_ = true;
+
+      js.header.stamp = ros::Time::now();
+      for (int i = 0; i < 6; ++i) {
+        js.position[i] = sol[i];
+      }
+      joint_pub_.publish(js);
+
+      publishWorkspaceViz();
+      rate.sleep();
+    }
+  }
+
+  void publishWorkspaceViz() {
+    if (!params_.workspace_viz_enable || !workspace_marker_pub_) {
+      return;
+    }
+    const double now = ros::Time::now().toSec();
+    if (now - last_workspace_pub_time_ < (1.0 / std::max(1.0, params_.workspace_viz_rate))) {
+      return;
+    }
+    last_workspace_pub_time_ = now;
+
+    Eigen::Vector3d drift_center;
+    Eigen::Vector3d drift_size;
+    Eigen::Vector3d work_center;
+    Eigen::Vector3d work_size;
+    pose_mapper_.getWorkspaceBoxes(drift_center, drift_size, work_center, work_size);
+
+    visualization_msgs::Marker drift_box;
+    drift_box.header.stamp = ros::Time::now();
+    drift_box.header.frame_id = params_.workspace_viz_frame;
+    drift_box.ns = "workspace_window";
+    drift_box.id = 0;
+    drift_box.type = visualization_msgs::Marker::CUBE;
+    drift_box.action = visualization_msgs::Marker::ADD;
+    drift_box.pose.position.x = drift_center.x();
+    drift_box.pose.position.y = drift_center.y();
+    drift_box.pose.position.z = drift_center.z();
+    drift_box.pose.orientation.w = 1.0;
+    drift_box.scale.x = drift_size.x();
+    drift_box.scale.y = drift_size.y();
+    drift_box.scale.z = drift_size.z();
+    drift_box.color.r = 0.1f;
+    drift_box.color.g = 0.6f;
+    drift_box.color.b = 0.9f;
+    drift_box.color.a = 0.15f;
+    drift_box.lifetime = ros::Duration(0.0);
+    workspace_marker_pub_.publish(drift_box);
+
+    visualization_msgs::Marker work_box = drift_box;
+    work_box.id = 1;
+    work_box.pose.position.x = work_center.x();
+    work_box.pose.position.y = work_center.y();
+    work_box.pose.position.z = work_center.z();
+    work_box.scale.x = work_size.x();
+    work_box.scale.y = work_size.y();
+    work_box.scale.z = work_size.z();
+    work_box.color.a = 0.3f;
+    workspace_marker_pub_.publish(work_box);
   }
 
   // 基于当前 TCP 位姿和上次位姿估算 TCP 线速度和角速度，用于发布状态信息。
@@ -786,17 +1183,20 @@ class RobotMainNode {
   PoseMapper pose_mapper_;
   PoseErrorController controller_;
   MoveItVelocityIk ik_;
+  MoveItPoseIk pose_ik_;
   std::unique_ptr<EliteCSRobotSDK> robot_;
 
   ros::Subscriber haptic_sub_;
   ros::Publisher joint_pub_;
   ros::Publisher tcp_pub_;
   ros::Publisher force_pub_;
+  ros::Publisher workspace_marker_pub_;
 
   std::thread sdk_thread_;
   std::thread pub_joint_thread_;
   std::thread pub_tcp_thread_;
   std::thread pub_force_thread_;
+  std::thread sim_thread_;
   std::atomic<bool> shutdown_{false};
 
   std::mutex state_mtx_;
@@ -821,6 +1221,13 @@ class RobotMainNode {
   std::atomic<double> last_cmd_time_{0.0};
 
   const ELITE::vector6d_t joint_zero_speed_{0, 0, 0, 0, 0, 0};
+
+  std::vector<std::string> sim_joint_names_;
+  std::array<double, 6> sim_seed_{};
+  std::vector<double> sim_last_solution_;
+  bool sim_have_solution_{false};
+
+  double last_workspace_pub_time_{0.0};
 };
 
 int main(int argc, char** argv) {

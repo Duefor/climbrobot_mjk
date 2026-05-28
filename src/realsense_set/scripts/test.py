@@ -103,5 +103,6 @@ class ChessboardTF:
         cv2.waitKey(1)
 
 if __name__ == "__main__":
+    print("Starting chessboard TF node...")
     ChessboardTF()
     rospy.spin()
