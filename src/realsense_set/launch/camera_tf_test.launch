@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+    args="-0.014353595893407988 0.033661869271357885 0.15485001375043025 
+    -0.6873409242223177 -0.025767056214063055 0.026484172721386225 0.725394445318225 base_link camera_color_optical_frame" />
+</launch>

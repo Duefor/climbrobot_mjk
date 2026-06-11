@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 import copy
-# import sys
-# sys.path.append('/usr/lib/python2.7/dist-packages')
+import sys
+sys.path.append('/usr/lib/python2.7/dist-packages')
 
 
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
-from sensor_msgs.msg import CameraInfo, Image, Imu
+from sensor_msgs.msg import CameraInfo, Image
 try:
     import pyrealsense2 as rs
 except ImportError as exc:
@@ -42,7 +41,6 @@ class RealSenseD435iPublisher:
         self.depth_pub = rospy.Publisher('/camera/depth/image_raw', Image, queue_size=5)
         self.rgb_info_pub = rospy.Publisher('/camera/rgb/camera_info', CameraInfo, queue_size=1)
         self.depth_info_pub = rospy.Publisher('/camera/depth/camera_info', CameraInfo, queue_size=1)
-        self.imu_pub = rospy.Publisher('/camera/imu', Imu, queue_size=5)
 
         self.active_stream_config = None
 
@@ -101,8 +99,6 @@ class RealSenseD435iPublisher:
                 config.enable_device(self.serial_number)
             config.enable_stream(rs.stream.color, color_width, color_height, rs.format.bgr8, fps)
             config.enable_stream(rs.stream.depth, depth_width, depth_height, rs.format.z16, fps)
-            config.enable_stream(rs.stream.accel)
-            config.enable_stream(rs.stream.gyro)
 
             try:
                 profile = pipeline.start(config)
@@ -220,8 +216,6 @@ class RealSenseD435iPublisher:
 
             depth_frame = frames.get_depth_frame()
             color_frame = frames.get_color_frame()
-            accel_frame = frames.first_or_default(rs.stream.accel)
-            gyro_frame  = frames.first_or_default(rs.stream.gyro)
             if not depth_frame or not color_frame:
                 rospy.logwarn_throttle(5.0, '收到不完整帧，跳过当前周期')
                 continue
@@ -252,43 +246,6 @@ class RealSenseD435iPublisher:
             depth_msg.header.frame_id = self.frame_id
             self.depth_pub.publish(depth_msg)
             self._publish_camera_info(self.depth_info_template, stamp, self.depth_info_pub)
-
-            if accel_frame and gyro_frame:
-                imu_msg = Imu()
-                imu_msg.header.stamp = stamp
-                imu_msg.header.frame_id = "camera_imu_optical_frame"
-
-                # 读取数据
-                accel_data = accel_frame.as_motion_frame().get_motion_data()
-                gyro_data  = gyro_frame.as_motion_frame().get_motion_data()
-
-                # 加速度 (m/s^2)
-                imu_msg.linear_acceleration.x = accel_data.x
-                imu_msg.linear_acceleration.y = accel_data.y
-                imu_msg.linear_acceleration.z = accel_data.z
-
-                # 角速度 (rad/s)
-                imu_msg.angular_velocity.x = gyro_data.x
-                imu_msg.angular_velocity.y = gyro_data.y
-                imu_msg.angular_velocity.z = gyro_data.z
-
-                # D435i 没有姿态
-                imu_msg.orientation_covariance[0] = -1
-
-                # 协方差（先给默认值，后续可标定）
-                imu_msg.angular_velocity_covariance = [
-                    1e-4, 0, 0,
-                    0, 1e-4, 0,
-                    0, 0, 1e-4
-                ]
-
-                imu_msg.linear_acceleration_covariance = [
-                    1e-2, 0, 0,
-                    0, 1e-2, 0,
-                    0, 0, 1e-2
-                ]
-
-                self.imu_pub.publish(imu_msg)
 
     def stop(self):
         if self.pipeline is not None:

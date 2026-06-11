@@ -8,6 +8,8 @@ add_compile_options(-std=c++17)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  actionlib
+  actionlib_msgs
   cv_bridge
   geometry_msgs
   image_transport
@@ -80,17 +82,18 @@ find_package(realsense2 REQUIRED)
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  FILES
+  ScanEnvironment.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   sensor_msgs#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  actionlib_msgs
+  geometry_msgs
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -124,7 +127,7 @@ find_package(realsense2 REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES realsense_set
-#  CATKIN_DEPENDS cv_bridge geometry_msgs image_transport message_generation pcl_conversions pcl_ros roscpp rospy sensor_msgs std_msgs robot_sdk_wrapper
+  CATKIN_DEPENDS actionlib_msgs
 #  DEPENDS system_lib
 )
 

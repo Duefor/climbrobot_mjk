@@ -1,0 +1,12 @@
+# 扫描目标参数（0 表示使用 ROS param 默认值）
+int32 grid_rows
+int32 grid_cols
+int32 window_size
+float32 max_depth
+---
+# 扫描结果：每个采样点包含在 target_frame 坐标系下的位姿
+geometry_msgs/Pose[] samples
+string message
+---
+# 反馈：扫描进度 0.0 ~ 1.0
+float32 progress
