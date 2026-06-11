@@ -4,17 +4,18 @@
 #include <cmath>
 #include <chrono>
 
-// 前置声明，供下面的关节限幅辅助函数使用。
-inline double clampScalar(double v, double lo, double hi);
-
 namespace {
 // 将目标关节角限制为相对参考点的单周期安全步长。
+// 避免单次跳变超过 max_step，以防触发底层驱动的速度保护。
 ELITE::vector6d_t limitJointStep(const ELITE::vector6d_t& reference,
                                  const ELITE::vector6d_t& target,
                                  double max_step) {
     ELITE::vector6d_t limited = target;
     for (int i = 0; i < 6; ++i) {
-        limited[i] = reference[i] + clampScalar(target[i] - reference[i], -max_step, max_step);
+        double delta = target[i] - reference[i];
+        // 用 std::max/std::min 将 delta 限制在 [-max_step, max_step] 范围内
+        double clamped_delta = std::max(-max_step, std::min(delta, max_step));
+        limited[i] = reference[i] + clamped_delta;
     }
     return limited;
 }
