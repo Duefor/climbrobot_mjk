@@ -1,3 +1,6 @@
+#include <atomic>
+#include <mutex>
+
 #include <Elite/DashboardClient.hpp>
 #include <Elite/DataType.hpp>
 #include <Elite/EliteDriver.hpp>
@@ -102,6 +105,8 @@ public:
 
     bool test(const ELITE::vector6d_t& ex_force);
 
+    // 关节模式下，SDK 会先对目标做限幅跟踪，再把安全命令发给底层驱动。
+    // 笛卡尔模式下不在 SDK 内做 IK，直接把目标位姿交给底层控制器处理。
     bool writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian = false, bool queue_mode = false);
 
     // 轨迹跟随，通过各个轨迹点的关节角位置，速度，加速度，到达时间 实现。control_freq为控制频率。IA为插值算法，0是三次插值，1是五次插值（加速度）
@@ -117,8 +122,20 @@ private:
     bool startMode1();
     bool startMode2();
 
+    // 重置关节伺服跟踪状态，避免长时间停顿或状态切换后沿用旧参考值。
+    void resetServojTrackingState();
+
     // 轨迹插值函数
     bool CubicInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
     bool QuinticInterpolation(const std::vector<TrajectoryPoint>& traj, double t, ELITE::vector6d_t& q_out);
+
+    // writeservoj 的关节目标限幅状态。
+    mutable std::mutex servoj_mtx_;
+    bool servoj_joint_target_valid_{false};
+    bool servoj_joint_time_valid_{false};
+    ELITE::vector6d_t servoj_last_joint_cmd_{};
+    double servoj_last_joint_stamp_sec_{0.0};
+    double servoj_max_joint_velocity_{2.0};
+    double servoj_servo_period_{0.008};
 
 };

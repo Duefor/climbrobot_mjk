@@ -1,7 +1,24 @@
 #include "robot_sdk_wrapper/robot_sdk.h"
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 #include <chrono>
+
+// 前置声明，供下面的关节限幅辅助函数使用。
+inline double clampScalar(double v, double lo, double hi);
+
+namespace {
+// 将目标关节角限制为相对参考点的单周期安全步长。
+ELITE::vector6d_t limitJointStep(const ELITE::vector6d_t& reference,
+                                 const ELITE::vector6d_t& target,
+                                 double max_step) {
+    ELITE::vector6d_t limited = target;
+    for (int i = 0; i < 6; ++i) {
+        limited[i] = reference[i] + clampScalar(target[i] - reference[i], -max_step, max_step);
+    }
+    return limited;
+}
+}  // namespace
 
 // 构造函数
 // EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string& pc_ip, const std::string& external_control_script, double mode,
@@ -57,6 +74,10 @@ EliteCSRobotSDK::EliteCSRobotSDK(const std::string& robot_ip, const std::string&
     DriverConfig.stopj_acc = 8;
     DriverConfig.servoj_queue_pre_recv_size = 10;
     DriverConfig.servoj_queue_pre_recv_timeout = -1;
+
+    // 关节伺服默认采用较保守的限幅，避免直接把大跳变发到底层驱动。
+    servoj_max_joint_velocity_ = 2.0;
+    servoj_servo_period_ = 0.008;
 
 }
 
@@ -162,6 +183,9 @@ bool EliteCSRobotSDK::start() {
         }
     });
 
+    // 新一轮运行开始前，清空上一轮的关节伺服参考值。
+    resetServojTrackingState();
+
     return true;
 }
 
@@ -233,6 +257,7 @@ bool EliteCSRobotSDK::startMode2() {
 
 // 断开与机械臂的连接
 bool EliteCSRobotSDK::disconnect() {
+    resetServojTrackingState();
     s_driver->stopControl();
     std::cout << "Driver Control stop" << std::endl;
     s_dashboard->stopProgram();
@@ -254,6 +279,7 @@ bool EliteCSRobotSDK::stopMove() {
     }
     std::cout << "STOP Move" << std::endl;
     is_move_finish = true;
+    resetServojTrackingState();
 
     return true;
 }
@@ -476,8 +502,57 @@ bool EliteCSRobotSDK::test(const ELITE::vector6d_t& ex_force)
 
 bool EliteCSRobotSDK::writeservoj(const ELITE::vector6d_t& pos, int timeout_ms, bool cartesian, bool queue_mode)
 {
-    if(!s_driver->writeServoj(pos,timeout_ms,cartesian,queue_mode)) return false;
-    return true;
+    if (!s_driver) {
+        return false;
+    }
+
+    // 笛卡尔模式保留给底层控制器自身的跟踪能力，SDK 不再做 IK 转换。
+    if (cartesian) {
+        return s_driver->writeServoj(pos, timeout_ms, true, queue_mode);
+    }
+
+    if (!s_rtsi_io) {
+        return s_driver->writeServoj(pos, timeout_ms, false, queue_mode);
+    }
+
+    // 关节模式下，SDK 只向目标逼近一个安全步长，避免单次跳变触发速度保护。
+    ELITE::vector6d_t current_joint = s_rtsi_io->getActualJointPositions();
+    const double now_sec = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    ELITE::vector6d_t limited_cmd = pos;
+    {
+        std::lock_guard<std::mutex> lk(servoj_mtx_);
+        if (!servoj_joint_target_valid_) {
+            // 第一次进入关节伺服时，先把参考点对齐到当前实际关节。
+            servoj_last_joint_cmd_ = current_joint;
+            servoj_joint_target_valid_ = true;
+        }
+
+        double elapsed_sec = servoj_servo_period_;
+        if (servoj_joint_time_valid_) {
+            elapsed_sec = std::max(0.0, now_sec - servoj_last_joint_stamp_sec_);
+        }
+        // 用“更短的实际间隔”和“驱动的伺服周期”共同约束单次步长，避免 250Hz 循环把目标抖成超速命令。
+        const double effective_period = std::min(elapsed_sec, servoj_servo_period_);
+        const double max_step = std::max(0.0, servoj_max_joint_velocity_ * effective_period);
+
+        limited_cmd = limitJointStep(servoj_last_joint_cmd_, pos, max_step);
+        servoj_last_joint_cmd_ = limited_cmd;
+        servoj_last_joint_stamp_sec_ = now_sec;
+        servoj_joint_time_valid_ = true;
+    }
+
+    return s_driver->writeServoj(limited_cmd, timeout_ms, false, queue_mode);
+}
+
+void EliteCSRobotSDK::resetServojTrackingState() {
+    std::lock_guard<std::mutex> lk(servoj_mtx_);
+    servoj_joint_target_valid_ = false;
+    servoj_joint_time_valid_ = false;
+    for (int i = 0; i < 6; ++i) {
+        servoj_last_joint_cmd_[i] = 0.0;
+    }
+    servoj_last_joint_stamp_sec_ = 0.0;
 }
 
 bool EliteCSRobotSDK::ExecuteJointTrajectory(const std::vector<TrajectoryPoint>& traj, double control_freq, int IA)
