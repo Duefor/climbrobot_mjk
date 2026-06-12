@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
+  geometry_msgs
   roslaunch
   actionlib
   control_msgs
@@ -21,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   moveit_ros_planning
   robot_sdk_wrapper
+  realsense_set
 )
 
 find_package(Threads REQUIRED)

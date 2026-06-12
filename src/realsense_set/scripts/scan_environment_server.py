@@ -425,8 +425,8 @@ class ScanEnvironmentServer:
                     continue
 
                 normal = Vt[-1].copy()
-                # 方向一致性：指向相机（camera 光心帧 Z 向前，应指 -Z）
-                if normal[2] > 0.0:
+                # 方向一致性：指离相机（camera 光心帧 Z 向前，应指 +Z）
+                if normal[2] < 0.0:
                     normal = -normal
 
                 # ---- 3D 起点 ----

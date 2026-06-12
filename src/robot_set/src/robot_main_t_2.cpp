@@ -22,11 +22,18 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <visualization_msgs/Marker.h>
 
+#include <actionlib/client/simple_action_client.h>
+#include <realsense_set/ScanEnvironmentAction.h>
+
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_state/robot_state.h>
 
 #include <robot_set/TCPState.h>
 #include <robot_sdk_wrapper/robot_sdk.h>
+
+#include <termios.h>
+#include <unistd.h>
+#include <sys/select.h>
 
 // 全局常量
 constexpr double kEps = 1e-6;
@@ -63,6 +70,7 @@ inline Eigen::Matrix3d eulerXYZToRotForTcp(double rx, double ry, double rz) {
 // ---- 手柄位姿到机器人工作空间映射 ----
 // 该模块将手柄的 TCP 位姿转换为机器人期望的 TCP 位姿。
 // 仅对平移部分做线性比例映射，姿态部分根据 CONTROL_MODE 决定是否传递手柄姿态。
+// 速度映射已移除，PoseMapper 现在只输出位置。速度输入不再使用。
 class PoseMapper {
  public:
   void load(ros::NodeHandle& pnh) {
@@ -196,18 +204,22 @@ class PoseMapper {
     out.position[0] = r_pos[0];
     out.position[1] = r_pos[1];
     out.position[2] = r_pos[2];
-    if (control_mode_ == 1) {
-      out.position[3] = h_rot[0];
-      out.position[4] = h_rot[1];
-      out.position[5] = h_rot[2];
-    } else {
+    if (control_mode_ == 0) {
+      // 模式0: 固定姿态朝下
       out.position[3] = kPi;
       out.position[4] = 0.0;
       out.position[5] = 0.0;
+    } else {
+      // 模式1: 手柄姿态直传; 模式2: 手柄姿态作为 fallback，表面感知混合在下游处理
+      out.position[3] = h_rot[0];
+      out.position[4] = h_rot[1];
+      out.position[5] = h_rot[2];
     }
     out.velocity.clear();
     out.header.stamp = now;
   }
+
+  int controlMode() const { return control_mode_; }
 
   void resetCenters() {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -574,6 +586,58 @@ class MoveItPoseIk {
   int ik_attempts_{3};
 };
 
+// ---- 表面采样点处理器 ----
+// 专门处理 scan_environment 返回的采样点数据：
+// 存储、最近邻查询。线程安全（actionlib 回调写入，sdkLoop 读取）。
+class SurfaceSampleProcessor {
+ public:
+  void setSamples(const std::vector<geometry_msgs::Pose>& samples) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    samples_ = samples;
+    has_data_ = !samples.empty();
+  }
+
+  bool hasData() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return has_data_;
+  }
+
+  size_t sampleCount() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return samples_.size();
+  }
+
+  // 找最近采样点。仅当最近点距离 ≤ max_dist 时返回 true。
+  // out_quat: 最近采样点的姿态四元数（Z=法向量）
+  // out_dist: TCP 到最近采样点的欧氏距离
+  bool findNearest(const Eigen::Vector3d& tcp_pos,
+                   double max_dist,
+                   Eigen::Quaterniond& out_quat,
+                   double& out_dist) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    if (samples_.empty()) return false;
+
+    out_dist = std::numeric_limits<double>::max();
+    bool found = false;
+    for (const auto& s : samples_) {
+      Eigen::Vector3d sp(s.position.x, s.position.y, s.position.z);
+      double d = (sp - tcp_pos).norm();
+      if (d < out_dist) {
+        out_dist = d;
+        out_quat = Eigen::Quaterniond(s.orientation.w, s.orientation.x,
+                                       s.orientation.y, s.orientation.z);
+        found = true;
+      }
+    }
+    return found && out_dist <= max_dist;
+  }
+
+ private:
+  mutable std::mutex mtx_;
+  std::vector<geometry_msgs::Pose> samples_;
+  bool has_data_{false};
+};
+
 // ---- 运行时参数定义 ----
 // 该结构包含节点初始化和运行时可配置的参数，通过 ROS 参数服务器加载。
 struct RuntimeParams {
@@ -605,6 +669,9 @@ struct RuntimeParams {
   ELITE::vector6d_t root_joint_pose{};
   double ik_timeout{0.01};
   int ik_attempts{3};
+  double surface_approach_max_dist{0.15};
+  double surface_approach_min_dist{0.03};
+  double surface_lock_delay{0.5};
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -636,6 +703,9 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("work_box_scale", p.work_box_scale, p.work_box_scale);
   pnh.param("ik_timeout", p.ik_timeout, p.ik_timeout);
   pnh.param("ik_attempts", p.ik_attempts, p.ik_attempts);
+  pnh.param("surface_approach_max_dist", p.surface_approach_max_dist, 0.15);
+  pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.03);
+  pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -700,10 +770,15 @@ class RobotMainNode {
     }
 
     haptic_sub_ = nh_.subscribe<robot_set::TCPState>(params_.haptic_topic, 1, &RobotMainNode::onHaptic, this);
+
+    initSurfaceAware();
   }
 
   ~RobotMainNode() {
     shutdown_ = true;
+    if (keyboard_thread_.joinable()) {
+      keyboard_thread_.join();
+    }
     if (sim_thread_.joinable()) {
       sim_thread_.join();
     }
@@ -737,6 +812,112 @@ class RobotMainNode {
   }
 
  private:
+  // ---- 表面感知：键盘监听线程 ----
+  // 在独立线程中监听 stdin，检测 Enter 键触发扫描。
+  void keyboardLoop() {
+    struct termios old_tio, new_tio;
+    tcgetattr(STDIN_FILENO, &old_tio);
+    new_tio = old_tio;
+    new_tio.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+
+    ROS_INFO("按 Enter 键触发环境扫描...");
+    while (!shutdown_.load()) {
+      fd_set fds;
+      FD_ZERO(&fds);
+      FD_SET(STDIN_FILENO, &fds);
+      struct timeval tv = {0, 100000};  // 100ms 超时
+      if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
+        char c;
+        if (read(STDIN_FILENO, &c, 1) > 0 && (c == '\r' || c == '\n')) {
+          scan_requested_.store(true);
+          ROS_INFO("收到扫描触发!");
+        }
+      }
+    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
+  }
+
+  // ---- 表面感知：初始化 ----
+  void initSurfaceAware() {
+    scan_client_ = std::make_unique<
+        actionlib::SimpleActionClient<realsense_set::ScanEnvironmentAction>>(
+        "scan_environment", true);
+    keyboard_thread_ = std::thread(&RobotMainNode::keyboardLoop, this);
+    ROS_INFO("表面感知模块已初始化");
+  }
+
+  // ---- 表面感知：发送扫描请求（异步） ----
+  void triggerScan() {
+    if (!scan_client_) return;
+    if (!scan_client_->waitForServer(ros::Duration(2.0))) {
+      ROS_WARN("scan_environment 服务不可用");
+      scan_done_.store(true);  // 标记完成以退出扫描状态
+      return;
+    }
+    realsense_set::ScanEnvironmentGoal goal;
+    goal.grid_rows = 0;     // 0 = 使用服务端默认 (40)
+    goal.grid_cols = 0;     // 0 = 使用服务端默认 (30)
+    goal.window_size = 0;   // 0 = 使用服务端默认 (7)
+    goal.max_depth = 0.0;   // 0.0 = 使用服务端默认 (3.0m)
+    scan_client_->sendGoal(goal,
+        boost::bind(&RobotMainNode::onScanDone, this, _1, _2));
+    ROS_INFO("扫描请求已发送...");
+  }
+
+  void onScanDone(
+      const actionlib::SimpleClientGoalState& state,
+      const realsense_set::ScanEnvironmentResultConstPtr& result) {
+    if (state == actionlib::SimpleClientGoalState::SUCCEEDED && result) {
+      surface_processor_.setSamples(result->samples);
+      ROS_INFO("扫描完成: %zu 个采样点已缓存", result->samples.size());
+    } else {
+      ROS_WARN("扫描失败: %s", state.toString().c_str());
+    }
+    scan_done_.store(true);
+  }
+
+  // ---- 表面感知：姿态混合计算 ----
+  // 根据当前 TCP 位置查找最近表面采样点，用 slerp 混合手柄姿态和表面对齐姿态。
+  // 混合系数 alpha 根据距离线性过渡。
+  // 返回 true 表示成功应用表面姿态（有数据且在范围内）。
+  bool computeSurfaceOrientation(
+      const Eigen::Vector3d& actual_pos,
+      const Eigen::Vector3d& haptic_rotvec,
+      Eigen::Vector3d& out_rotvec) {
+    out_rotvec = haptic_rotvec;  // 默认：不修改
+    if (!surface_processor_.hasData()) return false;
+
+    Eigen::Quaterniond q_surface;
+    double dist = 0.0;
+    if (!surface_processor_.findNearest(actual_pos,
+          params_.surface_approach_max_dist, q_surface, dist))
+      return false;
+
+    // 线性混合系数
+    double alpha;
+    if (dist <= params_.surface_approach_min_dist) {
+      alpha = 1.0;
+    } else {
+      alpha = 1.0 - (dist - params_.surface_approach_min_dist) /
+                    (params_.surface_approach_max_dist - params_.surface_approach_min_dist);
+    }
+
+    // 手柄旋转向量 → 四元数
+    double theta = haptic_rotvec.norm();
+    Eigen::Quaterniond q_haptic = (theta < 1e-8)
+        ? Eigen::Quaterniond::Identity()
+        : Eigen::Quaterniond(Eigen::AngleAxisd(theta, haptic_rotvec / theta));
+
+    // slerp 球面线性插值
+    Eigen::Quaterniond q_blended = q_haptic.slerp(alpha, q_surface);
+
+    // 转回旋转向量
+    Eigen::AngleAxisd aa(q_blended);
+    out_rotvec = aa.axis() * aa.angle();
+    return true;
+  }
+
   // 将机械臂移动到预设根位姿。该函数主要在初始化阶段调用，
   // 使机器人从当前状态平稳进入遥操作起始状态。
   void moveToRootPose() {
@@ -798,6 +979,48 @@ class RobotMainNode {
       const double age_des = des_ok ? (now - t_des_copy.toSec()) : 999.0;
       const bool feed_ok = des_ok && age_des < desired_timeout_sec_;
       // 手柄断连时工作空间保持当前状态，不重置
+
+      // ====== 表面扫描状态机 ======
+      // Enter 键触发后：LOCKING（等待稳定）→ SCANNING（保持锁定+等待扫描结果）→ NORMAL
+      if (scan_requested_.load() && scan_state_ == ScanState::NORMAL) {
+        scan_state_ = ScanState::LOCKING;
+        lock_start_time_ = ros::Time::now();
+        for (int i = 0; i < 6; ++i) lock_joints_[i] = joints[i];
+        ROS_INFO("表面扫描: 锁定机械臂 %.1fs...", params_.surface_lock_delay);
+      }
+      if (scan_state_ == ScanState::LOCKING) {
+        robot_->writeservoj(lock_joints_, 0);
+        if ((ros::Time::now() - lock_start_time_).toSec() >= params_.surface_lock_delay) {
+          scan_done_.store(false);
+          triggerScan();
+          scan_state_ = ScanState::SCANNING;
+          ROS_INFO("表面扫描: 正在扫描...");
+        }
+        rate.sleep();
+        continue;
+      }
+      if (scan_state_ == ScanState::SCANNING) {
+        robot_->writeservoj(lock_joints_, 0);
+        if (scan_done_.load()) {
+          scan_state_ = ScanState::NORMAL;
+          scan_requested_.store(false);
+          ROS_INFO("表面扫描: 完成，共 %zu 个采样点", surface_processor_.sampleCount());
+        }
+        rate.sleep();
+        continue;
+      }
+
+      // ---- 表面感知姿态混合（仅 CONTROL_MODE=2） ----
+      if (feed_ok && pose_mapper_.controlMode() == 2) {
+        Eigen::Vector3d actual_pos = actual6.head<3>();
+        Eigen::Vector3d haptic_rotvec = dpose.tail<3>();
+        Eigen::Vector3d surface_rotvec;
+        if (computeSurfaceOrientation(actual_pos, haptic_rotvec, surface_rotvec)) {
+          dpose[3] = surface_rotvec[0];
+          dpose[4] = surface_rotvec[1];
+          dpose[5] = surface_rotvec[2];
+        }
+      }
 
       // ---- PID 控制器：输出修正后的目标笛卡尔位姿 ----
       Eigen::VectorXd cmd_pose = controller_.compute(actual6, dpose, now, feed_ok, age_des);
@@ -1098,6 +1321,17 @@ class RobotMainNode {
   bool sim_have_solution_{false};
 
   double last_workspace_pub_time_{0.0};
+
+  // ---- 表面感知 ----
+  SurfaceSampleProcessor surface_processor_;
+  std::unique_ptr<actionlib::SimpleActionClient<realsense_set::ScanEnvironmentAction>> scan_client_;
+  std::atomic<bool> scan_requested_{false};
+  std::atomic<bool> scan_done_{false};
+  enum class ScanState { NORMAL, LOCKING, SCANNING };
+  ScanState scan_state_{ScanState::NORMAL};
+  ELITE::vector6d_t lock_joints_{};
+  ros::Time lock_start_time_;
+  std::thread keyboard_thread_;
 };
 
 int main(int argc, char** argv) {

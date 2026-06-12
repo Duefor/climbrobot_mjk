@@ -83,6 +83,8 @@
 
   <!-- 声明一下自己封装的依赖 -->
   <depend>robot_sdk_wrapper</depend>
+  <depend>realsense_set</depend>
+  <depend>geometry_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
