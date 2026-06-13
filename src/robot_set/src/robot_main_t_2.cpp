@@ -607,29 +607,41 @@ class SurfaceSampleProcessor {
     return samples_.size();
   }
 
-  // 找最近采样点。仅当最近点距离 ≤ max_dist 时返回 true。
-  // out_quat: 最近采样点的姿态四元数（Z=法向量）
-  // out_dist: TCP 到最近采样点的欧氏距离
-  bool findNearest(const Eigen::Vector3d& tcp_pos,
-                   double max_dist,
-                   Eigen::Quaterniond& out_quat,
-                   double& out_dist) const {
+  // 距离加权法向量平均。在 blend_radius 内找所有采样点，高斯加权平均法向量。
+  // 避免了单点最近邻的姿态跳变问题。
+  // 返回 true 表示找到至少一个在范围内的点。
+  // out_normal: 加权平均后的单位法向量
+  // out_dist: 最近采样点距离（用于 alpha 混合判断）
+  bool computeBlendedNormal(const Eigen::Vector3d& tcp_pos,
+                            double blend_radius,
+                            Eigen::Vector3d& out_normal,
+                            double& out_dist) const {
     std::lock_guard<std::mutex> lk(mtx_);
     if (samples_.empty()) return false;
 
+    const double sigma = blend_radius / 3.0;           // 3σ 半径，边界处权重≈0.01
+    const double two_sigma2 = 2.0 * sigma * sigma;
+    Eigen::Vector3d weighted_sum = Eigen::Vector3d::Zero();
+    double total_weight = 0.0;
     out_dist = std::numeric_limits<double>::max();
-    bool found = false;
+
     for (const auto& s : samples_) {
       Eigen::Vector3d sp(s.position.x, s.position.y, s.position.z);
-      double d = (sp - tcp_pos).norm();
-      if (d < out_dist) {
-        out_dist = d;
-        out_quat = Eigen::Quaterniond(s.orientation.w, s.orientation.x,
-                                       s.orientation.y, s.orientation.z);
-        found = true;
-      }
+      const double d = (sp - tcp_pos).norm();
+      if (d < out_dist) out_dist = d;
+      if (d > blend_radius) continue;
+      // 从四元数提取法向量（Z轴 = 表面法向量）
+      Eigen::Quaterniond q(s.orientation.w, s.orientation.x,
+                           s.orientation.y, s.orientation.z);
+      Eigen::Vector3d normal = q.toRotationMatrix().col(2);
+      const double w = std::exp(-d * d / two_sigma2);
+      weighted_sum += w * normal;
+      total_weight += w;
     }
-    return found && out_dist <= max_dist;
+
+    if (total_weight < 1e-9) return false;
+    out_normal = (weighted_sum / total_weight).normalized();
+    return true;
   }
 
  private:
@@ -671,7 +683,9 @@ struct RuntimeParams {
   int ik_attempts{3};
   double surface_approach_max_dist{0.15};
   double surface_approach_min_dist{0.03};
+  double surface_blend_radius{0.10};   // 法向量加权平均的邻域半径
   double surface_lock_delay{0.5};
+  double surface_safety_margin{0.1};  // [调试] 末端最小安全距离
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -705,7 +719,9 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("ik_attempts", p.ik_attempts, p.ik_attempts);
   pnh.param("surface_approach_max_dist", p.surface_approach_max_dist, 0.15);
   pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.03);
+  pnh.param("surface_blend_radius", p.surface_blend_radius, 0.10);
   pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
+  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.05);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -877,10 +893,30 @@ class RobotMainNode {
     scan_done_.store(true);
   }
 
+  // ---- 表面感知：法向量 → 姿态四元数 ----
+  // 与 scan_environment_server 的 normal_to_quaternion 一致：
+  // Z=法向量, X=[1,0,0]投影到法平面, Y=Z×X
+  static Eigen::Quaterniond normalToQuaternion(const Eigen::Vector3d& normal) {
+    Eigen::Vector3d Z = normal.normalized();
+    Eigen::Vector3d X(1.0, 0.0, 0.0);
+    X = X - Z * X.dot(Z);  // Gram-Schmidt 投影
+    if (X.norm() < 1e-6) {
+      X = Eigen::Vector3d(0.0, 1.0, 0.0);
+      X = X - Z * X.dot(Z);
+    }
+    X.normalize();
+    Eigen::Vector3d Y = Z.cross(X);
+    Y.normalize();
+    Eigen::Matrix3d R;
+    R.col(0) = X;
+    R.col(1) = Y;
+    R.col(2) = Z;
+    return Eigen::Quaterniond(R);
+  }
+
   // ---- 表面感知：姿态混合计算 ----
-  // 根据当前 TCP 位置查找最近表面采样点，用 slerp 混合手柄姿态和表面对齐姿态。
-  // 混合系数 alpha 根据距离线性过渡。
-  // 返回 true 表示成功应用表面姿态（有数据且在范围内）。
+  // 阶段1: 邻域高斯加权平均法向量（避免单点跳变）
+  // 阶段2: 距离线性过渡 + slerp 混合手柄姿态和表面对齐姿态
   bool computeSurfaceOrientation(
       const Eigen::Vector3d& actual_pos,
       const Eigen::Vector3d& haptic_rotvec,
@@ -888,20 +924,27 @@ class RobotMainNode {
     out_rotvec = haptic_rotvec;  // 默认：不修改
     if (!surface_processor_.hasData()) return false;
 
-    Eigen::Quaterniond q_surface;
-    double dist = 0.0;
-    if (!surface_processor_.findNearest(actual_pos,
-          params_.surface_approach_max_dist, q_surface, dist))
+    // 阶段1: 邻域加权平均法向量
+    Eigen::Vector3d blended_normal;
+    double nearest_dist = 0.0;
+    if (!surface_processor_.computeBlendedNormal(actual_pos,
+          params_.surface_blend_radius, blended_normal, nearest_dist))
       return false;
 
-    // 线性混合系数
+    // 阶段2: 距离决定 alpha（用最近点距离判断远近）
     double alpha;
-    if (dist <= params_.surface_approach_min_dist) {
+    if (nearest_dist <= params_.surface_approach_min_dist) {
       alpha = 1.0;
+    } else if (nearest_dist >= params_.surface_approach_max_dist) {
+      alpha = 0.0;
     } else {
-      alpha = 1.0 - (dist - params_.surface_approach_min_dist) /
+      alpha = 1.0 - (nearest_dist - params_.surface_approach_min_dist) /
                     (params_.surface_approach_max_dist - params_.surface_approach_min_dist);
     }
+    if (alpha < 1e-6) return false;  // 太远，不干预
+
+    // 法向量 → 完整姿态四元数
+    Eigen::Quaterniond q_surface = normalToQuaternion(blended_normal);
 
     // 手柄旋转向量 → 四元数
     double theta = haptic_rotvec.norm();
@@ -1010,15 +1053,29 @@ class RobotMainNode {
         continue;
       }
 
-      // ---- 表面感知姿态混合（仅 CONTROL_MODE=2） ----
-      if (feed_ok && pose_mapper_.controlMode() == 2) {
+      // ---- 表面感知：姿态混合 + 安全距离（仅 CONTROL_MODE=2） ----
+      if (feed_ok && pose_mapper_.controlMode() == 2 && surface_processor_.hasData()) {
         Eigen::Vector3d actual_pos = actual6.head<3>();
         Eigen::Vector3d haptic_rotvec = dpose.tail<3>();
+        // 姿态：邻域加权法向量 + slerp 混合
         Eigen::Vector3d surface_rotvec;
         if (computeSurfaceOrientation(actual_pos, haptic_rotvec, surface_rotvec)) {
           dpose[3] = surface_rotvec[0];
           dpose[4] = surface_rotvec[1];
           dpose[5] = surface_rotvec[2];
+        }
+
+        // [调试] 安全距离：不允许期望位置太靠近表面，沿法向量推开
+        Eigen::Vector3d des_pos = dpose.head<3>();
+        Eigen::Vector3d safety_normal;
+        double safety_dist;
+        if (surface_processor_.computeBlendedNormal(des_pos,
+              params_.surface_blend_radius, safety_normal, safety_dist) &&
+            safety_dist < params_.surface_safety_margin) {
+          Eigen::Vector3d push = safety_normal * (params_.surface_safety_margin - safety_dist);
+          dpose[0] += push.x();
+          dpose[1] += push.y();
+          dpose[2] += push.z();
         }
       }
 
