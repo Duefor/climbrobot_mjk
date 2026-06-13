@@ -20,7 +20,7 @@
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" />
   <!-- Publish TF tree from /joint_states -->
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
-    <remap from="/joint_states" to="/cs66/joint_states_pub_topic" />
+    <remap from="/joint_states" to="/cs66/joint_states" />
   </node>
 
   <!-- 手眼标定后的标定参数 --> 
@@ -54,7 +54,7 @@
     <param name="work_box_scale" value="0.8"/>
 
     <!-- Follow position + orientation -->
-    <param name="CONTROL_MODE" value="0"/>
+    <param name="CONTROL_MODE" value="2"/>
 
     <!-- Match MoveIt config -->
     <param name="planning_group" value="planning_group"/>

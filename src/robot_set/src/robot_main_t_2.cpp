@@ -685,7 +685,7 @@ struct RuntimeParams {
   double surface_approach_min_dist{0.03};
   double surface_blend_radius{0.10};   // 法向量加权平均的邻域半径
   double surface_lock_delay{0.5};
-  double surface_safety_margin{0.1};  // [调试] 末端最小安全距离
+  double surface_safety_margin{0.2};  // [调试] 末端最小安全距离
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -721,7 +721,7 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.03);
   pnh.param("surface_blend_radius", p.surface_blend_radius, 0.10);
   pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
-  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.05);
+  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.1);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -1394,6 +1394,7 @@ class RobotMainNode {
 int main(int argc, char** argv) {
   // 程序入口：初始化 ROS 节点，启动异步 spinner，并运行主控制节点。
   ros::init(argc, argv, "robot_main_node");
+  setlocale(LC_ALL,"");
   ros::AsyncSpinner spinner(3);
   spinner.start();
   ros::NodeHandle nh;
