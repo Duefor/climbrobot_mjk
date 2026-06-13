@@ -721,7 +721,7 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.03);
   pnh.param("surface_blend_radius", p.surface_blend_radius, 0.10);
   pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
-  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.1);
+  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.2);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -1073,9 +1073,9 @@ class RobotMainNode {
               params_.surface_blend_radius, safety_normal, safety_dist) &&
             safety_dist < params_.surface_safety_margin) {
           Eigen::Vector3d push = safety_normal * (params_.surface_safety_margin - safety_dist);
-          dpose[0] += push.x();
-          dpose[1] += push.y();
-          dpose[2] += push.z();
+          dpose[0] -= push.x();
+          dpose[1] -= push.y();
+          dpose[2] -= push.z();
         }
       }
 
