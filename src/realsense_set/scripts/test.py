@@ -74,8 +74,8 @@ class ChessboardTF:
             T,
             quat,
             rospy.Time.now(),
-            "chessboard",
-            "camera_link"
+            "marker_frame",
+            "camera_color_optical_frame"
         )
 
         # ===== 可视化 =====

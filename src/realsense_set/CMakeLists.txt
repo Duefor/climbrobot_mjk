@@ -227,8 +227,9 @@ target_link_libraries(testC
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
+file(GLOB SCRIPTS_PY scripts/*.py)
 catkin_install_python(PROGRAMS
-  scripts/pub_camera.py
+  ${SCRIPTS_PY}
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
