@@ -610,18 +610,21 @@ class SurfaceSampleProcessor {
   // 距离加权法向量平均。在 blend_radius 内找所有采样点，高斯加权平均法向量。
   // 避免了单点最近邻的姿态跳变问题。
   // 返回 true 表示找到至少一个在范围内的点。
-  // out_normal: 加权平均后的单位法向量
-  // out_dist: 最近采样点距离（用于 alpha 混合判断）
+  // out_normal:  加权平均后的单位法向量
+  // out_point:   加权平均后的表面参考点位置（用于安全距离硬边界）
+  // out_dist:    最近采样点距离（用于 alpha 混合判断）
   bool computeBlendedNormal(const Eigen::Vector3d& tcp_pos,
                             double blend_radius,
                             Eigen::Vector3d& out_normal,
+                            Eigen::Vector3d& out_point,
                             double& out_dist) const {
     std::lock_guard<std::mutex> lk(mtx_);
     if (samples_.empty()) return false;
 
     const double sigma = blend_radius / 3.0;           // 3σ 半径，边界处权重≈0.01
     const double two_sigma2 = 2.0 * sigma * sigma;
-    Eigen::Vector3d weighted_sum = Eigen::Vector3d::Zero();
+    Eigen::Vector3d weighted_normal = Eigen::Vector3d::Zero();
+    Eigen::Vector3d weighted_point = Eigen::Vector3d::Zero();
     double total_weight = 0.0;
     out_dist = std::numeric_limits<double>::max();
 
@@ -635,12 +638,14 @@ class SurfaceSampleProcessor {
                            s.orientation.y, s.orientation.z);
       Eigen::Vector3d normal = q.toRotationMatrix().col(2);
       const double w = std::exp(-d * d / two_sigma2);
-      weighted_sum += w * normal;
+      weighted_normal += w * normal;
+      weighted_point += w * sp;
       total_weight += w;
     }
 
     if (total_weight < 1e-9) return false;
-    out_normal = (weighted_sum / total_weight).normalized();
+    out_normal = (weighted_normal / total_weight).normalized();
+    out_point = weighted_point / total_weight;
     return true;
   }
 
@@ -925,10 +930,10 @@ class RobotMainNode {
     if (!surface_processor_.hasData()) return false;
 
     // 阶段1: 邻域加权平均法向量
-    Eigen::Vector3d blended_normal;
+    Eigen::Vector3d blended_normal, dummy_pt;
     double nearest_dist = 0.0;
     if (!surface_processor_.computeBlendedNormal(actual_pos,
-          params_.surface_blend_radius, blended_normal, nearest_dist))
+          params_.surface_blend_radius, blended_normal, dummy_pt, nearest_dist))
       return false;
 
     // 阶段2: 距离决定 alpha（用最近点距离判断远近）
@@ -1065,17 +1070,19 @@ class RobotMainNode {
           dpose[5] = surface_rotvec[2];
         }
 
-        // [调试] 安全距离：不允许期望位置太靠近表面，沿法向量推开
+        // [调试] 安全距离硬边界：不允许越过 margin，到了就停住
         Eigen::Vector3d des_pos = dpose.head<3>();
-        Eigen::Vector3d safety_normal;
+        Eigen::Vector3d safety_normal, surface_pt;
         double safety_dist;
         if (surface_processor_.computeBlendedNormal(des_pos,
-              params_.surface_blend_radius, safety_normal, safety_dist) &&
-            safety_dist < params_.surface_safety_margin) {
-          Eigen::Vector3d push = safety_normal * (params_.surface_safety_margin - safety_dist);
-          dpose[0] -= push.x();
-          dpose[1] -= push.y();
-          dpose[2] -= push.z();
+              params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
+          double signed_dist = (des_pos - surface_pt).dot(safety_normal);
+          if (signed_dist < params_.surface_safety_margin) {
+            Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
+            dpose[0] = clamped.x();
+            dpose[1] = clamped.y();
+            dpose[2] = clamped.z();
+          }
         }
       }
 
