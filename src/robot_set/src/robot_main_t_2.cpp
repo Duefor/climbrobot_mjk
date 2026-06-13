@@ -1076,7 +1076,9 @@ class RobotMainNode {
         double safety_dist;
         if (surface_processor_.computeBlendedNormal(des_pos,
               params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
+          safety_normal = -safety_normal;
           double signed_dist = (des_pos - surface_pt).dot(safety_normal);
+          ROS_INFO_STREAM("signed_dist=" <<signed_dist);
           if (signed_dist < params_.surface_safety_margin) {
             Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
             dpose[0] = clamped.x();
