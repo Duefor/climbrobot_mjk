@@ -766,11 +766,11 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("work_box_scale", p.work_box_scale, p.work_box_scale);
   pnh.param("ik_timeout", p.ik_timeout, p.ik_timeout);
   pnh.param("ik_attempts", p.ik_attempts, p.ik_attempts);
-  pnh.param("surface_approach_max_dist", p.surface_approach_max_dist, 0.15);
-  pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.15);
+  pnh.param("surface_approach_max_dist", p.surface_approach_max_dist, 0.12);
+  pnh.param("surface_approach_min_dist", p.surface_approach_min_dist, 0.1);
   pnh.param("surface_blend_radius", p.surface_blend_radius, 0.10);
   pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
-  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.1);
+  pnh.param("surface_safety_margin", p.surface_safety_margin, 0.05);
   pnh.param("surface_edge_tol", p.surface_edge_tol, 0.02);
   pnh.param("surface_out_region_decay", p.surface_out_region_decay, 0.3);
   pnh.param("surface_nearest_trust_dist", p.surface_nearest_trust_dist, 0.05);

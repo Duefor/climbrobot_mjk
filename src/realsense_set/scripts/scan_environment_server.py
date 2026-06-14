@@ -133,7 +133,7 @@ class ScanEnvironmentServer:
         self.robust_outlier_deg = rospy.get_param("~robust_outlier_deg", 5.0) # 夹角超过该值的法向量被视为离群点，替换为邻域参考并降权质量
         # === 深度图空间平滑（双边滤波，保边；根治深度像素级噪声） ===
         self.depth_bilateral_d = rospy.get_param("~depth_bilateral_d", 5)        # 邻域直径(像素)，0=自适应但慢
-        self.depth_bilateral_sigma_color = rospy.get_param("~depth_bilateral_sigma_color", 0.03)  # 颜色域 sigma（米）：>此值视为边
+        self.depth_bilateral_sigma_color = rospy.get_param("~depth_bilateral_sigma_color", 0.005)  # 颜色域 sigma（米）：>此值视为边
         self.depth_bilateral_sigma_space = rospy.get_param("~depth_bilateral_sigma_space", 5)    # 空间域 sigma（像素）
         self.camera_frame = rospy.get_param("~camera_frame", "camera_color_optical_frame")
         self.target_frame = rospy.get_param("~target_frame", "base_link")
