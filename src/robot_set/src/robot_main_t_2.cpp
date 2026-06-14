@@ -1075,16 +1075,34 @@ class RobotMainNode {
       Eigen::VectorXd cmd_pose = controller_.compute(actual6, dpose, now, feed_ok, age_des);
 
       // ---- [调试] 安全距离硬边界：clamp cmd_pose 位置（PID 后，IK 前） ----
+      // 注意：必须用 actual_pos（机械臂当前位置）而不是 cmd_pos 去查表面参考。
+      // 因为 cmd_pos 是每周期临时算出的目标点，一旦它被 PID 推到采样点云
+      // (surface_blend_radius) 覆盖范围之外，computeBlendedNormal 会返回 false，
+      // 此时若用 cmd_pos 查询，整个安全限制会被跳过，机械臂照常越界。
       if (feed_ok && pose_mapper_.controlMode() == 2 && surface_processor_.hasData()) {
-        Eigen::Vector3d cmd_pos = cmd_pose.head<3>();
+        Eigen::Vector3d actual_pos = actual6.head<3>();
         Eigen::Vector3d safety_normal, surface_pt;
         double safety_dist;
-        if (surface_processor_.computeBlendedNormal(cmd_pos,
+        // 先用 actual_pos 查询当前最近表面参考
+        if (surface_processor_.computeBlendedNormal(actual_pos,
               params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
-          safety_normal = -safety_normal;     // 翻转法向量，法向量指向工作空间内部
-          double signed_dist = (cmd_pos - surface_pt).dot(safety_normal);
+          safety_normal = -safety_normal;     // 翻转法向量，指向工作空间内部
+          safety_surface_pt_ = surface_pt;    // 缓存，供下一周期回退使用
+          safety_normal_ = safety_normal;
+          safety_ref_valid_ = true;
+        } else if (safety_ref_valid_) {
+          // actual_pos 已离开采样覆盖区：复用上次有效的表面参考
+          surface_pt = safety_surface_pt_;
+          safety_normal = safety_normal_;
+        } else {
+          safety_ref_valid_ = false;
+        }
+
+        if (safety_ref_valid_) {
+          const Eigen::Vector3d cmd_pos = cmd_pose.head<3>();
+          const double signed_dist = (cmd_pos - surface_pt).dot(safety_normal);
           if (signed_dist < params_.surface_safety_margin) {
-            Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
+            const Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
             cmd_pose[0] = clamped.x();
             cmd_pose[1] = clamped.y();
             cmd_pose[2] = clamped.z();
@@ -1399,6 +1417,13 @@ class RobotMainNode {
   ELITE::vector6d_t lock_joints_{};
   ros::Time lock_start_time_;
   std::thread keyboard_thread_;
+
+  // 表面安全限制缓存：记录最近一次成功的表面参考点和指向内部的法向量。
+  // 当 cmd_pos/actual_pos 超出采样点云覆盖范围、computeBlendedNormal 返回 false 时，
+  // 仍可据此把机械臂限在安全边界上，而不是放任越界。
+  Eigen::Vector3d safety_surface_pt_{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d safety_normal_{Eigen::Vector3d::UnitZ()};  // 已翻转，指向工作空间内部
+  bool safety_ref_valid_{false};
 };
 
 int main(int argc, char** argv) {
