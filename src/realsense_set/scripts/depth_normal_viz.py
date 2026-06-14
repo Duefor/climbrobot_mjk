@@ -18,6 +18,7 @@
 
 import sys
 import numpy as np
+import cv2
 
 import rospy
 import tf2_ros
@@ -46,8 +47,20 @@ class DepthNormalViz:
         self.min_patch_points = rospy.get_param("~min_patch_points", 6)  # 邻域最少有效点数
         self.sor_k = rospy.get_param("~sor_k", 6)                      # SOR 近邻数
         self.sor_stddev = rospy.get_param("~sor_stddev", 1.0)          # SOR 标准差倍数阈值
-        self.smooth_radius = rospy.get_param("~smooth_radius", 1)       # 法向量空间平滑邻域半径（1=3×3）
-        self.smooth_sharpness = rospy.get_param("~smooth_sharpness", 8.0)  # 角度权重锐度，0=均匀平均
+        self.smooth_radius = rospy.get_param("~smooth_radius", 3)       # 法向量空间平滑邻域半径（3=7×7）
+        self.smooth_sharpness = rospy.get_param("~smooth_sharpness", 8.0)  # 兼容保留，新算法用 smooth_ang_exp
+        # === 与 scan_environment_server.py 同步：深度门控 + 距离加权平滑 ===
+        self.depth_gate_ratio = rospy.get_param("~depth_gate_ratio", 0.02)   # 深度门控阈值 = ratio × center_depth
+        self.edge_min_points = rospy.get_param("~edge_min_points", 5)        # 门控后最少点数
+        self.smooth_sigma = rospy.get_param("~smooth_sigma", 1.5)            # 距离高斯 σ（grid 单位）
+        self.smooth_ang_exp = rospy.get_param("~smooth_ang_exp", 4.0)        # 角度相似度指数
+        # === 第3遍：离群法向剔除（与 scan_environment_server.py 同步） ===
+        self.robust_enabled = rospy.get_param("~robust_enabled", True)
+        self.robust_outlier_deg = rospy.get_param("~robust_outlier_deg", 5.0)
+        # === 深度图空间平滑（双边滤波） ===
+        self.depth_bilateral_d = rospy.get_param("~depth_bilateral_d", 5)
+        self.depth_bilateral_sigma_color = rospy.get_param("~depth_bilateral_sigma_color", 0.03)
+        self.depth_bilateral_sigma_space = rospy.get_param("~depth_bilateral_sigma_space", 5)
 
         # ================================================================
         #  相机内参（由 camera_info 回调填充）
@@ -199,6 +212,28 @@ class DepthNormalViz:
         return pts[mask], mask
 
     # ------------------------------------------------------------------
+    #  深度图空间域双边滤波（保边平滑，根治深度像素级噪声）
+    #  无效像素(=0)用邻域有效中位数临时填补后滤波，再恢复掩膜。
+    # ------------------------------------------------------------------
+    def _bilateral_smooth_depth(self, depth):
+        if self.depth_bilateral_d <= 0:
+            return depth
+        invalid = (depth <= 0.0)
+        if invalid.all():
+            return depth
+        filled = depth.copy()
+        if invalid.any():
+            valid_pixels = depth[~invalid]
+            fill_value = float(np.median(valid_pixels)) if valid_pixels.size > 0 else 0.0
+            filled[invalid] = fill_value
+        smoothed = cv2.bilateralFilter(
+            filled, self.depth_bilateral_d,
+            self.depth_bilateral_sigma_color, self.depth_bilateral_sigma_space,
+        )
+        smoothed[invalid] = 0.0
+        return smoothed
+
+    # ------------------------------------------------------------------
     #  定时器回调：网格化 → 反投影 → SOR → PCA → 空间平滑 → 发布
     # ------------------------------------------------------------------
     def process_and_publish(self, event):
@@ -215,6 +250,9 @@ class DepthNormalViz:
         if H == 0 or W == 0:
             return
 
+        # ---- 深度图空间域双边滤波（保边平滑，根治深度像素级噪声）----
+        depth = self._bilateral_smooth_depth(depth)
+
         R = self.grid_rows
         C = self.grid_cols
         half_win = self.window_size // 2
@@ -230,6 +268,7 @@ class DepthNormalViz:
         # origins_2d[r][c] = np.array([ox, oy, oz]) 或 None
         normals_2d = [[None] * C for _ in range(R)]
         origins_2d = [[None] * C for _ in range(R)]
+        quality_2d = [[None] * C for _ in range(R)]  # 深度门控后的有效点比例，0..1，供 marker 编码
 
         for r in range(R):
             for c in range(C):
@@ -251,8 +290,17 @@ class DepthNormalViz:
 
                 patch = depth[r0:r1, c0:c1]
                 valid_mask = patch > 0.0
+                n_total = np.count_nonzero(valid_mask)
+                if n_total < self.min_patch_points:
+                    continue
+
+                # ---- 深度门控：只保留与中心深度接近的像素，避免 PCA 跨边缘拟合 ----
+                depth_thr = self.depth_gate_ratio * center_depth
+                gate_mask = np.abs(patch - center_depth) < depth_thr
+                valid_mask = valid_mask & gate_mask
                 n_valid = np.count_nonzero(valid_mask)
-                if n_valid < self.min_patch_points:
+                quality = float(n_valid) / float(max(1, n_total))
+                if n_valid < self.edge_min_points:
                     continue
 
                 # ---- 反投影到 3D ----
@@ -283,7 +331,8 @@ class DepthNormalViz:
                     continue
 
                 normal = Vt[-1].copy()
-                if normal[2] > 0.0:
+                # 方向一致性：指离相机（camera_color_optical_frame +Z 向前）
+                if normal[2] < 0.0:
                     normal = -normal
 
                 # ---- 3D 起点 ----
@@ -293,33 +342,24 @@ class DepthNormalViz:
 
                 normals_2d[r][c] = normal
                 origins_2d[r][c] = np.array([ox, oy, oz])
+                quality_2d[r][c] = quality
 
         # ================================================================
-        #  第 2 遍：空间邻域加权平滑
+        #  第 2 遍：空间邻域加权平滑（只算 n_smooth 写出）
         # ================================================================
         sr = self.smooth_radius
-        sharp = self.smooth_sharpness
+        sigma = self.smooth_sigma
+        ang_exp = self.smooth_ang_exp
 
-        markers = MarkerArray()
-        # 每帧先清除上一帧全部箭头
-        delete_all = Marker()
-        delete_all.action = Marker.DELETEALL
-        delete_all.ns = "normals"
-        markers.markers.append(delete_all)
-
-        marker_id = 0
-
+        normals_smooth_2d = [[None] * C for _ in range(R)]
         for r in range(R):
             for c in range(C):
                 normal = normals_2d[r][c]
-                origin = origins_2d[r][c]
-                if normal is None or origin is None:
+                if normal is None:
                     continue
-
-                # ---- 收集邻域法向量，角度加权平均 ----
+                # 朝向一致化 + 距离高斯 × 角度相似度
                 n_smooth = np.zeros(3)
                 total_w = 0.0
-
                 for dr in range(-sr, sr + 1):
                     for dc in range(-sr, sr + 1):
                         nr, nc = r + dr, c + dc
@@ -328,21 +368,98 @@ class DepthNormalViz:
                         nb = normals_2d[nr][nc]
                         if nb is None:
                             continue
-                        if sharp > 0:
-                            w = max(0.0, float(np.dot(normal, nb))) ** sharp
-                        else:
-                            w = 1.0
-                        n_smooth += w * nb
+                        nb_use = nb.copy()
+                        # z-anchored 一致化：保证翻转后 z>=0（指离相机）。
+                        # 不能用 normal_cam 锚定：两个 z>=0 的向量 dot<0 时翻转会让一方 z<0，
+                        # 加权平均后可能产生指向相机（z<0）的法向。
+                        # Pass 1 已保证 nb.z>=0，所以此处通常不触发；保留作为防御。
+                        if nb_use[2] < 0.0:
+                            nb_use = -nb_use
+                        d2 = dr * dr + dc * dc
+                        w_dist = np.exp(-0.5 * d2 / (sigma ** 2))
+                        w_ang = max(0.0, float(np.dot(normal, nb_use))) ** ang_exp
+                        w = w_dist * w_ang
+                        n_smooth += w * nb_use
                         total_w += w
-
                 if total_w > 0.0:
                     n_smooth /= total_w
                     n_smooth /= np.linalg.norm(n_smooth)
                 else:
                     n_smooth = normal
+                normals_smooth_2d[r][c] = n_smooth
+
+        # ================================================================
+        #  第 3 遍：鲁棒后处理——离群法向剔除
+        #  自身与"排除自身的邻域距离加权平均"夹角 > 阈值 → 用邻域参考替换并降权
+        # ================================================================
+        normals_final_2d = [[None] * C for _ in range(R)]
+        if self.robust_enabled:
+            outlier_cos = np.cos(np.radians(self.robust_outlier_deg))
+            for r in range(R):
+                for c in range(C):
+                    n_self = normals_smooth_2d[r][c]
+                    if n_self is None:
+                        continue
+                    n_ref = np.zeros(3)
+                    total_w = 0.0
+                    for dr in range(-sr, sr + 1):
+                        for dc in range(-sr, sr + 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = r + dr, c + dc
+                            if nr < 0 or nr >= R or nc < 0 or nc >= C:
+                                continue
+                            nb = normals_smooth_2d[nr][nc]
+                            if nb is None:
+                                continue
+                            nb_use = nb.copy()
+                            # z-anchored 一致化（指离相机）
+                            if nb_use[2] < 0.0:
+                                nb_use = -nb_use
+                            d2 = dr * dr + dc * dc
+                            w = np.exp(-0.5 * d2 / (sigma ** 2))
+                            n_ref += w * nb_use
+                            total_w += w
+                    if total_w <= 1e-9:
+                        normals_final_2d[r][c] = n_self
+                        continue
+                    n_ref /= total_w
+                    n_ref /= np.linalg.norm(n_ref)
+                    cos_self = float(np.dot(n_self, n_ref))
+                    if cos_self < outlier_cos:
+                        normals_final_2d[r][c] = n_ref
+                        if quality_2d[r][c] is not None:
+                            quality_2d[r][c] *= 0.5
+                    else:
+                        normals_final_2d[r][c] = n_self
+        else:
+            for r in range(R):
+                for c in range(C):
+                    normals_final_2d[r][c] = normals_smooth_2d[r][c]
+
+        # ================================================================
+        #  第 4 遍：构造 Marker（用 normals_final_2d + origins_2d）
+        # ================================================================
+        markers = MarkerArray()
+        delete_all = Marker()
+        delete_all.action = Marker.DELETEALL
+        delete_all.ns = "normals"
+        markers.markers.append(delete_all)
+
+        marker_id = 0
+        for r in range(R):
+            for c in range(C):
+                normal = normals_final_2d[r][c]
+                origin = origins_2d[r][c]
+                if normal is None or origin is None:
+                    continue
+
+                # ---- 硬性方向保证：法向必须指离相机（z >= 0）----
+                if normal[2] < 0.0:
+                    normal = -normal
 
                 # ---- 构造 ARROW Marker ----
-                tip = origin + n_smooth * self.arrow_length
+                tip = origin + normal * self.arrow_length
 
                 marker = Marker()
                 marker.header.frame_id = "camera_color_optical_frame"
@@ -358,10 +475,11 @@ class DepthNormalViz:
                 marker.scale.x = self.shaft_diam
                 marker.scale.y = self.head_diam
                 marker.scale.z = self.head_len
-                marker.color.r = max(0.0, min(1.0, abs(n_smooth[0])))
-                marker.color.g = max(0.0, min(1.0, abs(n_smooth[1])))
-                marker.color.b = max(0.0, min(1.0, abs(n_smooth[2])))
-                marker.color.a = 0.85
+                marker.color.r = max(0.0, min(1.0, abs(normal[0])))
+                marker.color.g = max(0.0, min(1.0, abs(normal[1])))
+                marker.color.b = max(0.0, min(1.0, abs(normal[2])))
+                q = quality_2d[r][c] if quality_2d[r][c] is not None else 0.5
+                marker.color.a = 0.3 + 0.6 * float(q)
                 marker.lifetime = rospy.Duration(0)
 
                 markers.markers.append(marker)

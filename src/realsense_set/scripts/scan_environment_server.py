@@ -17,6 +17,7 @@
 import sys
 import threading
 import numpy as np
+import cv2
 
 import rospy
 import actionlib
@@ -108,10 +109,10 @@ class ScanEnvironmentServer:
         # ================================================================
         #  ROS 参数
         # ================================================================
-        self.grid_rows = rospy.get_param("~grid_rows", 40)
-        self.grid_cols = rospy.get_param("~grid_cols", 30)
-        self.window_size = rospy.get_param("~window_size", 7)
-        self.arrow_length = rospy.get_param("~arrow_length", 0.03)
+        self.grid_rows = rospy.get_param("~grid_rows", 50) # 网格行列数，越大越密集但越慢，建议 20..50，根据场景尺寸和细节调整
+        self.grid_cols = rospy.get_param("~grid_cols", 40)
+        self.window_size = rospy.get_param("~window_size", 11) # 参数含义：PCA 邻域半径，越大越平滑但越模糊，建议奇数以中心对称
+        self.arrow_length = rospy.get_param("~arrow_length", 0.03) # RViz 中箭头长度（米）
         self.max_depth = rospy.get_param("~max_depth", 3.0)
         self.shaft_diam = rospy.get_param("~shaft_diameter", 0.002)
         self.head_diam = rospy.get_param("~head_diameter", 0.005)
@@ -119,9 +120,21 @@ class ScanEnvironmentServer:
         self.min_patch_points = rospy.get_param("~min_patch_points", 6)
         self.sor_k = rospy.get_param("~sor_k", 6)
         self.sor_stddev = rospy.get_param("~sor_stddev", 1.0)
-        self.smooth_radius = rospy.get_param("~smooth_radius", 1)
-        self.smooth_sharpness = rospy.get_param("~smooth_sharpness", 8.0)
+        self.smooth_radius = rospy.get_param("~smooth_radius", 3)
+        self.smooth_sharpness = rospy.get_param("~smooth_sharpness", 8.0)  # 保留兼容 depth_normal_viz.py，server 不再读
         self.scan_frame_average = rospy.get_param("~scan_frame_average", 3)
+        # === 表面质量改进（深度门控 + 距离加权平滑）===
+        self.depth_gate_ratio = rospy.get_param("~depth_gate_ratio", 0.02)
+        self.edge_min_points = rospy.get_param("~edge_min_points", 5)
+        self.smooth_sigma = rospy.get_param("~smooth_sigma", 1.5)
+        self.smooth_ang_exp = rospy.get_param("~smooth_ang_exp", 4.0)
+        # === 第3遍：离群法向剔除 ===
+        self.robust_enabled = rospy.get_param("~robust_enabled", True)
+        self.robust_outlier_deg = rospy.get_param("~robust_outlier_deg", 5.0) # 夹角超过该值的法向量被视为离群点，替换为邻域参考并降权质量
+        # === 深度图空间平滑（双边滤波，保边；根治深度像素级噪声） ===
+        self.depth_bilateral_d = rospy.get_param("~depth_bilateral_d", 5)        # 邻域直径(像素)，0=自适应但慢
+        self.depth_bilateral_sigma_color = rospy.get_param("~depth_bilateral_sigma_color", 0.03)  # 颜色域 sigma（米）：>此值视为边
+        self.depth_bilateral_sigma_space = rospy.get_param("~depth_bilateral_sigma_space", 5)    # 空间域 sigma（像素）
         self.camera_frame = rospy.get_param("~camera_frame", "camera_color_optical_frame")
         self.target_frame = rospy.get_param("~target_frame", "base_link")
 
@@ -268,6 +281,32 @@ class ScanEnvironmentServer:
         return depth
 
     # ------------------------------------------------------------------
+    #  深度图空间域双边滤波（保边平滑，根治深度像素级噪声）
+    #  - 无效像素(=0)用邻域有效中位数临时填补后滤波，再恢复掩膜
+    #  - sigma_color 用"米"为单位：跨过此深度差的像素视为边缘，不参与平滑（保边）
+    # ------------------------------------------------------------------
+    def _bilateral_smooth_depth(self, depth):
+        """depth: H×W float32（米），无效值=0.0。返回平滑后的同形状数组（无效像素仍=0）。"""
+        if self.depth_bilateral_d <= 0:
+            return depth   # 关闭：d<=0 视为禁用
+        invalid = (depth <= 0.0)
+        if invalid.all():
+            return depth   # 整张图无效，平滑无意义
+        # 临时用邻域中位数填补无效像素，避免污染有效像素的滤波
+        filled = depth.copy()
+        if invalid.any():
+            valid_pixels = depth[~invalid]
+            fill_value = float(np.median(valid_pixels)) if valid_pixels.size > 0 else 0.0
+            filled[invalid] = fill_value
+        # opencv bilateral 需要 float32 单通道。sigma_color 在 float32 上是绝对值差，用"米"做单位
+        smoothed = cv2.bilateralFilter(
+            filled, self.depth_bilateral_d,
+            self.depth_bilateral_sigma_color, self.depth_bilateral_sigma_space,
+        )
+        smoothed[invalid] = 0.0   # 恢复无效掩膜（确保原坏点不会"被造"出来）
+        return smoothed
+
+    # ------------------------------------------------------------------
     #  查询 TF 并返回 (平移, 旋转矩阵) 从 camera_frame 到 target_frame
     # ------------------------------------------------------------------
     def _lookup_camera_transform(self):
@@ -321,6 +360,19 @@ class ScanEnvironmentServer:
         win_sz = goal.window_size if goal.window_size > 0 else self.window_size
         max_d = goal.max_depth if goal.max_depth > 0.0 else self.max_depth
 
+        # 热调：每次扫描前重读算法相关 param，便于 A/B 对比无需重启节点
+        self.smooth_radius = rospy.get_param("~smooth_radius", self.smooth_radius)
+        self.smooth_sigma = rospy.get_param("~smooth_sigma", self.smooth_sigma)
+        self.smooth_ang_exp = rospy.get_param("~smooth_ang_exp", self.smooth_ang_exp)
+        self.depth_gate_ratio = rospy.get_param("~depth_gate_ratio", self.depth_gate_ratio)
+        self.edge_min_points = rospy.get_param("~edge_min_points", self.edge_min_points)
+        self.min_patch_points = rospy.get_param("~min_patch_points", self.min_patch_points)
+        self.robust_enabled = rospy.get_param("~robust_enabled", self.robust_enabled)
+        self.robust_outlier_deg = rospy.get_param("~robust_outlier_deg", self.robust_outlier_deg)
+        self.depth_bilateral_d = rospy.get_param("~depth_bilateral_d", self.depth_bilateral_d)
+        self.depth_bilateral_sigma_color = rospy.get_param("~depth_bilateral_sigma_color", self.depth_bilateral_sigma_color)
+        self.depth_bilateral_sigma_space = rospy.get_param("~depth_bilateral_sigma_space", self.depth_bilateral_sigma_space)
+
         rospy.loginfo(
             "scan_environment_server: 开始扫描 grid=%dx%d win=%d max_d=%.1f avg=%d...",
             grid_r, grid_c, win_sz, max_d, self.scan_frame_average
@@ -340,6 +392,9 @@ class ScanEnvironmentServer:
             self.server.set_preempted()
             rospy.loginfo("scan_environment_server: 扫描被抢占或深度采集失败")
             return
+
+        # ---- 深度图空间域双边滤波（保边平滑，根治深度像素级噪声）----
+        depth = self._bilateral_smooth_depth(depth)
 
         H, W = depth.shape
         if H == 0 or W == 0:
@@ -364,6 +419,7 @@ class ScanEnvironmentServer:
 
         normals_2d = [[None] * grid_c for _ in range(grid_r)]
         origins_2d = [[None] * grid_c for _ in range(grid_r)]
+        quality_2d = [[None] * grid_c for _ in range(grid_r)]  # 深度门控后的有效点比例，0..1，供 marker 编码
 
         total_cells = float(grid_r * grid_c)
         processed = 0
@@ -393,8 +449,20 @@ class ScanEnvironmentServer:
 
                 patch = depth[r0:r1, c0:c1]
                 valid_mask = patch > 0.0
+                n_total = np.count_nonzero(valid_mask)
+                if n_total < self.min_patch_points:
+                    continue
+
+                # ---- 深度门控：只保留与中心深度接近的像素，避免 PCA 跨边缘拟合 ----
+                # 阈值自适应：ratio × center_depth，匹配 RealSense 噪声∝z 模型；
+                # 近处严、远处宽，曲面合法梯度不被误切，但跨表面跳变被过滤。
+                depth_thr = self.depth_gate_ratio * center_depth
+                gate_mask = np.abs(patch - center_depth) < depth_thr
+                valid_mask = valid_mask & gate_mask
                 n_valid = np.count_nonzero(valid_mask)
-                if n_valid < self.min_patch_points:
+                # 边缘质量：门控后保留比例，越低越靠近边缘（供第2遍/marker 编码）
+                quality = float(n_valid) / float(max(1, n_total))
+                if n_valid < self.edge_min_points:
                     continue
 
                 # ---- 反投影 ----
@@ -436,17 +504,121 @@ class ScanEnvironmentServer:
 
                 normals_2d[r][c] = normal
                 origins_2d[r][c] = np.array([ox, oy, oz])
+                quality_2d[r][c] = quality
 
             # 每行反馈一次进度
             feedback.progress = 0.1 + 0.6 * (float(processed) / total_cells)
             self.server.publish_feedback(feedback)
 
         # ================================================================
-        #  第 2 遍：空间邻域加权平滑 + TF 变换 + 构造姿态
+        #  第 2 遍：空间邻域加权平滑（只算 n_smooth，写入 normals_smooth_2d）
         # ================================================================
         sr = self.smooth_radius
-        sharp = self.smooth_sharpness
+        sigma = self.smooth_sigma
+        ang_exp = self.smooth_ang_exp
 
+        normals_smooth_2d = [[None] * grid_c for _ in range(grid_r)]
+        processed = 0
+        for r in range(grid_r):
+            for c in range(grid_c):
+                processed += 1
+                normal_cam = normals_2d[r][c]
+                if normal_cam is None:
+                    continue
+                # 朝向一致化 + 距离高斯 × 角度相似度
+                n_smooth = np.zeros(3)
+                total_w = 0.0
+                for dr in range(-sr, sr + 1):
+                    for dc in range(-sr, sr + 1):
+                        nr, nc = r + dr, c + dc
+                        if nr < 0 or nr >= grid_r or nc < 0 or nc >= grid_c:
+                            continue
+                        nb = normals_2d[nr][nc]
+                        if nb is None:
+                            continue
+                        nb_use = nb.copy()
+                        # 朝向一致化：用 camera +Z 锚定，保证翻转后 z>=0（指离相机）。
+                        # 不能用 normal_cam 锚定：两个 z>=0 的向量 dot<0 时，翻转会让一方 z<0，
+                        # 加权平均后可能产生指向相机（z<0）的法向，导致下游 180° 翻转。
+                        if nb_use[2] < 0.0:
+                            nb_use = -nb_use
+                        # 距离高斯 × 角度相似度
+                        d2 = dr * dr + dc * dc
+                        w_dist = np.exp(-0.5 * d2 / (sigma ** 2))
+                        w_ang = max(0.0, float(np.dot(normal_cam, nb_use))) ** ang_exp
+                        w = w_dist * w_ang
+                        n_smooth += w * nb_use
+                        total_w += w
+                if total_w > 0.0:
+                    n_smooth /= total_w
+                    n_smooth /= np.linalg.norm(n_smooth)
+                else:
+                    n_smooth = normal_cam
+                normals_smooth_2d[r][c] = n_smooth
+            feedback.progress = 0.7 + 0.05 * (float(processed) / total_cells)
+            self.server.publish_feedback(feedback)
+
+        # ================================================================
+        #  第 3 遍：鲁棒后处理——离群法向剔除
+        #  对每个有效点，算"排除自身的邻域距离加权平均"作参考 n_ref，
+        #  若自身与 n_ref 夹角 > robust_outlier_deg，则用 n_ref 替换并降权 quality。
+        # ================================================================
+        normals_final_2d = [[None] * grid_c for _ in range(grid_r)]
+        if self.robust_enabled:
+            outlier_cos = np.cos(np.radians(self.robust_outlier_deg))
+            processed = 0
+            for r in range(grid_r):
+                for c in range(grid_c):
+                    processed += 1
+                    n_self = normals_smooth_2d[r][c]
+                    if n_self is None:
+                        continue   # 空洞点保持 None，不做插补
+                    # 算邻域参考 n_ref（排除自身的纯距离加权平均）
+                    n_ref = np.zeros(3)
+                    total_w = 0.0
+                    for dr in range(-sr, sr + 1):
+                        for dc in range(-sr, sr + 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = r + dr, c + dc
+                            if nr < 0 or nr >= grid_r or nc < 0 or nc >= grid_c:
+                                continue
+                            nb = normals_smooth_2d[nr][nc]
+                            if nb is None:
+                                continue
+                            nb_use = nb.copy()
+                            # z-anchored 一致化：保证翻转后 z>=0（指离相机）。
+                            # Pass 2 输出已保证 z>=0，所以此处条件通常不触发；保留作为防御层。
+                            if nb_use[2] < 0.0:
+                                nb_use = -nb_use
+                            d2 = dr * dr + dc * dc
+                            w = np.exp(-0.5 * d2 / (sigma ** 2))
+                            n_ref += w * nb_use
+                            total_w += w
+                    if total_w <= 1e-9:
+                        normals_final_2d[r][c] = n_self   # 邻域全空，无可参考
+                        continue
+                    n_ref /= total_w
+                    n_ref /= np.linalg.norm(n_ref)
+                    # 离群判定
+                    cos_self = float(np.dot(n_self, n_ref))
+                    if cos_self < outlier_cos:
+                        normals_final_2d[r][c] = n_ref
+                        if quality_2d[r][c] is not None:
+                            quality_2d[r][c] *= 0.5
+                    else:
+                        normals_final_2d[r][c] = n_self
+                feedback.progress = 0.75 + 0.1 * (float(processed) / total_cells)
+                self.server.publish_feedback(feedback)
+        else:
+            # 总开关关闭：第3遍退化为直接拷贝第2遍结果
+            for r in range(grid_r):
+                for c in range(grid_c):
+                    normals_final_2d[r][c] = normals_smooth_2d[r][c]
+
+        # ================================================================
+        #  第 4 遍：TF 变换 + 构造姿态 + Marker
+        # ================================================================
         samples = []
         markers = MarkerArray()
 
@@ -458,43 +630,23 @@ class ScanEnvironmentServer:
 
         marker_id = 0
         processed = 0
-
         for r in range(grid_r):
             for c in range(grid_c):
                 processed += 1
-                normal_cam = normals_2d[r][c]
+                normal_cam = normals_final_2d[r][c]
                 origin_cam = origins_2d[r][c]
                 if normal_cam is None or origin_cam is None:
-                    continue
+                    continue   # 空洞点不输出 Pose
 
-                # ---- 空间加权平滑（camera 坐标系下） ----
-                n_smooth = np.zeros(3)
-                total_w = 0.0
-
-                for dr in range(-sr, sr + 1):
-                    for dc in range(-sr, sr + 1):
-                        nr, nc = r + dr, c + dc
-                        if nr < 0 or nr >= grid_r or nc < 0 or nc >= grid_c:
-                            continue
-                        nb = normals_2d[nr][nc]
-                        if nb is None:
-                            continue
-                        if sharp > 0:
-                            w = max(0.0, float(np.dot(normal_cam, nb))) ** sharp
-                        else:
-                            w = 1.0
-                        n_smooth += w * nb
-                        total_w += w
-
-                if total_w > 0.0:
-                    n_smooth /= total_w
-                    n_smooth /= np.linalg.norm(n_smooth)
-                else:
-                    n_smooth = normal_cam
+                # ---- 硬性方向保证：法向必须指离相机（camera 系 z >= 0）----
+                # Pass 2 的朝向一致化翻转可能把邻居 z 翻成负、加权平均后 n_smooth.z<0，
+                # 导致个别点指向相机、下游姿态 180° 翻转。这里强制兜底。
+                if normal_cam[2] < 0.0:
+                    normal_cam = -normal_cam
 
                 # ---- TF 变换到 target_frame ----
                 pos_base, norm_base = self._transform_point_and_normal(
-                    origin_cam, n_smooth, trans, R_cam2base
+                    origin_cam, normal_cam, trans, R_cam2base
                 )
 
                 # ---- 构造 6D 姿态 ----
@@ -527,12 +679,13 @@ class ScanEnvironmentServer:
                 marker.color.r = max(0.0, min(1.0, abs(norm_base[0])))
                 marker.color.g = max(0.0, min(1.0, abs(norm_base[1])))
                 marker.color.b = max(0.0, min(1.0, abs(norm_base[2])))
-                marker.color.a = 0.85
+                # alpha 编码边缘质量：门控保留比例低→半透明（边缘点），被离群剔除的更淡（quality×0.5）
+                q = quality_2d[r][c] if quality_2d[r][c] is not None else 0.5
+                marker.color.a = 0.3 + 0.6 * float(q)
                 marker.lifetime = rospy.Duration(0)
                 markers.markers.append(marker)
                 marker_id += 1
-
-            feedback.progress = 0.7 + 0.25 * (float(processed) / total_cells)
+            feedback.progress = 0.85 + 0.15 * (float(processed) / total_cells)
             self.server.publish_feedback(feedback)
 
         # ================================================================

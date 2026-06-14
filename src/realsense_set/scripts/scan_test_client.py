@@ -6,6 +6,7 @@ scan_environment_server 动作服务器测试节点。
 """
 
 import sys
+import numpy as np
 import rospy
 import actionlib
 from realsense_set.msg import ScanEnvironmentAction, ScanEnvironmentGoal
@@ -90,6 +91,28 @@ def main():
         "位置范围: x=[%.3f, %.3f]  y=[%.3f, %.3f]  z=[%.3f, %.3f]",
         min(xs), max(xs), min(ys), max(ys), min(zs), max(zs),
     )
+
+    # ---- 法向质量量化：与整体平均法向的 RMS 角度偏差（平面扫描应 <2°，越大越差）----
+    norms = []
+    for p in result.samples:
+        q = p.orientation
+        n = np.array([
+            2.0 * (q.x * q.z + q.w * q.y),
+            2.0 * (q.y * q.z - q.w * q.x),
+            1.0 - 2.0 * (q.x * q.x + q.y * q.y),
+        ])
+        norms.append(n)
+    norms = np.stack(norms)
+    mean_n = norms.mean(axis=0)
+    nrm = np.linalg.norm(mean_n)
+    if nrm > 1e-6:
+        mean_n /= nrm
+        cos_a = np.clip(norms @ mean_n, -1.0, 1.0)
+        angles = np.degrees(np.arccos(cos_a))
+        rospy.loginfo(
+            "法向 RMS 角度偏差: %.2f° (max %.2f°) — 平面应 <2°",
+            float(np.sqrt((angles ** 2).mean())), float(angles.max()),
+        )
 
 
 if __name__ == "__main__":
