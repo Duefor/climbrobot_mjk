@@ -268,6 +268,7 @@ class PoseMapper {
   }
   static double defaultRMin(int i) {
     static const double d[3] = {0.28, -0.56, 0.12};
+    // static const double d[3] = {0.28, -0.56, 0.22};
     return d[i];
   }
 
@@ -1058,38 +1059,38 @@ class RobotMainNode {
         continue;
       }
 
-      // ---- 表面感知：姿态混合 + 安全距离（仅 CONTROL_MODE=2） ----
+      // ---- 表面感知：姿态混合（仅 CONTROL_MODE=2） ----
       if (feed_ok && pose_mapper_.controlMode() == 2 && surface_processor_.hasData()) {
         Eigen::Vector3d actual_pos = actual6.head<3>();
         Eigen::Vector3d haptic_rotvec = dpose.tail<3>();
-        // 姿态：邻域加权法向量 + slerp 混合
         Eigen::Vector3d surface_rotvec;
         if (computeSurfaceOrientation(actual_pos, haptic_rotvec, surface_rotvec)) {
           dpose[3] = surface_rotvec[0];
           dpose[4] = surface_rotvec[1];
           dpose[5] = surface_rotvec[2];
         }
-
-        // [调试] 安全距离硬边界：不允许越过 margin，到了就停住
-        Eigen::Vector3d des_pos = dpose.head<3>();
-        Eigen::Vector3d safety_normal, surface_pt;
-        double safety_dist;
-        if (surface_processor_.computeBlendedNormal(des_pos,
-              params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
-          safety_normal = -safety_normal;
-          double signed_dist = (des_pos - surface_pt).dot(safety_normal);
-          ROS_INFO_STREAM("signed_dist=" <<signed_dist);
-          if (signed_dist < params_.surface_safety_margin) {
-            Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
-            dpose[0] = clamped.x();
-            dpose[1] = clamped.y();
-            dpose[2] = clamped.z();
-          }
-        }
       }
 
       // ---- PID 控制器：输出修正后的目标笛卡尔位姿 ----
       Eigen::VectorXd cmd_pose = controller_.compute(actual6, dpose, now, feed_ok, age_des);
+
+      // ---- [调试] 安全距离硬边界：clamp cmd_pose 位置（PID 后，IK 前） ----
+      if (feed_ok && pose_mapper_.controlMode() == 2 && surface_processor_.hasData()) {
+        Eigen::Vector3d cmd_pos = cmd_pose.head<3>();
+        Eigen::Vector3d safety_normal, surface_pt;
+        double safety_dist;
+        if (surface_processor_.computeBlendedNormal(cmd_pos,
+              params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
+          safety_normal = -safety_normal;     // 翻转法向量，法向量指向工作空间内部
+          double signed_dist = (cmd_pos - surface_pt).dot(safety_normal);
+          if (signed_dist < params_.surface_safety_margin) {
+            Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
+            cmd_pose[0] = clamped.x();
+            cmd_pose[1] = clamped.y();
+            cmd_pose[2] = clamped.z();
+          }
+        }
+      }
 
       // ---- 位置 IK ----
       ELITE::vector6d_t q_cmd{};
