@@ -267,7 +267,7 @@ class PoseMapper {
     return d[i];
   }
   static double defaultRMin(int i) {
-    static const double d[3] = {0.28, -0.56, 0.22};
+    static const double d[3] = {0.28, -0.56, 0.12};
     return d[i];
   }
 
