@@ -596,6 +596,23 @@ class SurfaceSampleProcessor {
     std::lock_guard<std::mutex> lk(mtx_);
     samples_ = samples;
     has_data_ = !samples.empty();
+    if (samples_.empty()) {
+      bbox_valid_ = false;
+      return;
+    }
+    // 一次性 XY 包围盒，用于 isInsideRegion 的确定性区域判定。
+    double xmin = std::numeric_limits<double>::infinity();
+    double xmax = -std::numeric_limits<double>::infinity();
+    double ymin = std::numeric_limits<double>::infinity();
+    double ymax = -std::numeric_limits<double>::infinity();
+    for (const auto& s : samples_) {
+      xmin = std::min(xmin, s.position.x);
+      xmax = std::max(xmax, s.position.x);
+      ymin = std::min(ymin, s.position.y);
+      ymax = std::max(ymax, s.position.y);
+    }
+    xmin_ = xmin; xmax_ = xmax; ymin_ = ymin; ymax_ = ymax;
+    bbox_valid_ = true;
   }
 
   bool hasData() const {
@@ -608,17 +625,30 @@ class SurfaceSampleProcessor {
     return samples_.size();
   }
 
+  // 确定性区域归属判定：actual_pos 的 XY 是否落在采样点云覆盖的矩形内（含边缘容差）。
+  // 不依赖 blend 球内有没有点，边界干净、无抖动。
+  bool isInsideRegion(const Eigen::Vector3d& pos, double edge_tol) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    if (!bbox_valid_) return false;
+    return pos.x() >= xmin_ - edge_tol && pos.x() <= xmax_ + edge_tol
+        && pos.y() >= ymin_ - edge_tol && pos.y() <= ymax_ + edge_tol;
+  }
+
   // 距离加权法向量平均。在 blend_radius 内找所有采样点，高斯加权平均法向量。
   // 避免了单点最近邻的姿态跳变问题。
   // 返回 true 表示找到至少一个在范围内的点。
-  // out_normal:  加权平均后的单位法向量
-  // out_point:   加权平均后的表面参考点位置（用于安全距离硬边界）
-  // out_dist:    最近采样点距离（用于 alpha 混合判断）
+  // out_normal:        加权平均后的单位法向量
+  // out_point:         加权平均后的表面参考点位置（fallback 用）
+  // out_dist:          最近采样点距离
+  // out_nearest_pt:    最近采样点的位置（曲面/高低差首选参考）
+  // out_nearest_normal:最近采样点的法向量
   bool computeBlendedNormal(const Eigen::Vector3d& tcp_pos,
                             double blend_radius,
                             Eigen::Vector3d& out_normal,
                             Eigen::Vector3d& out_point,
-                            double& out_dist) const {
+                            double& out_dist,
+                            Eigen::Vector3d& out_nearest_pt,
+                            Eigen::Vector3d& out_nearest_normal) const {
     std::lock_guard<std::mutex> lk(mtx_);
     if (samples_.empty()) return false;
 
@@ -632,21 +662,29 @@ class SurfaceSampleProcessor {
     for (const auto& s : samples_) {
       Eigen::Vector3d sp(s.position.x, s.position.y, s.position.z);
       const double d = (sp - tcp_pos).norm();
-      if (d < out_dist) out_dist = d;
-      if (d > blend_radius) continue;
       // 从四元数提取法向量（Z轴 = 表面法向量）
       Eigen::Quaterniond q(s.orientation.w, s.orientation.x,
                            s.orientation.y, s.orientation.z);
       Eigen::Vector3d normal = q.toRotationMatrix().col(2);
+      if (d < out_dist) {
+        out_dist = d;
+        out_nearest_pt = sp;
+        out_nearest_normal = normal;
+      }
+      if (d > blend_radius) continue;
       const double w = std::exp(-d * d / two_sigma2);
       weighted_normal += w * normal;
       weighted_point += w * sp;
       total_weight += w;
     }
 
-    if (total_weight < 1e-9) return false;
-    out_normal = (weighted_normal / total_weight).normalized();
-    out_point = weighted_point / total_weight;
+    // out_nearest_pt / out_nearest_normal 只要遍历过任何点就有效，但 blended 信息需要权重。
+    out_normal = (total_weight > 1e-9)
+        ? (weighted_normal / total_weight).normalized()
+        : out_nearest_normal;   // 球内无点：法向退化为最近邻法向
+    out_point = (total_weight > 1e-9)
+        ? (weighted_point / total_weight)
+        : out_nearest_pt;       // 球内无点：点退化为最近邻点
     return true;
   }
 
@@ -654,6 +692,8 @@ class SurfaceSampleProcessor {
   mutable std::mutex mtx_;
   std::vector<geometry_msgs::Pose> samples_;
   bool has_data_{false};
+  double xmin_{0.0}, xmax_{0.0}, ymin_{0.0}, ymax_{0.0};
+  bool bbox_valid_{false};
 };
 
 // ---- 运行时参数定义 ----
@@ -692,6 +732,9 @@ struct RuntimeParams {
   double surface_blend_radius{0.10};   // 法向量加权平均的邻域半径
   double surface_lock_delay{0.5};
   double surface_safety_margin{0.2};  // [调试] 末端最小安全距离
+  double surface_edge_tol{0.02};            // 区域判定 XY 边缘容差(m)，避免边界抖动
+  double surface_out_region_decay{0.3};     // 出区域后缓存保留时长(s)，期间仍约束、超时放手
+  double surface_nearest_trust_dist{0.05};  // 最近邻单点法向信任半径(m)
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -728,6 +771,9 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("surface_blend_radius", p.surface_blend_radius, 0.10);
   pnh.param("surface_lock_delay", p.surface_lock_delay, 0.5);
   pnh.param("surface_safety_margin", p.surface_safety_margin, 0.2);
+  pnh.param("surface_edge_tol", p.surface_edge_tol, 0.02);
+  pnh.param("surface_out_region_decay", p.surface_out_region_decay, 0.3);
+  pnh.param("surface_nearest_trust_dist", p.surface_nearest_trust_dist, 0.05);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -931,10 +977,11 @@ class RobotMainNode {
     if (!surface_processor_.hasData()) return false;
 
     // 阶段1: 邻域加权平均法向量
-    Eigen::Vector3d blended_normal, dummy_pt;
+    Eigen::Vector3d blended_normal, dummy_pt, dummy_nearest_pt, dummy_nearest_normal;
     double nearest_dist = 0.0;
     if (!surface_processor_.computeBlendedNormal(actual_pos,
-          params_.surface_blend_radius, blended_normal, dummy_pt, nearest_dist))
+          params_.surface_blend_radius, blended_normal, dummy_pt, nearest_dist,
+          dummy_nearest_pt, dummy_nearest_normal))
       return false;
 
     // 阶段2: 距离决定 alpha（用最近点距离判断远近）
@@ -1075,43 +1122,59 @@ class RobotMainNode {
       Eigen::VectorXd cmd_pose = controller_.compute(actual6, dpose, now, feed_ok, age_des);
 
       // ---- [调试] 安全距离硬边界：clamp cmd_pose 位置（PID 后，IK 前） ----
-      // 约束模型：
-      //   表面点云 = 不可穿透的边界
-      //   法向（垂直于表面）：cmd_pos 距边界 ≥ surface_safety_margin
-      //   切向（沿表面 xy）：完全自由，不修改
-      // 因此只能调整 cmd_pos 沿法向的分量，切向分量保持不变。
-      //
-      // 注意：必须用 actual_pos（机械臂当前位置）而不是 cmd_pos 去查表面参考。
-      // 因为 cmd_pos 是每周期临时算出的目标点，一旦它被 PID 推到采样点云
-      // (surface_blend_radius) 覆盖范围之外，computeBlendedNormal 会返回 false，
-      // 此时若用 cmd_pos 查询，整个安全限制会被跳过，机械臂照常越界。
+      // 约束模型（区域内外干净切分）：
+      //   表面点云 XY 覆盖的矩形 = 受约束区域
+      //   区域内：法向距表面 ≥ surface_safety_margin（不穿透），切向（沿表面 xy）完全自由
+      //   区域外：完全自由操控，不施加任何约束
+      // 两步解耦：
+      //   A. isInsideRegion(actual_pos) 确定性判定是否在区域内（不靠 blend 球里有没有点）
+      //   B. 仅在区域内，用最近邻单点法向（曲面/高低差更准）或 blend（远距离 fallback）
+      //      做法向正交投影钳制，切向分量完全保留
       if (feed_ok && pose_mapper_.controlMode() == 2 && surface_processor_.hasData()) {
-        Eigen::Vector3d actual_pos = actual6.head<3>();
-        Eigen::Vector3d safety_normal, surface_pt;
-        double safety_dist;
-        // 先用 actual_pos 查询当前最近表面参考
-        if (surface_processor_.computeBlendedNormal(actual_pos,
-              params_.surface_blend_radius, safety_normal, surface_pt, safety_dist)) {
-          safety_normal = -safety_normal;     // 翻转法向量，指向工作空间内部
-          safety_surface_pt_ = surface_pt;    // 缓存，供下一周期回退使用
-          safety_normal_ = safety_normal;
-          safety_ref_valid_ = true;
-        } else if (safety_ref_valid_) {
-          // actual_pos 已离开采样覆盖区：复用上次有效的表面参考
-          surface_pt = safety_surface_pt_;
-          safety_normal = safety_normal_;
+        const Eigen::Vector3d actual_pos = actual6.head<3>();
+
+        // 步骤A：干净的区域归属判定
+        if (surface_processor_.isInsideRegion(actual_pos, params_.surface_edge_tol)) {
+          // 步骤B：区域内，算表面参考
+          Eigen::Vector3d blended_normal, blended_pt, nearest_pt, nearest_normal;
+          double nearest_dist;
+          if (surface_processor_.computeBlendedNormal(actual_pos,
+                params_.surface_blend_radius, blended_normal, blended_pt, nearest_dist,
+                nearest_pt, nearest_normal)) {
+            // 法向参考：最近邻足够近时优先用单点（曲面/高低差更准），否则 blend 平滑
+            Eigen::Vector3d ref_normal = (nearest_dist < params_.surface_nearest_trust_dist)
+                ? nearest_normal : blended_normal;
+            Eigen::Vector3d ref_pt = (nearest_dist < params_.surface_nearest_trust_dist)
+                ? nearest_pt : blended_pt;
+            // 服务端法向指离相机（指向工作空间外侧），翻转后指向工作空间内部（机械臂侧），
+            // 也就是末端应当退让、保持安全距离的方向。不翻转会让 clamp 变成猛冲。
+            ref_normal = -ref_normal;
+            // 法向方向连续性保护：与上次夹角>90°(dot<0)说明"翻面"，沿用上次方向，
+            // 防止曲面/台阶边缘法向跳变导致 clamp 方向突然反转。
+            if (safety_ref_valid_ && ref_normal.dot(safety_normal_) < 0.0) {
+              ref_normal = -ref_normal;
+            }
+            safety_normal_      = ref_normal;   // 已翻转，指向工作空间内部
+            safety_surface_pt_  = ref_pt;
+            safety_ref_time_    = ros::Time::now();
+            safety_ref_valid_   = true;
+          }
+          // in-region 内若球内无点，保留上一周期参考（decay 内仍生效），不施加无效更新
         } else {
-          safety_ref_valid_ = false;
+          // 区域外：带时间衰减地放手。短时越界（边缘抖动一两个周期）保留参考避免冲击，
+          // 持续越界（超过 decay）彻底清空，机械臂完全自由
+          if (safety_ref_valid_ &&
+              (ros::Time::now() - safety_ref_time_).toSec() > params_.surface_out_region_decay) {
+            safety_ref_valid_ = false;
+          }
         }
 
+        // 步骤B 执行：仅在有有效参考时，沿法向正交投影钳制（切向完全保留）
         if (safety_ref_valid_) {
           const Eigen::Vector3d cmd_pos = cmd_pose.head<3>();
-          const double signed_dist = (cmd_pos - surface_pt).dot(safety_normal);
+          const double signed_dist = (cmd_pos - safety_surface_pt_).dot(safety_normal_);
           if (signed_dist < params_.surface_safety_margin) {
-            // 沿法向把 cmd_pos 推回到安全距离处，切向分量完全保留，
-            // 这样机械臂沿表面滑动时不会被拉回某个固定点。
-            const double push = params_.surface_safety_margin - signed_dist;
-            cmd_pose.head<3>() += safety_normal * push;
+            cmd_pose.head<3>() += safety_normal_ * (params_.surface_safety_margin - signed_dist);
           }
         }
       }
@@ -1425,11 +1488,12 @@ class RobotMainNode {
   std::thread keyboard_thread_;
 
   // 表面安全限制缓存：记录最近一次成功的表面参考点和指向内部的法向量。
-  // 当 cmd_pos/actual_pos 超出采样点云覆盖范围、computeBlendedNormal 返回 false 时，
+  // 当 actual_pos 超出采样点云覆盖范围、computeBlendedNormal 返回 false 时，
   // 仍可据此把机械臂限在安全边界上，而不是放任越界。
   Eigen::Vector3d safety_surface_pt_{Eigen::Vector3d::Zero()};
   Eigen::Vector3d safety_normal_{Eigen::Vector3d::UnitZ()};  // 已翻转，指向工作空间内部
   bool safety_ref_valid_{false};
+  ros::Time safety_ref_time_;  // 最近一次成功 in-region 查询的时间，用于出区域后的衰减放手
 };
 
 int main(int argc, char** argv) {
