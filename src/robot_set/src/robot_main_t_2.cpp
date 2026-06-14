@@ -1075,6 +1075,12 @@ class RobotMainNode {
       Eigen::VectorXd cmd_pose = controller_.compute(actual6, dpose, now, feed_ok, age_des);
 
       // ---- [调试] 安全距离硬边界：clamp cmd_pose 位置（PID 后，IK 前） ----
+      // 约束模型：
+      //   表面点云 = 不可穿透的边界
+      //   法向（垂直于表面）：cmd_pos 距边界 ≥ surface_safety_margin
+      //   切向（沿表面 xy）：完全自由，不修改
+      // 因此只能调整 cmd_pos 沿法向的分量，切向分量保持不变。
+      //
       // 注意：必须用 actual_pos（机械臂当前位置）而不是 cmd_pos 去查表面参考。
       // 因为 cmd_pos 是每周期临时算出的目标点，一旦它被 PID 推到采样点云
       // (surface_blend_radius) 覆盖范围之外，computeBlendedNormal 会返回 false，
@@ -1102,10 +1108,10 @@ class RobotMainNode {
           const Eigen::Vector3d cmd_pos = cmd_pose.head<3>();
           const double signed_dist = (cmd_pos - surface_pt).dot(safety_normal);
           if (signed_dist < params_.surface_safety_margin) {
-            const Eigen::Vector3d clamped = surface_pt + safety_normal * params_.surface_safety_margin;
-            cmd_pose[0] = clamped.x();
-            cmd_pose[1] = clamped.y();
-            cmd_pose[2] = clamped.z();
+            // 沿法向把 cmd_pos 推回到安全距离处，切向分量完全保留，
+            // 这样机械臂沿表面滑动时不会被拉回某个固定点。
+            const double push = params_.surface_safety_margin - signed_dist;
+            cmd_pose.head<3>() += safety_normal * push;
           }
         }
       }
