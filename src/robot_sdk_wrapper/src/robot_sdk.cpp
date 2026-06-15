@@ -725,3 +725,34 @@ ELITE::vector6d_t EliteCSRobotSDK::getTCPforce()
 {
     return s_rtsi_io->getAcutalTCPForce();
 }
+
+bool EliteCSRobotSDK::startForceControl(const ELITE::vector6d_t& reference_frame,
+                                        const ELITE::vector6int32_t& selection_vector,
+                                        const ELITE::vector6d_t& wrench,
+                                        const ELITE::vector6d_t& limits) {
+    // 开启力控前先对力传感器去皮
+    if (!s_driver->zeroFTSensor()) {
+        std::cout << "Force sensor zero (tare) failed" << std::endl;
+        return false;
+    }
+    std::cout << "Force sensor zeroed" << std::endl;
+
+    // 力控模式恒定为 TCP（值=3）
+    if (!s_driver->startForceMode(reference_frame, selection_vector, wrench,
+                                   ELITE::ForceMode::TCP, limits)) {
+        std::cout << "Start force control failed" << std::endl;
+        return false;
+    }
+    std::cout << "Force control started" << std::endl;
+    return true;
+}
+
+bool EliteCSRobotSDK::endForceControl() {
+    if (!s_driver->endForceMode()) {
+        std::cout << "End force control failed" << std::endl;
+        return false;
+    }
+    std::cout << "Force control ended" << std::endl;
+    return true;
+}
+

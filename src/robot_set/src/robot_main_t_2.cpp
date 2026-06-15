@@ -1504,20 +1504,20 @@ class RobotMainNode {
       // 关键：drift 模式下 r_center_ 会跟随手柄漂移，导致机械臂 TCP 永远在 r_space box 内。
       // 所以力反馈必须基于手柄在 h_space 相对 work box 的超出量（PoseMapper::getDriftExcess），
       // 它就是 h_pos 减去 clamp 后的 h_clamped，再缩放到 r_space。
-      if (params_.drift_force_enable) {
-        Eigen::Vector3d excess = pose_mapper_.getDriftExcess();
-        if (excess.norm() > 1e-9) {
-          // 弹簧力 = -k * excess（方向相反 = 指向 box 内部），限幅总力
-          Eigen::Vector3d fvec = -params_.drift_force_k * excess;
-          const double fmag = fvec.norm();
-          if (fmag > params_.drift_force_max) {
-            fvec *= (params_.drift_force_max / std::max(fmag, 1e-9));
-          }
-          for (int i = 0; i < 3; ++i) {
-            msg.data[i] += fvec[i];
-          }
-        }
-      }
+      // if (params_.drift_force_enable) {
+      //   Eigen::Vector3d excess = pose_mapper_.getDriftExcess();
+      //   if (excess.norm() > 1e-9) {
+      //     // 弹簧力 = -k * excess（方向相反 = 指向 box 内部），限幅总力
+      //     Eigen::Vector3d fvec = -params_.drift_force_k * excess;
+      //     const double fmag = fvec.norm();
+      //     if (fmag > params_.drift_force_max) {
+      //       fvec *= (params_.drift_force_max / std::max(fmag, 1e-9));
+      //     }
+      //     for (int i = 0; i < 3; ++i) {
+      //       msg.data[i] += fvec[i];
+      //     }
+      //   }
+      // }
       force_pub_.publish(msg);
       rate.sleep();
     }

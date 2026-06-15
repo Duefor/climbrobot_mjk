@@ -118,6 +118,19 @@ public:
     // 获取当前末端力传感器数据，单位N
     ELITE::vector6d_t getTCPforce();
 
+    // 启动力控模式。力控模式恒定为 TCP(3)。
+    // reference_frame: 力参考坐标系相对基座 [X,Y,Z,Rx,Ry,Rz] (m, rad)
+    // selection_vector: 6维0/1向量，1表示该轴柔顺
+    // wrench: 目标力/力矩 [Fx,Fy,Fz,Mx,My,Mz] (N, Nm)
+    // limits: 柔顺轴最大速度 [Vx,Vy,Vz,ωx,ωy,ωz] (m/s, rad/s)
+    bool startForceControl(const ELITE::vector6d_t& reference_frame,
+                           const ELITE::vector6int32_t& selection_vector,
+                           const ELITE::vector6d_t& wrench,
+                           const ELITE::vector6d_t& limits);
+
+    // 关闭力控模式
+    bool endForceControl();
+
 private:
     bool startMode1();
     bool startMode2();
