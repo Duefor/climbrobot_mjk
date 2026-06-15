@@ -195,6 +195,16 @@ class PoseMapper {
               }
             }
           }
+          // 表面 safety 联动：被边界夹住时，去掉 drift_vel 沿撞墙法向的分量。
+          // safety_block_normal_ 指向工作空间内部（末端被推回、远离表面的方向）。
+          // 手柄推向表面 → drift_vel 朝表面 = 与 safety_normal 反向 → 点积<0 → 抑制；
+          // 手柄远离表面 → drift_vel 朝 safety_normal 同向 → 点积>0 → 不抑制（允许离开）。
+          if (safety_block_active_) {
+            const double along = drift_vel.dot(safety_block_normal_);
+            if (along < 0.0) {
+              drift_vel -= safety_block_normal_ * along;
+            }
+          }
           r_center_ += drift_vel * dt;
         }
       }
@@ -243,6 +253,16 @@ class PoseMapper {
     work_center = r_center_ + scale_.cwiseProduct(work_offset);
     drift_size = scale_.cwiseProduct(h_drift_pos_ + h_drift_neg_);
     work_size = scale_.cwiseProduct(h_work_pos_ + h_work_neg_);
+  }
+
+  // sdkLoop 检测到末端被表面边界夹住时调用：传入安全法向（指向工作空间内部、
+  // 即 safety 钳制把末端推回的方向）与激活标志。map() 的 drift 分支会据此把
+  // drift_vel 沿该法向的分量去掉，只保留切向漂移，防止 r_center_ 朝撞墙方向累积。
+  // active=false 时 normal 被忽略，drift 完全恢复（出区域或无表面数据）。
+  void setSafetyBlock(const Eigen::Vector3d& normal, bool active) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    safety_block_normal_ = active ? normal : Eigen::Vector3d::Zero();
+    safety_block_active_ = active;
   }
 
  private:
@@ -302,6 +322,10 @@ class PoseMapper {
   double work_box_scale_{0.85};
   std::string map_mode_{"drift"};
   int control_mode_{0};
+  // 表面 safety 联动：sdkLoop 检测到末端被边界夹住时，把安全法向写入此，
+  // map() 累积 drift 时去掉该法向分量，避免 r_center_ 朝撞墙方向偷跑 → 松手跳变。
+  Eigen::Vector3d safety_block_normal_{Eigen::Vector3d::Zero()};
+  bool safety_block_active_{false};
   mutable std::mutex mtx_;
   ros::Time last_map_time_;
 };
@@ -735,6 +759,11 @@ struct RuntimeParams {
   double surface_edge_tol{0.02};            // 区域判定 XY 边缘容差(m)，避免边界抖动
   double surface_out_region_decay{0.3};     // 出区域后缓存保留时长(s)，期间仍约束、超时放手
   double surface_nearest_trust_dist{0.05};  // 最近邻单点法向信任半径(m)
+  // drift 漂移区力反馈：机械臂 TCP 超出 work_radius 时，沿指向 r_center_ 方向
+  // 施加弹簧力到手柄，让操作者主观感受到工作空间的漂移边界。
+  bool   drift_force_enable{false};
+  double drift_force_k{40.0};     // 弹簧刚度 (N/m)：超出 work_radius 每米产生的力
+  double drift_force_max{3.0};    // 力上限 (N)，避免过大反馈伤设备
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -774,6 +803,9 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("surface_edge_tol", p.surface_edge_tol, 0.02);
   pnh.param("surface_out_region_decay", p.surface_out_region_decay, 0.3);
   pnh.param("surface_nearest_trust_dist", p.surface_nearest_trust_dist, 0.05);
+  pnh.param("drift_force_enable", p.drift_force_enable, false);
+  pnh.param("drift_force_k", p.drift_force_k, 40.0);
+  pnh.param("drift_force_max", p.drift_force_max, 3.0);
   for (int i = 0; i < 6; ++i) {
     double root_def = 0.0;
     if (i == 1) {
@@ -820,9 +852,6 @@ class RobotMainNode {
         sim_seed_[i] = params_.root_joint_pose[i];
       }
       joint_pub_ = nh_.advertise<sensor_msgs::JointState>(params_.sim_joint_pub_topic, 10);
-      if (params_.workspace_viz_enable) {
-        workspace_marker_pub_ = nh_.advertise<visualization_msgs::Marker>(params_.workspace_viz_topic, 1, true);
-      }
     } else {
       robot_ = std::make_unique<EliteCSRobotSDK>(params_.robot_ip, params_.pc_ip, params_.mode, params_.external_control,
                                                  params_.output_recipe, params_.input_recipe, params_.task_file,
@@ -835,6 +864,11 @@ class RobotMainNode {
       joint_pub_ = nh_.advertise<sensor_msgs::JointState>(params_.joint_pub_topic, 10);
       tcp_pub_ = nh_.advertise<robot_set::TCPState>(params_.tcp_pub_topic, 10);
       force_pub_ = nh_.advertise<std_msgs::Float64MultiArray>(params_.force_pub_topic, 10);
+    }
+
+    // 工作空间/漂移空间可视化：仿真与实机共用，不受 use_sim 门控。
+    if (params_.workspace_viz_enable) {
+      workspace_marker_pub_ = nh_.advertise<visualization_msgs::Marker>(params_.workspace_viz_topic, 1, true);
     }
 
     haptic_sub_ = nh_.subscribe<robot_set::TCPState>(params_.haptic_topic, 1, &RobotMainNode::onHaptic, this);
@@ -1177,6 +1211,20 @@ class RobotMainNode {
             cmd_pose.head<3>() += safety_normal_ * (params_.surface_safety_margin - signed_dist);
           }
         }
+
+        // drift 抑制联动：把"本周期是否被边界夹住"回传给 PoseMapper。
+        // 钳制段若 signed_dist<margin 视为夹住 → PoseMapper 下一周期去掉 drift 沿
+        // safety_normal_ 反向（撞墙方向）的分量；切向漂移保留。
+        // 无有效参考时显式清空，确保出区域后抑制及时撤销。
+        if (safety_ref_valid_) {
+          const double signed_dist_after =
+              (cmd_pose.head<3>() - safety_surface_pt_).dot(safety_normal_);
+          pose_mapper_.setSafetyBlock(
+              safety_normal_,
+              signed_dist_after < params_.surface_safety_margin);
+        } else {
+          pose_mapper_.setSafetyBlock(Eigen::Vector3d::Zero(), false);
+        }
       }
 
       // ---- 位置 IK ----
@@ -1212,6 +1260,7 @@ class RobotMainNode {
         last_cmd_time_.store(now, std::memory_order_release);
       }
 
+      publishWorkspaceViz();
       rate.sleep();
     }
   }
@@ -1412,17 +1461,62 @@ class RobotMainNode {
   }
 
   // 发布力传感器数据，包含机器人端口读到的六维力/力矩。
+  // 若 drift_force_enable，叠加"漂移区弹簧力"：机械臂 TCP 超出工作空间 box 时，
+  // 各超出轴独立施加指向 box 中心的弹簧力（box 各轴 work_pos/work_neg 独立）。
   void publishForce() {
     ros::Rate rate(params_.pub_hz);
     std_msgs::Float64MultiArray msg;
     msg.data.resize(6);
     while (ros::ok() && !shutdown_) {
+      // 先在 state_mtx_ 下拷贝 force / tcp 缓存，避免与 sdkLoop 竞争
+      double force_copy[6];
+      double tcp_pos[3];
       {
         std::lock_guard<std::mutex> lk(state_mtx_);
         for (int i = 0; i < 6; ++i) {
-          msg.data[i] = force_cache_[i];
+          force_copy[i] = force_cache_[i];
+        }
+        for (int i = 0; i < 3; ++i) {
+          tcp_pos[i] = tcp_cache_[i];
         }
       }
+      for (int i = 0; i < 6; ++i) {
+        msg.data[i] = force_copy[i];
+      }
+
+      // 漂移区弹簧力叠加（仅平移力分量 Fx/Fy/Fz）
+      // 工作空间是矩形 box（各轴 work_pos/work_neg 独立），用 getWorkspaceBoxes
+      // 逐轴算超出量；任一轴超出即在该轴方向施加指向 box 中心的弹簧力。
+      if (params_.drift_force_enable) {
+        Eigen::Vector3d drift_center, drift_size, work_center, work_size;
+        pose_mapper_.getWorkspaceBoxes(drift_center, drift_size, work_center, work_size);
+        const Eigen::Vector3d work_half = 0.5 * work_size;
+        const Eigen::Vector3d r_pos(tcp_pos[0], tcp_pos[1], tcp_pos[2]);
+        const Eigen::Vector3d delta = r_pos - work_center;
+        // 各轴 |delta| - half：超出量；负值表示在 box 内，置 0
+        const Eigen::Vector3d over = (delta.cwiseAbs() - work_half).cwiseMax(0.0);
+        if (over.maxCoeff() > 0.0) {
+          // 各轴独立：力方向 = -sign(delta)，大小 = k * over
+          Eigen::Vector3d fvec;
+          for (int i = 0; i < 3; ++i) {
+            if (over[i] > 0.0) {
+              fvec[i] = -params_.drift_force_k * over[i]
+                        * (delta[i] >= 0.0 ? 1.0 : -1.0);
+            } else {
+              fvec[i] = 0.0;
+            }
+          }
+          // 限幅：总力向量模长不超过 max
+          const double fmag = fvec.norm();
+          if (fmag > params_.drift_force_max) {
+            fvec *= (params_.drift_force_max / std::max(fmag, 1e-9));
+          }
+          for (int i = 0; i < 3; ++i) {
+            msg.data[i] += fvec[i];
+          }
+        }
+      }
+
       force_pub_.publish(msg);
       rate.sleep();
     }
