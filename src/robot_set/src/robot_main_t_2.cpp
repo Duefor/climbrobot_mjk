@@ -761,9 +761,9 @@ struct RuntimeParams {
   double surface_nearest_trust_dist{0.05};  // 最近邻单点法向信任半径(m)
   // drift 漂移区力反馈：机械臂 TCP 超出 work_radius 时，沿指向 r_center_ 方向
   // 施加弹簧力到手柄，让操作者主观感受到工作空间的漂移边界。
-  bool   drift_force_enable{false};
+  bool   drift_force_enable{true};
   double drift_force_k{40.0};     // 弹簧刚度 (N/m)：超出 work_radius 每米产生的力
-  double drift_force_max{3.0};    // 力上限 (N)，避免过大反馈伤设备
+  double drift_force_max{2.0};    // 力上限 (N)，避免过大反馈伤设备
 };
 
 // 从参数服务器读取运行时配置，允许通过 launch 文件或 rosparam 修改行为。
@@ -803,7 +803,7 @@ void loadRuntimeParams(ros::NodeHandle& pnh, RuntimeParams& p) {
   pnh.param("surface_edge_tol", p.surface_edge_tol, 0.02);
   pnh.param("surface_out_region_decay", p.surface_out_region_decay, 0.3);
   pnh.param("surface_nearest_trust_dist", p.surface_nearest_trust_dist, 0.05);
-  pnh.param("drift_force_enable", p.drift_force_enable, false);
+  pnh.param("drift_force_enable", p.drift_force_enable, true);
   pnh.param("drift_force_k", p.drift_force_k, 40.0);
   pnh.param("drift_force_max", p.drift_force_max, 3.0);
   for (int i = 0; i < 6; ++i) {
@@ -1511,12 +1511,13 @@ class RobotMainNode {
           if (fmag > params_.drift_force_max) {
             fvec *= (params_.drift_force_max / std::max(fmag, 1e-9));
           }
+          std::cout << fvec[0] << "," << fvec[1] << "," << fvec[2] << std::endl;
           for (int i = 0; i < 3; ++i) {
             msg.data[i] += fvec[i];
           }
         }
       }
-
+      // std::cout << msg.data[0] << "," << msg.data[1] << "," << msg.data[2] << std::endl;
       force_pub_.publish(msg);
       rate.sleep();
     }

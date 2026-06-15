@@ -40,7 +40,7 @@
     <param name="haptic_tcp_topic" value="$(arg haptic_tcp_topic)"/>
 
     <!-- Movable workspace mapping (drift为漂移映射，fixed为固定映射，clutch为离合映射) -->
-    <param name="map_mode" value="fixed"/>
+    <param name="map_mode" value="drift"/>
     <param name="h_work_radius" value="0.12"/>
     <param name="h_drift_radius" value="0.16"/>
     <param name="drift_gain" value="10.0"/>

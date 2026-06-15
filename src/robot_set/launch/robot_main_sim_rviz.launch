@@ -16,7 +16,7 @@
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find robot_simulation)/config/cs66arm.rviz" />
 
   <!-- Haptic TCP -> mapping -> MoveIt IK -> /joint_states (sim) -->
-  <node pkg="robot_set" type="robot_main_t_1" name="robot_main_t_1" output="screen">
+  <node pkg="robot_set" type="robot_main_t_2" name="robot_main_t_2" output="screen">
     <param name="use_sim" value="true"/>
     <param name="haptic_tcp_topic" value="$(arg haptic_tcp_topic)"/>
     <param name="sim_joint_states_topic" value="/joint_states"/>
@@ -41,7 +41,7 @@
     <param name="work_box_scale" value="0.8"/>
 
     <!-- Follow position + orientation -->
-    <param name="CONTROL_MODE" value="0"/>
+    <param name="CONTROL_MODE" value="2"/>
 
     <!-- Match MoveIt config -->
     <param name="planning_group" value="planning_group"/>
