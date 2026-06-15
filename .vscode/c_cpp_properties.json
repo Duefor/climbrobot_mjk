@@ -9,6 +9,7 @@
         "/opt/ros/noetic/include/**",
         "/usr/include/**",
         "/usr/local/include/**",
+        "/home/duefor/Elite_Robots_CS_SDK/include/**",
         "${workspaceFolder}/src/robot_sdk_wrapper/include/**",
         "${workspaceFolder}/devel/include/**"
       ],

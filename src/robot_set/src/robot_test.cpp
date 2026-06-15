@@ -14,6 +14,11 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <atomic>
+#include <ctime>
 
 #include <termios.h>
 #include <unistd.h>
@@ -41,6 +46,90 @@ void waitForEnter(const std::string& next_step_desc) {
     tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
     std::cout << std::endl;
 }
+
+// 生成带时间戳的 CSV 文件名
+std::string makeLogFilename() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm* local = std::localtime(&t);
+    std::ostringstream oss;
+    oss << "force_log_"
+        << std::setfill('0')
+        << std::setw(4) << local->tm_year + 1900
+        << std::setw(2) << local->tm_mon + 1
+        << std::setw(2) << local->tm_mday << "_"
+        << std::setw(2) << local->tm_hour
+        << std::setw(2) << local->tm_min
+        << std::setw(2) << local->tm_sec
+        << ".csv";
+    return oss.str();
+}
+
+// 力传感器数据日志记录器
+// 在独立线程中运行，以 ~250Hz 采集力/位姿数据写入 CSV
+class ForceLogger {
+public:
+    ForceLogger(EliteCSRobotSDK* robot, const std::string& filename)
+        : robot_(robot), filename_(filename), running_(false) {}
+
+    void start() {
+        running_ = true;
+        start_time_ = std::chrono::steady_clock::now();
+        worker_ = std::thread(&ForceLogger::run, this);
+    }
+
+    void stop() {
+        running_ = false;
+        if (worker_.joinable()) {
+            worker_.join();
+        }
+    }
+
+private:
+    void run() {
+        std::ofstream file(filename_);
+        if (!file.is_open()) {
+            std::cerr << "[ERROR] 无法创建日志文件: " << filename_ << std::endl;
+            return;
+        }
+
+        // CSV 表头
+        file << "timestamp_s,Fx_N,Fy_N,Fz_N,Mx_Nm,My_Nm,Mz_Nm,"
+             << "TCP_x_m,TCP_y_m,TCP_z_m,TCP_rx_rad,TCP_ry_rad,TCP_rz_rad\n";
+        file << std::fixed << std::setprecision(6);
+
+        std::cout << "[INFO] 力数据日志已启动 → " << filename_ << std::endl;
+
+        constexpr auto kSamplePeriod = std::chrono::microseconds(4000);  // ~250Hz
+        auto next_wake = std::chrono::steady_clock::now();
+
+        while (running_) {
+            auto now = std::chrono::steady_clock::now();
+            double elapsed = std::chrono::duration<double>(now - start_time_).count();
+
+            ELITE::vector6d_t force = robot_->getTCPforce();
+            ELITE::vector6d_t pose  = robot_->getCurrentTCPPose();
+
+            file << elapsed << ","
+                 << force[0] << "," << force[1] << "," << force[2] << ","
+                 << force[3] << "," << force[4] << "," << force[5] << ","
+                 << pose[0]  << "," << pose[1]  << "," << pose[2]  << ","
+                 << pose[3]  << "," << pose[4]  << "," << pose[5]  << "\n";
+
+            next_wake += kSamplePeriod;
+            std::this_thread::sleep_until(next_wake);
+        }
+
+        file.close();
+        std::cout << "[INFO] 力数据日志已保存 → " << filename_ << std::endl;
+    }
+
+    EliteCSRobotSDK* robot_;
+    std::string filename_;
+    std::atomic<bool> running_;
+    std::thread worker_;
+    std::chrono::steady_clock::time_point start_time_;
+};
 
 const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
 const std::string DEFAULT_PC_IP = "192.168.1.150";
@@ -149,18 +238,26 @@ int main(int argc, char** argv)
 
     waitForEnter("力控模式下直线移动到终点 (moveLine → end_pose)");
 
-    // ---- 5. 力控模式下沿直线移动到终点 ----
+    // ---- 5. 力控模式下沿直线移动到终点（同时记录力数据） ----
     ELITE::vector6d_t end_pose = {kEndX, kEndY, kWorkPlaneZ, kToolRx, kToolRy, kToolRz};
     std::cout << "[INFO] 力控模式下直线移动到终点: "
               << end_pose[0] << ", " << end_pose[1] << ", " << end_pose[2] << ", "
               << end_pose[3] << ", " << end_pose[4] << ", " << end_pose[5] << std::endl;
 
+    // 启动力数据日志记录
+    ForceLogger logger(&cs66robot, makeLogFilename());
+    logger.start();
+
     if (!cs66robot.moveLine(end_pose, kMoveTime)) {
+        logger.stop();
         std::cout << "[ERROR] 力控模式下移动到终点失败" << std::endl;
         cs66robot.endForceControl();
         cs66robot.disconnect();
         return 1;
     }
+
+    // 停止日志记录
+    logger.stop();
     std::cout << "[INFO] 到达终点" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
