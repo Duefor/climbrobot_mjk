@@ -169,6 +169,9 @@ class PoseMapper {
         }
         h_clamped[i] = h_center_[i] + clampScalar(d, -h_work_neg_[i], h_work_pos_[i]);
       }
+      // h_space 下手柄超出 work box 的向量（手柄越界时各轴非零，box 内全 0）
+      // 用于下游力反馈：手柄在 h_space 推出 work box 时给操作者一个反推力。
+      h_excess_vec_ = h_delta - (h_clamped - h_center_);
       if (in_work) {
         r_pos = r_center_ + scale_.cwiseProduct(h_delta);
       } else {
@@ -255,6 +258,15 @@ class PoseMapper {
     work_size = scale_.cwiseProduct(h_work_pos_ + h_work_neg_);
   }
 
+  // 返回手柄在 h_space 超出 work box 的向量，已缩放到 r_space（米）。
+  // 手柄在工作区内时返回零向量；越界时各越界轴为非零，方向指向 h_center（反推方向）。
+  // 注意：drift 模式下 r_center_ 会跟随手柄漂移，TCP 永远在 box 内，
+  // 所以 drift 力反馈必须基于 h_space 超出量，不能基于 TCP-box 几何。
+  Eigen::Vector3d getDriftExcess() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return scale_.cwiseProduct(h_excess_vec_);
+  }
+
   // sdkLoop 检测到末端被表面边界夹住时调用：传入安全法向（指向工作空间内部、
   // 即 safety 钳制把末端推回的方向）与激活标志。map() 的 drift 分支会据此把
   // drift_vel 沿该法向的分量去掉，只保留切向漂移，防止 r_center_ 朝撞墙方向累积。
@@ -287,8 +299,8 @@ class PoseMapper {
     return d[i];
   }
   static double defaultRMin(int i) {
-    static const double d[3] = {0.28, -0.56, 0.12};
-    // static const double d[3] = {0.28, -0.56, 0.22};
+    // static const double d[3] = {0.28, -0.56, 0.12};
+    static const double d[3] = {0.28, -0.56, 0.22};
     return d[i];
   }
 
@@ -326,6 +338,10 @@ class PoseMapper {
   // map() 累积 drift 时去掉该法向分量，避免 r_center_ 朝撞墙方向偷跑 → 松手跳变。
   Eigen::Vector3d safety_block_normal_{Eigen::Vector3d::Zero()};
   bool safety_block_active_{false};
+  // 手柄在 h_space 超出 work box 的向量（map() 每周期更新，box 内为 0）。
+  // 供 publishForce 算漂移区反推力，避免 drift 模式下 box 跟随 r_center_ 移动
+  // 导致 TCP 永远在 box 内、力始终为 0 的问题。
+  Eigen::Vector3d h_excess_vec_{Eigen::Vector3d::Zero()};
   mutable std::mutex mtx_;
   ros::Time last_map_time_;
 };
@@ -1485,39 +1501,23 @@ class RobotMainNode {
       }
 
       // 漂移区弹簧力叠加（仅平移力分量 Fx/Fy/Fz）
-      // 工作空间是矩形 box（各轴 work_pos/work_neg 独立），用 getWorkspaceBoxes
-      // 逐轴算超出量；任一轴超出即在该轴方向施加指向 box 中心的弹簧力。
+      // 关键：drift 模式下 r_center_ 会跟随手柄漂移，导致机械臂 TCP 永远在 r_space box 内。
+      // 所以力反馈必须基于手柄在 h_space 相对 work box 的超出量（PoseMapper::getDriftExcess），
+      // 它就是 h_pos 减去 clamp 后的 h_clamped，再缩放到 r_space。
       if (params_.drift_force_enable) {
-        Eigen::Vector3d drift_center, drift_size, work_center, work_size;
-        pose_mapper_.getWorkspaceBoxes(drift_center, drift_size, work_center, work_size);
-        const Eigen::Vector3d work_half = 0.5 * work_size;
-        const Eigen::Vector3d r_pos(tcp_pos[0], tcp_pos[1], tcp_pos[2]);
-        const Eigen::Vector3d delta = r_pos - work_center;
-        // 各轴 |delta| - half：超出量；负值表示在 box 内，置 0
-        const Eigen::Vector3d over = (delta.cwiseAbs() - work_half).cwiseMax(0.0);
-        if (over.maxCoeff() > 0.0) {
-          // 各轴独立：力方向 = -sign(delta)，大小 = k * over
-          Eigen::Vector3d fvec;
-          for (int i = 0; i < 3; ++i) {
-            if (over[i] > 0.0) {
-              fvec[i] = -params_.drift_force_k * over[i]
-                        * (delta[i] >= 0.0 ? 1.0 : -1.0);
-            } else {
-              fvec[i] = 0.0;
-            }
-          }
-          // 限幅：总力向量模长不超过 max
+        Eigen::Vector3d excess = pose_mapper_.getDriftExcess();
+        if (excess.norm() > 1e-9) {
+          // 弹簧力 = -k * excess（方向相反 = 指向 box 内部），限幅总力
+          Eigen::Vector3d fvec = -params_.drift_force_k * excess;
           const double fmag = fvec.norm();
           if (fmag > params_.drift_force_max) {
             fvec *= (params_.drift_force_max / std::max(fmag, 1e-9));
           }
-          std::cout << fvec[0] << "," << fvec[1] << "," << fvec[2] << std::endl;
           for (int i = 0; i < 3; ++i) {
             msg.data[i] += fvec[i];
           }
         }
       }
-      // std::cout << msg.data[0] << "," << msg.data[1] << "," << msg.data[2] << std::endl;
       force_pub_.publish(msg);
       rate.sleep();
     }
