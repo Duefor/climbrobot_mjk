@@ -45,33 +45,33 @@ void waitForEnter(const std::string& next_step_desc) {
 const std::string DEFAULT_ROBOT_IP = "192.168.1.199";
 const std::string DEFAULT_PC_IP = "192.168.1.150";
 const std::string external_control_file_address =
-    "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
+    "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/external_control.script";
 const std::string output_recipe_file_address =
-    "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
+    "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/output_recipe.txt";
 const std::string input_recipe_file_address =
-    "/home/duefor/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
-const std::string task_file_address = "mjktest.task";
+    "/home/barry/workspace/climbrobot_mjk/src/robot_sdk_wrapper/resource/input_recipe.txt";
+const std::string task_file_address = "test12.task";
 
 // ---- 可调参数 ----
 // 平面运动高度 (m)
-constexpr double kWorkPlaneZ = 0.25;
+constexpr double kWorkPlaneZ = 0.098;
 
 // 起始点: XY 平面位置 (m)，姿态保持末端垂直向下 (rx=π, ry=0, rz=0)
-constexpr double kStartX = 0.35;
-constexpr double kStartY = -0.25;
+constexpr double kStartX = 0.295;
+constexpr double kStartY = -0.456;
 
 // 终点: 沿 X 方向移动一段距离
-constexpr double kEndX = 0.55;
-constexpr double kEndY = -0.25;
+constexpr double kEndX = 0.58;
+constexpr double kEndY = -0.16;
 
 // 运动时间 (s)
-constexpr double kMoveTime = 30.0;
+constexpr double kMoveTime = 15.0;
 
 // 力控目标力 (N)，仅 Z 方向
 constexpr double kForceTargetZ = 5.0;
 
 // 力控 Z 方向最大速度 (m/s)
-constexpr double kForceLimitZ = 0.002;
+constexpr double kForceLimitZ = 0.04;
 
 // 末端垂直向下的姿态: rx = π (绕X轴180°), ry = 0, rz = 0
 constexpr double kToolRx = M_PI;
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 
     // ---- 1. 初始化机械臂 ----
     EliteCSRobotSDK cs66robot(
-        DEFAULT_ROBOT_IP, DEFAULT_PC_IP, true,
+        DEFAULT_ROBOT_IP, DEFAULT_PC_IP, false,
         external_control_file_address,
         output_recipe_file_address,
         input_recipe_file_address,
