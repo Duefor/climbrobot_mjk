@@ -146,21 +146,22 @@ const std::string task_file_address = "test12.task";
 constexpr double kWorkPlaneZ = 0.098;
 
 // 起始点: XY 平面位置 (m)，姿态保持末端垂直向下 (rx=π, ry=0, rz=0)
-constexpr double kStartX = 0.295;
-constexpr double kStartY = -0.456;
+constexpr double kStartX = 0.386;
+constexpr double kStartY = -0.690;
 
 // 终点: 沿 X 方向移动一段距离
 constexpr double kEndX = 0.58;
-constexpr double kEndY = -0.16;
+constexpr double kEndY = -0.059;
 
 // 运动时间 (s)
-constexpr double kMoveTime = 15.0;
+constexpr double kMoveTime = 30.0;
+constexpr double kMoveTime_0 = 10.0;
 
 // 力控目标力 (N)，仅 Z 方向
-constexpr double kForceTargetZ = 5.0;
+constexpr double kForceTargetZ = 15.0;
 
 // 力控 Z 方向最大速度 (m/s)
-constexpr double kForceLimitZ = 0.04;
+constexpr double kForceLimitZ = 0.005;
 
 // 末端垂直向下的姿态: rx = π (绕X轴180°), ry = 0, rz = 0
 constexpr double kToolRx = M_PI;
@@ -205,7 +206,7 @@ int main(int argc, char** argv)
               << start_pose[0] << ", " << start_pose[1] << ", " << start_pose[2] << ", "
               << start_pose[3] << ", " << start_pose[4] << ", " << start_pose[5] << std::endl;
 
-    if (!cs66robot.moveLine(start_pose, kMoveTime)) {
+    if (!cs66robot.moveLine(start_pose, kMoveTime_0)) {
         std::cout << "[ERROR] 移动到起始点失败" << std::endl;
         cs66robot.disconnect();
         return 1;
@@ -279,7 +280,7 @@ int main(int argc, char** argv)
               << initial_pose[0] << ", " << initial_pose[1] << ", " << initial_pose[2] << ", "
               << initial_pose[3] << ", " << initial_pose[4] << ", " << initial_pose[5] << std::endl;
 
-    if (!cs66robot.moveLine(initial_pose, kMoveTime)) {
+    if (!cs66robot.moveLine(initial_pose, kMoveTime_0)) {
         std::cout << "[ERROR] 返回初始点失败" << std::endl;
         cs66robot.disconnect();
         return 1;
