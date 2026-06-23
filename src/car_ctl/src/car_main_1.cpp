@@ -8,7 +8,9 @@
 #include <linux/can/raw.h>
 #include <unistd.h>
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
+#include <csignal>
 #include <cstring>
 #include <string>
 #include <std_msgs/Float64MultiArray.h>
@@ -24,7 +26,9 @@ public:
       sim_mode_(false),
       current_mode_(-1),
       speed_mode_initialized_(false),
-      position_mode_initialized_(false)
+      position_mode_initialized_(false),
+      stop_requested_(false),
+      emergency_stop_sent_(false)
   {
     ros::NodeHandle pnh("~");
     pnh.param("can_interface", can_interface_, std::string("can0"));    // CAN接口名称
@@ -51,10 +55,34 @@ public:
 
   ~CarWheelMotionActionServer()
   {
+    emergencyStop();
     if (sock_ >= 0) {
       close(sock_);
       sock_ = -1;
     }
+  }
+
+  void emergencyStop()
+  {
+    stop_requested_.store(true);
+
+    bool already_sent = emergency_stop_sent_.exchange(true);
+    if (already_sent) {
+      return;
+    }
+
+    if (sim_mode_) {
+      publishWheelSpeedCommand(0, 0);
+      return;
+    }
+
+    if (sock_ < 0) {
+      return;
+    }
+
+    ROS_WARN("[%s] Emergency stop: sending zero speed and stop commands", action_name_.c_str());
+    sendZeroSpeed();
+    sendstop();
   }
 
 private:
@@ -72,6 +100,8 @@ private:
   int current_mode_;
   bool speed_mode_initialized_;
   bool position_mode_initialized_;
+  std::atomic<bool> stop_requested_;
+  std::atomic<bool> emergency_stop_sent_;
   ros::Publisher wheel_speed_pub_;
 
   // 将RPM转换为CAN协议中的速度值
@@ -382,7 +412,7 @@ private:
       feedback.progress = 0.0;
       as_.publishFeedback(feedback);
 
-      while (ros::ok() && as_.isActive() && !as_.isPreemptRequested()) {
+      while (ros::ok() && as_.isActive() && !as_.isPreemptRequested() && !stop_requested_.load()) {
         if (sim_mode_) {
           publishWheelSpeedCommand(left_rpm, right_rpm);
         } else {
@@ -404,7 +434,7 @@ private:
 
       stopWheelCommand();
 
-      if (as_.isPreemptRequested()) {
+      if (as_.isPreemptRequested() || stop_requested_.load()) {
         result.success = false;
         result.message = "Velocity goal preempted";
         as_.setPreempted(result);
@@ -445,7 +475,7 @@ private:
       feedback.progress = 0.0;
       as_.publishFeedback(feedback);
 
-      while (ros::ok() && as_.isActive() && !as_.isPreemptRequested()) {
+      while (ros::ok() && as_.isActive() && !as_.isPreemptRequested() && !stop_requested_.load()) {
         double elapsed = (ros::Time::now() - start).toSec();
         if (timed_goal && elapsed >= timeout) {
           stopWheelCommand();
@@ -485,7 +515,7 @@ private:
         rate.sleep();
       }
 
-      if (as_.isPreemptRequested()) {
+      if (as_.isPreemptRequested() || stop_requested_.load()) {
         stopWheelCommand();
         result.success = false;
         result.message = "Position goal preempted";
@@ -506,10 +536,31 @@ private:
   }
 };
 
+std::atomic<bool> g_shutdown_requested(false);
+
+void sigintHandler(int)
+{
+  g_shutdown_requested.store(true);
+}
+
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "car_wheel_action_server");
+  ros::init(argc, argv, "car_wheel_action_server", ros::init_options::NoSigintHandler);
+  std::signal(SIGINT, sigintHandler);
+  std::signal(SIGTERM, sigintHandler);
+
   CarWheelMotionActionServer server("car_wheel_motion");
-  ros::spin();
+
+  ros::AsyncSpinner spinner(2);
+  spinner.start();
+
+  ros::Rate rate(20);
+  while (ros::ok() && !g_shutdown_requested.load()) {
+    rate.sleep();
+  }
+
+  server.emergencyStop();
+  ros::shutdown();
+  spinner.stop();
   return 0;
 }

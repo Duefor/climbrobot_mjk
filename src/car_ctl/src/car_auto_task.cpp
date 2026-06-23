@@ -1,4 +1,6 @@
 #include <cmath>
+#include <atomic>
+#include <csignal>
 #include <ros/ros.h>
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/simple_action_client.h>
@@ -20,6 +22,8 @@ public:
       base_turn_timeout_(100.0),
       base_drive_timeout_(100.0) // 超时时间写死，作为一个安全值，但是实际上会在运动结束前就返回
   {
+    stop_requested_.store(false);
+
     ros::NodeHandle pnh("~");
     pnh.param("wheel_radius", wheel_radius_, wheel_radius_);
     pnh.param("wheel_separation", wheel_separation_, wheel_separation_);
@@ -37,6 +41,22 @@ public:
     ROS_INFO("[%s] car_auto_task action server started", action_name_.c_str());
   }
 
+  ~CarAutoTaskActionServer()
+  {
+    requestStop();
+  }
+
+  void requestStop()
+  {
+    bool already_requested = stop_requested_.exchange(true);
+    if (already_requested) {
+      return;
+    }
+
+    ROS_WARN("[%s] Stop requested, canceling active wheel motion goal", action_name_.c_str());
+    ac_.cancelAllGoals();
+  }
+
 private:
   ros::NodeHandle nh_;
   actionlib::SimpleActionServer<car_ctl::CarAutoTaskAction> as_;
@@ -46,6 +66,7 @@ private:
   double wheel_separation_;
   double base_turn_timeout_;
   double base_drive_timeout_;
+  std::atomic<bool> stop_requested_;
 
   static double normalizeAngle(double value)
   {
@@ -81,8 +102,8 @@ private:
     ac_.sendGoal(wheel_goal);
 
     ros::Rate rate(20);
-    while (ros::ok() && ros::Time::now() < deadline) {
-      if (as_.isPreemptRequested()) {
+    while (ros::ok() && ros::Time::now() < deadline && !stop_requested_.load()) {
+      if (as_.isPreemptRequested() || stop_requested_.load()) {
         ROS_WARN("[%s] Preempt requested, canceling wheel position goal", action_name_.c_str());
         ac_.cancelGoal();
         return false;
@@ -90,7 +111,6 @@ private:
       if (ac_.getState().isDone()) {
         break;
       }
-      ros::spinOnce();
       rate.sleep();
     }
 
@@ -117,6 +137,7 @@ private:
     car_ctl::CarAutoTaskFeedback feedback;
 
     ROS_INFO("[%s] Received goal: distance=%.3f m", action_name_.c_str(), goal->distance);
+    stop_requested_.store(false);
 
     double rotation_revs = computeRotationRevolutions();
     double distance_revs = computeDistanceRevolutions(goal->distance);
@@ -131,7 +152,11 @@ private:
     if (!sendWheelPositionGoal(rotation_revs, -rotation_revs, turn_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during first 90-degree rotation";
-      as_.setAborted(result);
+      if (stop_requested_.load() || as_.isPreemptRequested()) {
+        as_.setPreempted(result);
+      } else {
+        as_.setAborted(result);
+      }
       return;
     }
     feedback.progress = 0.33f;
@@ -141,7 +166,11 @@ private:
     if (!sendWheelPositionGoal(distance_revs, distance_revs, drive_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during forward distance move";
-      as_.setAborted(result);
+      if (stop_requested_.load() || as_.isPreemptRequested()) {
+        as_.setPreempted(result);
+      } else {
+        as_.setAborted(result);
+      }
       return;
     }
     feedback.progress = 0.66f;
@@ -151,7 +180,11 @@ private:
     if (!sendWheelPositionGoal(-rotation_revs, rotation_revs, turn_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during second 90-degree rotation";
-      as_.setAborted(result);
+      if (stop_requested_.load() || as_.isPreemptRequested()) {
+        as_.setPreempted(result);
+      } else {
+        as_.setAborted(result);
+      }
       return;
     }
 
@@ -163,10 +196,31 @@ private:
   }
 };
 
+std::atomic<bool> g_shutdown_requested(false);
+
+void sigintHandler(int)
+{
+  g_shutdown_requested.store(true);
+}
+
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "car_auto_task_server");
+  ros::init(argc, argv, "car_auto_task_server", ros::init_options::NoSigintHandler);
+  std::signal(SIGINT, sigintHandler);
+  std::signal(SIGTERM, sigintHandler);
+
   CarAutoTaskActionServer server("car_auto_task");
-  ros::spin();
+
+  ros::AsyncSpinner spinner(2);
+  spinner.start();
+
+  ros::Rate rate(20);
+  while (ros::ok() && !g_shutdown_requested.load()) {
+    rate.sleep();
+  }
+
+  server.requestStop();
+  ros::shutdown();
+  spinner.stop();
   return 0;
 }

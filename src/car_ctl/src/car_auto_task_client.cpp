@@ -1,26 +1,22 @@
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
 #include <car_ctl/CarAutoTaskAction.h>
-#include <signal.h>
+#include <atomic>
+#include <csignal>
+#include <cstdlib>
 
-// 全局指针，供信号回调使用
-actionlib::SimpleActionClient<car_ctl::CarAutoTaskAction>* g_client_ptr = nullptr;
+std::atomic<bool> g_cancel_requested(false);
 
-// Ctrl+C 信号回调
-void sigintHandler(int sig)
+void sigintHandler(int)
 {
-  if (g_client_ptr) {
-    ROS_WARN("Ctrl+C detected! Cancelling goal...");
-    g_client_ptr->cancelAllGoals();  // 或 cancelGoal()
-  }
-
-  ros::shutdown();  // 正常关闭 ROS
+  g_cancel_requested.store(true);
 }
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "car_auto_task_client", ros::init_options::NoSigintHandler);
-  signal(SIGINT, sigintHandler);  // 注册 Ctrl+C 处理
+  std::signal(SIGINT, sigintHandler);
+  std::signal(SIGTERM, sigintHandler);
 
   if (argc != 2) {
     ROS_ERROR("Usage: rosrun car_ctl car_auto_task_client <distance_m>");
@@ -30,7 +26,6 @@ int main(int argc, char** argv)
   double distance = std::atof(argv[1]);
 
   actionlib::SimpleActionClient<car_ctl::CarAutoTaskAction> client("car_auto_task", true);
-  g_client_ptr = &client;  // 赋值给全局变量
 
   ROS_INFO("Waiting for car_auto_task action server...");
   if (!client.waitForServer(ros::Duration(20.0))) {
@@ -44,9 +39,14 @@ int main(int argc, char** argv)
   ROS_INFO("Sending goal: distance=%.3f m", distance);
   client.sendGoal(goal);
 
-  // 循环等待，而不是直接 waitForResult
   ros::Rate rate(10);
   while (ros::ok() && !client.getState().isDone()) {
+    if (g_cancel_requested.load()) {
+      ROS_WARN("Stop requested. Cancelling car_auto_task goal...");
+      client.cancelAllGoals();
+      client.waitForResult(ros::Duration(2.0));
+      break;
+    }
     rate.sleep();
   }
 
