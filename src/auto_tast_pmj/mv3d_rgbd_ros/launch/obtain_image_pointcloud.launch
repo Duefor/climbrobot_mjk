@@ -1,0 +1,19 @@
+<launch>
+  <arg name="pd_type" default="1"/>
+  <arg name="cam_sn1" default="None"/>
+
+  <!-- server: 保存点云和图像 -->
+  <node name="hik_camera_image_pointcloud_server"
+        pkg="mv3d_rgbd_ros"
+        type="hik_camera_image_pointcloud_server"
+        output="screen"/>
+
+  <!-- client: 按回车触发一次抓取并调用 SaveImagePointCloud -->
+  <node name="hik_camera_image_pointcloud_client"
+        pkg="mv3d_rgbd_ros"
+        type="hik_camera_image_pointcloud_client"
+        output="screen">
+    <param name="pd_type" type="int" value="$(arg pd_type)"/>
+    <param name="cam_sn" type="string" value="$(arg cam_sn1)"/>
+  </node>
+</launch>

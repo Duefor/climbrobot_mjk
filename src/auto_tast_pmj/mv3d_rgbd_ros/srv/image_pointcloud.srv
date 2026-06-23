@@ -1,0 +1,14 @@
+# 请求数据
+string                   camSerialNum
+uint32                   typeInfo
+uint32                   frameNum
+int64                    timeStamp
+sensor_msgs/PointCloud2  pointCloud
+
+sensor_msgs/Image        depthImg
+sensor_msgs/Image        rgbImg
+sensor_msgs/CameraInfo   depthCamInfo
+sensor_msgs/CameraInfo   rgbCamInfo
+---
+# 响应数据
+std_msgs/Bool            result

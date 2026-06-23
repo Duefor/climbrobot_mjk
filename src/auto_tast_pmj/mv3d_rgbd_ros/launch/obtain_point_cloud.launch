@@ -1,0 +1,13 @@
+<launch>
+  <arg name="pd_type" default="1"/>
+  <arg name="cam_sn1" default="None"/>
+
+  <node name="hik_camera_point_cloud_client" pkg="mv3d_rgbd_ros" type="hik_camera_point_cloud_client" output="screen">
+      <param name="pd_type" type="int" value="$(arg pd_type)"/>
+      <param name="cam_sn" type="string" value="$(arg cam_sn1)"/>
+  </node>
+
+  <node name="hik_camera_point_cloud_server" pkg="mv3d_rgbd_ros" type="hik_camera_point_cloud_server" output="screen"> 
+    </node>
+    
+</launch>

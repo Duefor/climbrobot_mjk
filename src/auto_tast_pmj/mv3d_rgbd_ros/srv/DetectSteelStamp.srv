@@ -1,0 +1,7 @@
+# Request
+---
+# Response
+bool success
+string message
+geometry_msgs/Pose[] poses   # 改为 Pose 数组 (包含 position 和 orientation)
+string[] texts

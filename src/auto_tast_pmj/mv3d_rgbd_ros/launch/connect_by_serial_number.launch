@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="cam_sn1" default="None"/>
+
+    <node name="hik_camera_image_pub" pkg="mv3d_rgbd_ros" type="hik_camera_image_pub" args="cam_sn1" output="screen">
+        <param name="cam_sn" type="string" value="$(arg cam_sn1)"/>
+    </node>
+
+    <node name="hik_camera_image_sub" pkg="mv3d_rgbd_ros" type="hik_camera_image_sub" output="screen">
+    </node>
+    
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mv3d_rgbd_ros)/config/ShowImage.rviz"/>
+</launch>

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="hik_camera_image_pub" pkg="mv3d_rgbd_ros" type="hik_camera_image_pub" output="screen">
+    </node>
+
+    <node name="hik_camera_image_sub" pkg="mv3d_rgbd_ros" type="hik_camera_image_sub" output="screen">
+    </node>
+    
+<!-- display in Rviz -->
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mv3d_rgbd_ros)/config/ShowImage.rviz"/> -->
+</launch>

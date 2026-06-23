@@ -1,0 +1,46 @@
+# CS66 Robot Controller Configuration for Servoj Control
+# 基于writeServoj的高精度实时控制配置
+
+# 机器人连接参数
+robot_ip: "192.168.1.100"
+local_ip: ""
+headless_mode: true
+
+# 控制频率参数
+control_frequency: 50.0        # ROS控制循环频率 (Hz)
+status_frequency: 250.0        # 状态发布频率 (Hz)
+
+# 实时控制参数
+enable_realtime_control: true  # 启用实时控制模式
+servoj_frequency: 250.0        # servoj控制频率 (Hz) - 4ms周期
+realtime_cpu_core: 2           # 实时线程绑定的CPU核心
+
+# 话题名称配置
+joint_state_topic: "/cs66/joint_states"
+tcp_pose_topic: "/cs66/tcp_pose"
+robot_status_topic: "/cs66/robot_status"
+joint_command_topic: "/cs66/joint_command"
+tcp_command_topic: "/cs66/tcp_command"
+emergency_stop_topic: "/cs66/emergency_stop"
+
+# 运动控制参数
+default_motion_duration: 2.0   # 默认运动时间 (秒)
+smooth_motion_enabled: true    # 默认启用平滑运动
+trajectory_blend_radius: 0.0   # 轨迹混合半径 (已弃用，使用servoj插值)
+
+# 安全参数
+emergency_stop_timeout: 1.0    # 紧急停止超时时间 (秒)
+max_velocity: 1.0              # 最大速度限制 (rad/s)
+max_acceleration: 2.0          # 最大加速度限制 (rad/s²)
+
+# 调试参数
+debug_mode: false              # 调试模式
+log_level: "INFO"              # 日志级别
+performance_monitoring: true   # 性能监控
+
+
+
+
+
+
+

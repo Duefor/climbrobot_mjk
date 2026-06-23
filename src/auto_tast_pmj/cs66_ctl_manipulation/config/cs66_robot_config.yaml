@@ -1,0 +1,18 @@
+# CS66 Robot Controller Configuration
+
+# Control frequencies
+control_frequency: 50.0    # Hz - Control command frequency
+status_frequency: 250.0     # Hz - Status publishing frequency
+
+# Topic names
+joint_state_topic: "/cs66/joint_states"
+tcp_pose_topic: "/cs66/tcp_pose"
+robot_status_topic: "/cs66/robot_status"
+joint_command_topic: "/cs66/joint_command"
+tcp_command_topic: "/cs66/tcp_command"
+emergency_stop_topic: "/cs66/emergency_stop"
+
+# Safety parameters
+max_joint_velocity: 1.0    # rad/s
+max_tcp_velocity: 0.5       # m/s
+emergency_stop_timeout: 5.0 # seconds

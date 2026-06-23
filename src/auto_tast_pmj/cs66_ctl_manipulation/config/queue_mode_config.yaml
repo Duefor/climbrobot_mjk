@@ -1,0 +1,46 @@
+# CS66 Robot Controller Configuration - Queue Mode
+# 基于writeServoj队列模式的可靠控制配置
+
+# 机器人连接参数
+robot_ip: "192.168.1.100"
+local_ip: ""
+headless_mode: true
+
+# 控制频率参数
+control_frequency: 50.0        # ROS控制循环频率 (Hz)
+status_frequency: 250.0        # 状态发布频率 (Hz)
+
+# 队列模式参数（推荐配置）
+enable_queue_mode: true        # 启用队列模式（避免多线程并发问题）
+servoj_time: 0.004             # servoj控制周期 (4ms = 250Hz)
+servoj_queue_pre_recv_size: 20 # 预存点数（启动延迟 = 20 * 4ms = 80ms）
+servoj_queue_pre_recv_timeout_ms: 0 # 预存超时（0=自动计算）
+
+# 话题名称配置
+joint_state_topic: "/cs66/joint_states"
+tcp_pose_topic: "/cs66/tcp_pose"
+robot_status_topic: "/cs66/robot_status"
+joint_command_topic: "/cs66/joint_command"
+tcp_command_topic: "/cs66/tcp_command"
+emergency_stop_topic: "/cs66/emergency_stop"
+
+# 队列模式优势说明：
+# 1. 避免多线程并发控制问题
+# 2. 平滑运动，抗抖动
+# 3. 可容忍发送频率波动
+# 4. 更可靠的控制方式
+#
+# 参数调优建议：
+# - servoj_queue_pre_recv_size: 10-50
+#   * 太小：容易队列耗尽，运动不连续
+#   * 太大：启动延迟长，响应慢
+#   * 推荐：20-30（平衡启动延迟和稳定性）
+#
+# - servoj_time: 0.004 (4ms)
+#   * 与机器人控制周期一致
+#   * 250Hz控制频率
+#   * 平衡精度和性能
+
+
+
+

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="cam_sn1" default="None"/>
+    <arg name="cam_sn2" default="None"/>
+
+    <node name="hik_camera_image_client1" pkg="mv3d_rgbd_ros" type="hik_camera_image_client" output="screen">
+        <param name="cam_sn" type="string" value="$(arg cam_sn1)"/>
+    </node>
+
+    <node name="hik_camera_image_client2" pkg="mv3d_rgbd_ros" type="hik_camera_image_client" output="screen">
+        <param name="cam_sn" type="string" value="$(arg cam_sn2)"/>
+    </node>
+
+    <node name="hik_camera_image_server" pkg="mv3d_rgbd_ros" type="hik_camera_image_server" output="screen">
+    </node>
+</launch>

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- CS66 Robot Controller Launch File -->
+  
+  <!-- Load configuration parameters -->
+  <rosparam file="$(find cs66_ctl_manipulation)/config/cs66_robot_config.yaml" command="load" />
+  
+  <!-- Override robot IP if provided as argument -->
+  <arg name="robot_ip" default="192.168.1.200" />
+  <param name="robot_ip" value="$(arg robot_ip)" />
+  
+  <!-- Override headless mode if provided as argument -->
+  <arg name="headless_mode" default="true" />
+  <param name="headless_mode" value="$(arg headless_mode)" />
+  
+  <!-- Launch the robot controller node -->
+  <node name="cs66_robot_controller" 
+        pkg="cs66_ctl_manipulation" 
+        type="cs66_robot_controller" 
+        output="screen"
+        respawn="false">
+    
+    <!-- Remap topics if needed -->
+    <!-- <remap from="/cs66/joint_states" to="/joint_states" /> -->
+    <!-- <remap from="/cs66/tcp_pose" to="/tcp_pose" /> -->
+    
+  </node>
+  
+  <!-- Optional: Launch RViz for visualization -->
+  <arg name="rviz" default="false" />
+  <node if="$(arg rviz)" 
+        name="rviz" 
+        pkg="rviz" 
+        type="rviz" 
+        args="-d $(find cs66_ctl_manipulation)/config/cs66_robot.rviz" />
+  
+</launch>
