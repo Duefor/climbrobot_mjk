@@ -7,6 +7,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <unistd.h>
+#include <algorithm>
+#include <cerrno>
 #include <cstring>
 #include <string>
 #include <std_msgs/Float64MultiArray.h>
@@ -247,6 +249,60 @@ private:
     sendCanFrame(sock_, addr_, can_id, start_move);
   }
 
+  void drainCanSocket()
+  {
+    struct can_frame frame;
+    while (recvfrom(sock_, &frame, sizeof(frame), MSG_DONTWAIT, nullptr, nullptr) > 0) {
+    }
+  }
+
+  bool readStatusResponse(int response_can_id, int16_t& status, double timeout_sec)
+  {
+    const ros::Time deadline = ros::Time::now() + ros::Duration(timeout_sec);
+
+    while (ros::ok() && ros::Time::now() < deadline) {
+      struct can_frame frame;
+      int nbytes = recvfrom(sock_, &frame, sizeof(frame), MSG_DONTWAIT, nullptr, nullptr);
+
+      if (nbytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+          usleep(1000);
+          continue;
+        }
+        perror("CAN status read error");
+        return false;
+      }
+
+      if (nbytes == sizeof(frame) &&
+          frame.can_id == static_cast<canid_t>(response_can_id) &&
+          frame.can_dlc >= 6 &&
+          frame.data[1] == 0x41 &&
+          frame.data[2] == 0x60) {
+        status = static_cast<int16_t>(frame.data[4] | (frame.data[5] << 8));
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool queryMotorStatus(int command_can_id, int response_can_id, int16_t& status)
+  {
+    unsigned char status_request[8] = {0x40, 0x41, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00};
+    sendCanFrame(sock_, addr_, command_can_id, status_request);
+    return readStatusResponse(response_can_id, status, 0.02);
+  }
+
+  static bool isTargetReached(int16_t status)
+  {
+    return (status & (1 << 10)) != 0;
+  }
+
+  static bool isFault(int16_t status)
+  {
+    return (status & (1 << 3)) != 0;
+  }
+
   void sendZeroSpeed()
   {
     unsigned char stop_data[8];
@@ -284,8 +340,8 @@ private:
       sendResetAndRemoteControl();
       sendVelocitySetup(0x601);
       sendVelocitySetup(0x602);
-      stopWheelCommand();
       current_mode_ = 0;
+      stopWheelCommand();
       speed_mode_initialized_ = true;
       position_mode_initialized_ = false;
     }
@@ -320,6 +376,9 @@ private:
       makeSpeedCommand(right_data, right_rpm);
 
       ros::Rate rate(speed_publish_hz_);
+      ros::Time start = ros::Time::now();
+      double timeout = goal->timeout;
+      bool timed_goal = timeout > 0.0;
       feedback.progress = 0.0;
       as_.publishFeedback(feedback);
 
@@ -330,6 +389,16 @@ private:
           sendCanFrame(sock_, addr_, 0x601, left_data);
           sendCanFrame(sock_, addr_, 0x602, right_data);
         }
+
+        if (timed_goal) {
+          double elapsed = (ros::Time::now() - start).toSec();
+          feedback.progress = static_cast<float>(std::min(elapsed / timeout, 1.0));
+          as_.publishFeedback(feedback);
+          if (elapsed >= timeout) {
+            break;
+          }
+        }
+
         rate.sleep();
       }
 
@@ -365,22 +434,54 @@ private:
       int32_t left_target = static_cast<int32_t>(goal->left_value * pulse_per_rev_ * gear_ratio_);
       int32_t right_target = static_cast<int32_t>(goal->right_value * pulse_per_rev_ * gear_ratio_);
 
+      drainCanSocket();
       sendPositionMove(0x601, left_target);
       sendPositionMove(0x602, right_target);
 
       ros::Rate rate(20);
       ros::Time start = ros::Time::now();
+      bool timed_goal = goal->timeout >= 0.0;
       double timeout = goal->timeout > 0.0 ? goal->timeout : position_timeout_;
       feedback.progress = 0.0;
       as_.publishFeedback(feedback);
 
       while (ros::ok() && as_.isActive() && !as_.isPreemptRequested()) {
         double elapsed = (ros::Time::now() - start).toSec();
-        if (elapsed >= timeout) {
-          break;
+        if (timed_goal && elapsed >= timeout) {
+          stopWheelCommand();
+          result.success = false;
+          result.message = "Position goal timed out before target reached";
+          as_.setAborted(result);
+          return;
         }
-        feedback.progress = static_cast<float>(elapsed / timeout);
-        as_.publishFeedback(feedback);
+
+        int16_t left_status = 0;
+        int16_t right_status = 0;
+        bool left_status_ok = queryMotorStatus(0x601, 0x581, left_status);
+        bool right_status_ok = queryMotorStatus(0x602, 0x582, right_status);
+
+        if ((left_status_ok && isFault(left_status)) || (right_status_ok && isFault(right_status))) {
+          stopWheelCommand();
+          result.success = false;
+          result.message = "Position goal failed: motor fault";
+          as_.setAborted(result);
+          return;
+        }
+
+        if (left_status_ok && right_status_ok &&
+            isTargetReached(left_status) && isTargetReached(right_status)) {
+          feedback.progress = 1.0f;
+          as_.publishFeedback(feedback);
+          result.success = true;
+          result.message = "Position goal reached";
+          as_.setSucceeded(result);
+          return;
+        }
+
+        if (timed_goal && timeout > 0.0) {
+          feedback.progress = static_cast<float>(std::min(elapsed / timeout, 1.0));
+          as_.publishFeedback(feedback);
+        }
         rate.sleep();
       }
 
@@ -392,9 +493,10 @@ private:
         return;
       }
 
-      result.success = true;
-      result.message = "Position goal launched";
-      as_.setSucceeded(result);
+      stopWheelCommand();
+      result.success = false;
+      result.message = "Position goal interrupted before target reached";
+      as_.setAborted(result);
       return;
     }
 

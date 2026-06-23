@@ -17,8 +17,8 @@ public:
       action_name_(name),
       wheel_radius_(0.15),
       wheel_separation_(0.308),
-      base_turn_timeout_(20.0),
-      base_drive_timeout_(20.0)
+      base_turn_timeout_(100.0),
+      base_drive_timeout_(100.0) // 超时时间写死，作为一个安全值，但是实际上会在运动结束前就返回
   {
     ros::NodeHandle pnh("~");
     pnh.param("wheel_radius", wheel_radius_, wheel_radius_);
@@ -72,7 +72,7 @@ private:
   bool sendWheelPositionGoal(double left_revs, double right_revs, double timeout, const ros::Time& deadline)
   {
     car_ctl::CarWheelMotionGoal wheel_goal;
-    wheel_goal.control_mode = 0;
+    wheel_goal.control_mode = 1;
     wheel_goal.left_value = static_cast<float>(left_revs);
     wheel_goal.right_value = static_cast<float>(right_revs);
     wheel_goal.timeout = static_cast<float>(timeout);
