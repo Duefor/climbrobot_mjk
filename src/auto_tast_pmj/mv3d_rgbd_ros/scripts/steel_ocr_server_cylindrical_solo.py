@@ -86,8 +86,8 @@ class SteelStampOcrSoloServer:
         self.sync_queue_size = int(rospy.get_param('~sync_queue_size', 10))
         self.sync_slop = float(rospy.get_param('~sync_slop', 0.05))
         
-        self.depth_min_mm = int(rospy.get_param('~depth_min_mm', 30))
-        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 900))
+        self.depth_min_mm = int(rospy.get_param('~depth_min_mm', 300))
+        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 600))
 
         # 新增扩展配置，21为默认ROI提取大小
         self.roi_window_size = int(rospy.get_param('~roi_window_size', 21))
@@ -96,7 +96,9 @@ class SteelStampOcrSoloServer:
         self.trajectory_mode = rospy.get_param('~trajectory_mode', 'dense_arc')
         self.arc_sample_step_m = float(rospy.get_param('~arc_sample_step_m', 0.004))
         self.max_arc_points = int(rospy.get_param('~max_arc_points', 500))
+        # 新增法向偏移配置，默认 -0.048m（-48mm）向工件表面内偏移
         self.trajectory_normal_offset_m = float(rospy.get_param('~trajectory_normal_offset_m', -0.048))
+        self.debug_image_prefix = rospy.get_param('~debug_image_prefix', 'cyl_solo_result')
 
         # 姿态切向参考向
         self.pose_reference_axis = np.asarray(rospy.get_param('~pose_reference_axis', [1.0, 0.0, 0.0]), dtype=np.float64)
@@ -112,9 +114,14 @@ class SteelStampOcrSoloServer:
         self.latest_data = {'rgb': None, 'depth': None, 'info': None}
         self.data_lock = threading.Lock()
 
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        pkg_root = os.path.dirname(script_dir)
+        self.save_dir = os.path.join(pkg_root, 'debug_images')
+        os.makedirs(self.save_dir, exist_ok=True)
+
         # 加载 OCR 模型
-        self.det_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
-        self.rec_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/steel_rec_model'
+        self.det_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/det_steel_1280x720'
+        self.rec_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/rec_single_char'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',
@@ -295,6 +302,7 @@ class SteelStampOcrSoloServer:
         fx, fy = float(info_msg.P[0]), float(info_msg.P[5])
         cx, cy = float(info_msg.P[2]), float(info_msg.P[6])
         height, width = depth_arr.shape  # 图像尺寸，用于后续边界检查
+        debug_image = rgb_arr.copy()
 
         # ------------------------------------------------------------------
         # 10. 初始化处理变量
@@ -322,6 +330,7 @@ class SteelStampOcrSoloServer:
             # ----------------------------------------------------------
             bbox = np.asarray(line[0], dtype=np.float32)  # 检测框四点坐标
             text = line[1][0]                              # 识别的文本内容
+            score = float(line[1][1])
 
             # ----------------------------------------------------------
             # 10b. 计算包围框的几何中心（像素坐标）
@@ -332,6 +341,7 @@ class SteelStampOcrSoloServer:
             center_px = np.mean(bbox, axis=0)
             u_center = int(round(center_px[0]))  # 中心列坐标
             v_center = int(round(center_px[1]))  # 中心行坐标
+            self.draw_debug_overlay(debug_image, bbox, center_px, text, score, False)
 
             # ----------------------------------------------------------
             # 10c. 边界检查
@@ -444,6 +454,7 @@ class SteelStampOcrSoloServer:
             #     - 旋转矩阵 → 四元数 (scipy.spatial.transform.Rotation)
             # ==========================================================
             pose = self.normal_to_pose(best_point, best_normal)
+            self.draw_debug_overlay(debug_image, bbox, center_px, text, score, True)
 
             # 将该字符的全部处理结果存入列表
             valid_entries.append({
@@ -499,6 +510,7 @@ class SteelStampOcrSoloServer:
         # ------------------------------------------------------------------
         self.publish_markers(valid_entries, final_poses)
         self.publish_pose_array(final_poses)
+        self.save_debug_image(debug_image)
 
         # ------------------------------------------------------------------
         # 16. 设置最终响应状态
@@ -622,6 +634,35 @@ class SteelStampOcrSoloServer:
             shifted_poses.append(shifted)
 
         return shifted_poses
+
+    def draw_debug_overlay(self, image, bbox, center_px, text, score, success):
+        box_int = np.round(bbox).astype(np.int32)
+        color = (0, 255, 0) if success else (0, 165, 255)
+        cv2.polylines(image, [box_int], isClosed=True, color=color, thickness=2)
+
+        cx, cy = int(round(center_px[0])), int(round(center_px[1]))
+        cv2.circle(image, (cx, cy), 4, (0, 0, 255), -1)
+
+        status = 'OK' if success else 'DET'
+        label = '{} {:.2f} {}'.format(text, score, status)
+        text_x = int(box_int[0][0])
+        text_y = max(20, int(box_int[0][1]) - 8)
+        cv2.putText(
+            image,
+            label,
+            (text_x, text_y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
+
+    def save_debug_image(self, debug_image):
+        filename = '{}_{}.jpg'.format(self.debug_image_prefix, int(time.time() * 1000))
+        path = os.path.join(self.save_dir, filename)
+        cv2.imwrite(path, debug_image)
+        rospy.loginfo('Solo OCR debug image saved: %s', path)
     
     def lookup_camera_transform(self, rgb_msg):
         stamp = rgb_msg.header.stamp
