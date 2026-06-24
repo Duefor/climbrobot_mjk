@@ -3,3 +3,4 @@ build/
 devel/
 logs/
 for_docker/
+src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/

@@ -113,8 +113,8 @@ class SteelStampOcrSoloServer:
         self.data_lock = threading.Lock()
 
         # 加载 OCR 模型
-        self.det_model_path = '/workspace/PaddleOCR/inference/det_steel_1280x720'
-        self.rec_model_path = '/workspace/PaddleOCR/inference/rec_single_char'
+        self.det_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/det_steel_1280x720'
+        self.rec_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/rec_single_char'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',
