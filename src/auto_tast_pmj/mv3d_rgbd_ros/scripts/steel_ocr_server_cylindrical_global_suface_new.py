@@ -148,8 +148,8 @@ class SteelStampCylindricalGlobalSurfaceServer:
         self.data_lock = threading.Lock()
         self.bridge = CvBridge()
 
-        self.det_model_path = '/home/m/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
-        self.rec_model_path = '//home/m/ws_moveit/PaddleOCR/inference/steel_rec_model'
+        self.det_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
+        self.rec_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/steel_rec_model'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',

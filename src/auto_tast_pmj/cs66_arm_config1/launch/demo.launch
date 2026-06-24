@@ -48,8 +48,8 @@
 
   <!-- 手眼标定后的标定参数 --> 
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
-    args=" -0.029327785008482942 0.01789755530671809 0.16730325766246715
-    -0.680160586465853 -0.0073174553843848855 0.027049492100014498 0.7325273758995331 Link_5 camera_color_optical_frame" />
+    args=" -0.035402184588539436 0.02082406511303763 0.13524869276191477
+    -0.6855936887447207 -0.007508434268817976 0.02614320065665353 0.7274760823749904 Link_5 camera_color_optical_frame" />
 
   <group if = "$(eval arg('moveit_controller_manager') == 'simple')">
 

@@ -105,11 +105,11 @@ class SteelStampOcrSoloServer:
         self.pose_reference_axis_backup = np.asarray(rospy.get_param('~pose_reference_axis_backup', [0.0, 1.0, 0.0]), dtype=np.float64)
         
         # 基座负方向，用于约束法向
-        self.base_negative_axis = np.asarray(rospy.get_param('~base_negative_axis', [0.0, 0.0, 1.0]), dtype=np.float64)
+        self.base_negative_axis = np.asarray(rospy.get_param('~base_negative_axis', [0.0, 0.0, -1.0]), dtype=np.float64)
 
         self.pose_reference_axis = self.safe_normalize(self.pose_reference_axis, np.array([1.0, 0.0, 0.0], dtype=np.float64))
         self.pose_reference_axis_backup = self.safe_normalize(self.pose_reference_axis_backup, np.array([0.0, 1.0, 0.0], dtype=np.float64))
-        self.base_negative_axis = self.safe_normalize(self.base_negative_axis, np.array([0.0, 0.0, -1.0], dtype=np.float64))
+        self.base_negative_axis = self.safe_normalize(self.base_negative_axis, np.array([0.0, 0.0, 1.0], dtype=np.float64))
 
         self.latest_data = {'rgb': None, 'depth': None, 'info': None}
         self.data_lock = threading.Lock()

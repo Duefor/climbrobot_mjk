@@ -8,14 +8,14 @@
     <arg name="namespace_prefix" value="my_eih_calib"/>
     <!-- 机器人TF帧配置 -->
     <arg name="robot_base_frame" value="base_link"/>
-    <arg name="robot_effector_frame" value="ee_link"/>
+    <arg name="robot_effector_frame" value="Link_5"/>
     <!-- 视觉系统TF帧配置 -->
     <arg name="tracking_base_frame" value="camera_color_optical_frame"/>
-    <arg name="tracking_marker_frame" value="marker_frame"/>
+    <arg name="tracking_marker_frame" value="chessboard_board"/>
     <arg name="freehand_robot_movement" value="true"/>
   </include>
 
   <!-- realsense_set test节点 -->
-  <node pkg="realsense_set" type="test.py" name="test_node" output="screen"/>
+  <!-- <node pkg="realsense_set" type="test.py" name="test_node" output="screen"/> -->
 
 </launch>

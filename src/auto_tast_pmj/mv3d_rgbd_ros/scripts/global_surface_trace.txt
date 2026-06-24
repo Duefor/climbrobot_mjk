@@ -13073,3 +13073,298 @@ surface_mode: inner  center_sign: 1.0
   processed_point_base[m]: [0.590265, 0.069525, 0.916500]
   processed_normal_base: [-0.000000, -0.265445, 0.964126]
   delta_processed_minus_raw[m]: [0.073115, 0.013025, 0.115500] |norm|=0.137316
+============================================================
+timestamp_ms: 1782282989590
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.517020, -0.516409, 0.597862]
+camera_quat_in_base[xyzw]: [-0.443496, 0.895005, -0.026370, 0.039767]
+global_roi[xmin,xmax,ymin,ymax]: [241, 634, 305, 411]
+detections_total: 3  valid_after_model: 3
+cylinder_axis_point[m]: [0.683961, -0.806634, -2.005220]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: outer  center_sign: -1.0
+--- per char ---
+[0] text=1 score=0.997
+  center_px: [271.25, 349.00]
+  raw_depth_mm: 513.00
+  raw_point_base[m]: [0.692480, -0.362981, 0.097346]
+  processed_point_base[m]: [0.692044, -0.363361, 0.098588]
+  processed_normal_base: [0.000000, 0.206174, 0.978515]
+  delta_processed_minus_raw[m]: [-0.000435, -0.000381, 0.001242] |norm|=0.001370
+[1] text=2 score=0.985
+  center_px: [404.50, 354.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.640778, -0.424078, 0.110471]
+  processed_normal_base: [0.000000, 0.177933, 0.984043]
+[2] text=3 score=0.943
+  center_px: [595.50, 360.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.573440, -0.505090, 0.123528]
+  processed_normal_base: [0.000000, 0.140253, 0.990116]
+============================================================
+timestamp_ms: 1782283184167
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.522589, -0.524253, 0.591874]
+camera_quat_in_base[xyzw]: [-0.440921, 0.896088, -0.019529, 0.047263]
+global_roi[xmin,xmax,ymin,ymax]: [257, 1019, 317, 416]
+detections_total: 4  valid_after_model: 4
+cylinder_axis_point[m]: [0.685107, 0.039960, 2.209574]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: outer  center_sign: -1.0
+--- per char ---
+[0] text=1 score=0.997
+  center_px: [286.00, 361.50]
+  raw_depth_mm: 509.00
+  raw_point_base[m]: [0.690583, -0.365623, 0.098476]
+  processed_point_base[m]: [0.690693, -0.365520, 0.098156]
+  processed_normal_base: [0.000000, -0.188596, -0.982055]
+  delta_processed_minus_raw[m]: [0.000109, 0.000103, -0.000320] |norm|=0.000354
+[1] text=2 score=0.976
+  center_px: [416.50, 366.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.640073, -0.425069, 0.110467]
+  processed_normal_base: [0.000000, -0.216292, -0.976329]
+[2] text=4 score=0.530
+  center_px: [810.50, 377.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.508509, -0.582112, 0.151534]
+  processed_normal_base: [0.000000, -0.289336, -0.957228]
+[3] text=5 score=0.957
+  center_px: [992.00, 385.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.456796, -0.641494, 0.170426]
+  processed_normal_base: [0.000000, -0.316955, -0.948441]
+============================================================
+timestamp_ms: 1782283308578
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.521864, -0.523759, 0.591622]
+camera_quat_in_base[xyzw]: [-0.441557, 0.896100, -0.023782, 0.038283]
+global_roi[xmin,xmax,ymin,ymax]: [233, 1086, 313, 419]
+detections_total: 5  valid_after_model: 5
+cylinder_axis_point[m]: [0.692220, -0.676206, -2.030238]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=1 score=0.996
+  center_px: [262.00, 357.50]
+  raw_depth_mm: 505.00
+  raw_point_base[m]: [0.692203, -0.364805, 0.098483]
+  processed_point_base[m]: [0.692708, -0.364334, 0.097022]
+  processed_normal_base: [-0.000000, -0.145057, -0.989423]
+  delta_processed_minus_raw[m]: [0.000505, 0.000471, -0.001461] |norm|=0.001615
+[1] text=2 score=0.997
+  center_px: [395.00, 362.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.642852, -0.423545, 0.104864]
+  processed_normal_base: [-0.000000, -0.117517, -0.993071]
+[2] text=3 score=0.999
+  center_px: [587.50, 370.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.574847, -0.504342, 0.112882]
+  processed_normal_base: [-0.000000, -0.079937, -0.996800]
+[3] text=4 score=0.977
+  center_px: [791.00, 377.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.506918, -0.585674, 0.117855]
+  processed_normal_base: [-0.000000, -0.042108, -0.999113]
+[4] text=1 score=0.584
+  center_px: [1046.50, 385.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.425565, -0.684978, 0.119744]
+  processed_normal_base: [-0.000000, 0.004080, -0.999992]
+============================================================
+timestamp_ms: 1782283392621
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.522458, -0.524429, 0.591618]
+camera_quat_in_base[xyzw]: [-0.440837, 0.896180, -0.019503, 0.046297]
+global_roi[xmin,xmax,ymin,ymax]: [252, 843, 315, 424]
+detections_total: 4  valid_after_model: 4
+cylinder_axis_point[m]: [0.686330, -0.000651, 2.218160]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=11 score=0.835
+  center_px: [281.50, 360.00]
+  raw_depth_mm: 509.00
+  raw_point_base[m]: [0.691808, -0.364761, 0.098028]
+  processed_point_base[m]: [0.691376, -0.365168, 0.099286]
+  processed_normal_base: [-0.000000, 0.169543, 0.985523]
+  delta_processed_minus_raw[m]: [-0.000432, -0.000407, 0.001258] |norm|=0.001391
+[1] text=2 score=0.997
+  center_px: [414.50, 363.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.640921, -0.425898, 0.110634]
+  processed_normal_base: [-0.000000, 0.197789, 0.980245]
+[2] text=3 score=0.999
+  center_px: [604.25, 369.25]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.573809, -0.505809, 0.128348]
+  processed_normal_base: [-0.000000, 0.234957, 0.972006]
+[3] text=4 score=0.996
+  center_px: [809.00, 379.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.507162, -0.581886, 0.148216]
+  processed_normal_base: [-0.000000, 0.270342, 0.962764]
+============================================================
+timestamp_ms: 1782283490957
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.522836, -0.524440, 0.591147]
+camera_quat_in_base[xyzw]: [-0.441597, 0.896033, -0.025113, 0.038561]
+global_roi[xmin,xmax,ymin,ymax]: [228, 626, 317, 425]
+detections_total: 3  valid_after_model: 3
+cylinder_axis_point[m]: [0.694798, -0.050974, 2.224289]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=1 score=0.997
+  center_px: [260.50, 363.00]
+  raw_depth_mm: 505.00
+  raw_point_base[m]: [0.692098, -0.364027, 0.097752]
+  processed_point_base[m]: [0.692296, -0.363840, 0.097175]
+  processed_normal_base: [-0.000000, 0.145519, 0.989355]
+  delta_processed_minus_raw[m]: [0.000198, 0.000187, -0.000577] |norm|=0.000638
+[1] text=2 score=0.982
+  center_px: [395.50, 369.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.641009, -0.423917, 0.106882]
+  processed_normal_base: [-0.000000, 0.173462, 0.984841]
+[2] text=3 score=0.973
+  center_px: [587.00, 374.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.573972, -0.504990, 0.122773]
+  processed_normal_base: [-0.000000, 0.211170, 0.977449]
+============================================================
+timestamp_ms: 1782283515690
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.522707, -0.524426, 0.591240]
+camera_quat_in_base[xyzw]: [-0.441555, 0.896055, -0.025053, 0.038565]
+global_roi[xmin,xmax,ymin,ymax]: [226, 1092, 315, 698]
+detections_total: 6  valid_after_model: 6
+cylinder_axis_point[m]: [0.613709, -0.318256, 2.241857]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=3 score=0.735
+  center_px: [244.50, 677.50]
+  raw_depth_mm: 500.00
+  raw_point_base[m]: [0.559677, -0.253778, 0.089557]
+  processed_point_base[m]: [0.559440, -0.255512, 0.092773]
+  processed_normal_base: [-0.000000, -0.029183, 0.999574]
+  delta_processed_minus_raw[m]: [-0.000237, -0.001735, 0.003216] |norm|=0.003661
+[1] text=1 score=0.998
+  center_px: [260.00, 362.50]
+  raw_depth_mm: 505.00
+  raw_point_base[m]: [0.692348, -0.363921, 0.097891]
+  processed_point_base[m]: [0.694269, -0.362103, 0.092304]
+  processed_normal_base: [-0.000000, 0.020394, 0.999792]
+  delta_processed_minus_raw[m]: [0.001921, 0.001818, -0.005587] |norm|=0.006181
+[2] text=2 score=0.998
+  center_px: [396.00, 368.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.644225, -0.421785, 0.094351]
+  processed_normal_base: [-0.000000, 0.048153, 0.998840]
+[3] text=3 score=0.820
+  center_px: [586.50, 375.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.575857, -0.503262, 0.099831]
+  processed_normal_base: [-0.000000, 0.086049, 0.996291]
+[4] text=4 score=0.996
+  center_px: [792.00, 381.25]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.506400, -0.587661, 0.108802]
+  processed_normal_base: [-0.000000, 0.125305, 0.992118]
+[5] text=1 score=0.939
+  center_px: [1042.75, 388.50]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.427636, -0.682824, 0.122992]
+  processed_normal_base: [-0.000000, 0.169567, 0.985519]
+============================================================
+timestamp_ms: 1782283544050
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.522600, -0.524412, 0.591320]
+camera_quat_in_base[xyzw]: [-0.441522, 0.896073, -0.025005, 0.038565]
+global_roi[xmin,xmax,ymin,ymax]: [231, 823, 318, 425]
+detections_total: 4  valid_after_model: 4
+cylinder_axis_point[m]: [0.691429, -0.124517, 2.233823]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=1 score=0.997
+  center_px: [261.00, 365.00]
+  raw_depth_mm: 505.00
+  raw_point_base[m]: [0.690804, -0.363473, 0.097843]
+  processed_point_base[m]: [0.691052, -0.363236, 0.097117]
+  processed_normal_base: [-0.000000, 0.111032, 0.993817]
+  delta_processed_minus_raw[m]: [0.000247, 0.000237, -0.000726] |norm|=0.000802
+[1] text=2 score=0.997
+  center_px: [394.50, 367.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.642531, -0.423529, 0.104717]
+  processed_normal_base: [-0.000000, 0.139075, 0.990282]
+[2] text=3 score=0.881
+  center_px: [587.25, 373.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.574600, -0.505079, 0.117772]
+  processed_normal_base: [-0.000000, 0.177006, 0.984210]
+[3] text=4 score=0.959
+  center_px: [792.00, 385.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.505626, -0.583243, 0.133330]
+  processed_normal_base: [-0.000000, 0.213361, 0.976973]
+============================================================
+timestamp_ms: 1782286988080
+rgb_frame_id: camera_color_optical_frame
+camera_info_frame_id: camera_color_optical_frame
+base_frame: base_link
+camera_position_in_base[m]: [0.483539, -0.487544, 0.588103]
+camera_quat_in_base[xyzw]: [-0.442869, 0.895792, -0.016556, 0.033908]
+global_roi[xmin,xmax,ymin,ymax]: [158, 1080, 365, 478]
+detections_total: 4  valid_after_model: 4
+cylinder_axis_point[m]: [0.646787, 0.032660, 2.222070]
+cylinder_axis_dir: [1.000000, 0.000000, 0.000000]
+cylinder_radius_fit[m]: 2.150000  inlier_ratio: 1.0000
+surface_mode: inner  center_sign: 1.0
+--- per char ---
+[0] text=1 score=0.737
+  center_px: [182.50, 406.00]
+  raw_depth_mm: 506.00
+  raw_point_base[m]: [0.652063, -0.272020, 0.093484]
+  processed_point_base[m]: [0.651960, -0.272152, 0.093786]
+  processed_normal_base: [-0.000000, 0.141773, 0.989899]
+  delta_processed_minus_raw[m]: [-0.000103, -0.000132, 0.000303] |norm|=0.000346
+[1] text=2 score=0.986
+  center_px: [312.00, 415.00]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.601492, -0.330241, 0.102918]
+  processed_normal_base: [-0.000000, 0.168791, 0.985652]
+[2] text=3 score=0.944
+  center_px: [502.00, 422.75]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.533878, -0.412486, 0.118657]
+  processed_normal_base: [-0.000000, 0.207045, 0.978331]
+[3] text=1 score=0.745
+  center_px: [1037.50, 428.75]
+  raw_depth_center: invalid
+  processed_point_base[m]: [0.379987, -0.611244, 0.170756]
+  processed_normal_base: [-0.000000, 0.299490, 0.954099]
