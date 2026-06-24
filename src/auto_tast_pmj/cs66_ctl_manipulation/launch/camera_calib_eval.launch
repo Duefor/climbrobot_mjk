@@ -1,0 +1,16 @@
+<launch>
+  <node pkg="cs66_ctl_manipulation" type="camera_calib_eval_node" name="camera_calib_eval_node" output="screen">
+    <param name="base_frame" value="base_link"/>
+    <param name="ee_link" value="ee_link"/>
+    <param name="board_frame" value="chessboard_board"/>
+    <param name="inner_corners_x" value="11"/>
+    <param name="square_size" value="0.03"/>
+    <param name="hover_height" value="0.08"/>
+    <param name="tf_timeout" value="3.0"/>
+    <param name="cartesian_step" value="0.005"/>
+    <param name="velocity_scaling" value="0.03"/>
+    <param name="acceleration_scaling" value="0.05"/>
+    <rosparam param="observation_joints">[-0.63, -1.86, -1.18, -1.67, 1.57, -2.14]</rosparam>
+    <rosparam param="home_joints">[0.04, -0.11, -2.7, -1.24, 1.45, -0.37]</rosparam>
+  </node>
+</launch>
