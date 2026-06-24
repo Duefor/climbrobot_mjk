@@ -28,8 +28,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <xmlrpcpp/XmlRpcValue.h>
 
-#include "cs66_follow_joint_traj_server.h"
 #include "cs66_robot_controller.h"
+#include "cs66_follow_joint_traj_server.h"
 
 namespace {
 
