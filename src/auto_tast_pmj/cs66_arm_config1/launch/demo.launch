@@ -61,6 +61,12 @@
     args="-0.03278578881898636 0.045448527998304504 0.14028238513655256
     -0.6840700023748223 -0.007787846495520556 0.02814907218584223 0.7288314009652362 Link_5 camera_color_optical_frame" />
 
+<!-- 手眼标定后的标定参数 --> 
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+    args="-0.03215551372864 0.04357992832071803 0.13632178201003867
+    -0.6831599795128327 -0.008156249910456492 0.028437167160868197 0.7296692713163198 Link_5 camera_color_optical_frame" /> -->
+
+
 
 
   <group if = "$(eval arg('moveit_controller_manager') == 'simple')">
