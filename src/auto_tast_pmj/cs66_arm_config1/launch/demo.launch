@@ -15,7 +15,7 @@
   <arg name="load_robot_description" default="true"/>
 
   <!-- Choose controller manager: fake, simple, or ros_control -->
-  <arg name="moveit_controller_manager" default="fake" />
+  <arg name="moveit_controller_manager" default="simple" />
   <!-- Set execution mode for fake execution controllers -->
   <arg name="fake_execution_type" default="interpolate" />
 
@@ -42,9 +42,14 @@
   </group>
 
   <!-- 手眼标定后的标定参数 --> 
-  <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
     args="-0.014353595893407988 0.033661869271357885 0.15485001375043025 
-    -0.6873409242223177 -0.025767056214063055 0.026484172721386225 0.725394445318225 Link_5 camera_color_optical_frame" />
+    -0.6873409242223177 -0.025767056214063055 0.026484172721386225 0.725394445318225 Link_5 camera_color_optical_frame" /> -->
+
+  <!-- 手眼标定后的标定参数 --> 
+  <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+    args=" -0.029327785008482942 0.01789755530671809 0.16730325766246715
+    -0.680160586465853 -0.0073174553843848855 0.027049492100014498 0.7325273758995331 Link_5 camera_color_optical_frame" />
 
   <group if = "$(eval arg('moveit_controller_manager') == 'simple')">
 

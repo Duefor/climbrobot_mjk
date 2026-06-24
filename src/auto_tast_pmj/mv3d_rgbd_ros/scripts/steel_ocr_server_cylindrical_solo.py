@@ -86,8 +86,8 @@ class SteelStampOcrSoloServer:
         self.sync_queue_size = int(rospy.get_param('~sync_queue_size', 10))
         self.sync_slop = float(rospy.get_param('~sync_slop', 0.05))
         
-        self.depth_min_mm = int(rospy.get_param('~depth_min_mm', 300))
-        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 600))
+        self.depth_min_mm = int(rospy.get_param('~depth_min_mm', 30))
+        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 900))
 
         # 新增扩展配置，21为默认ROI提取大小
         self.roi_window_size = int(rospy.get_param('~roi_window_size', 21))
@@ -113,8 +113,8 @@ class SteelStampOcrSoloServer:
         self.data_lock = threading.Lock()
 
         # 加载 OCR 模型
-        self.det_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/det_steel_1280x720'
-        self.rec_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/rec_single_char'
+        self.det_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
+        self.rec_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/steel_rec_model'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',

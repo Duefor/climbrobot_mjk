@@ -92,7 +92,7 @@ CS66RobotController::~CS66RobotController() {
 void CS66RobotController::loadParameters() {
     // 从ROS参数服务器读取配置
     private_nh_.param<std::string>("robot_ip", robot_ip_, "192.168.1.199");
-    private_nh_.param<std::string>("local_ip", local_ip_, "192.168.1.234");
+    private_nh_.param<std::string>("local_ip", local_ip_, "192.168.1.150");
     private_nh_.param<bool>("headless_mode", headless_mode_, true);
     private_nh_.param<double>("control_frequency", control_frequency_, 50.0);
     private_nh_.param<double>("status_frequency", status_frequency_, 250.0);

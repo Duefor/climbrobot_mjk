@@ -313,7 +313,8 @@ int main(int argc, char** argv) {
     // const std::vector<double> observation_joints = {0.85,-1.66,-1.62,-1.43,1.57,-0.72};
     // const std::vector<double> observation_joints = {0.87, -1.51, -1.44, -1.79, 1.56, -0.7};
     // const std::vector<double> observation_joints = {0.12, -1.38,-2.24,-1.09,1.57,-1.45};
-    const std::vector<double> observation_joints = {0.12, -1.42, -1.94, -1.26, 1.57, -1.44};
+    // const std::vector<double> observation_joints = {0.12, -1.42, -1.94, -1.26, 1.57, -1.44};
+    const std::vector<double> observation_joints = {-0.55, -1.43, -1.64, -1.64, 1.57, -2.14};
 
     // shouna_joints: 收納姿态——任务结束后机械臂收回的安全位置
     const std::vector<double> shouna_joints = {0.04, -0.11, -2.7, -1.24, 1.45, -0.37};
