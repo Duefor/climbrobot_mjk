@@ -47,9 +47,21 @@
     -0.6873409242223177 -0.025767056214063055 0.026484172721386225 0.725394445318225 Link_5 camera_color_optical_frame" /> -->
 
   <!-- 手眼标定后的标定参数 --> 
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+    args="-0.02488384377067184 0.03257156892590839 0.1385883622172132
+    -0.6858508915803497  -0.00012069056527685973 0.04328816952559122 0.7264534908246711 Link_5 camera_color_optical_frame" /> -->
+
+<!-- 手眼标定后的标定参数 --> 
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
+    args="-0.029090898171565148  0.029413583964670316 0.12444771410264233
+    -0.682517869084223  -0.008789727726567276 0.033221411567490026 0.7300605706930677 Link_5 camera_color_optical_frame" /> -->
+
+<!-- 手眼标定后的标定参数 --> 
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_fix_broadcaster"
-    args=" -0.035402184588539436 0.02082406511303763 0.11524869276191477
-    -0.6855936887447207 -0.007508434268817976 0.02614320065665353 0.7274760823749904 Link_5 camera_color_optical_frame" />
+    args="-0.03278578881898636 0.045448527998304504 0.14028238513655256
+    -0.6840700023748223 -0.007787846495520556 0.02814907218584223 0.7288314009652362 Link_5 camera_color_optical_frame" />
+
+
 
   <group if = "$(eval arg('moveit_controller_manager') == 'simple')">
 
