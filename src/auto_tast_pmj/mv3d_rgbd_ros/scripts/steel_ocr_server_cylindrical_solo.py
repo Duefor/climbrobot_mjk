@@ -120,8 +120,8 @@ class SteelStampOcrSoloServer:
         os.makedirs(self.save_dir, exist_ok=True)
 
         # 加载 OCR 模型
-        self.det_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/det_steel_1280x720'
-        self.rec_model_path = 'src/auto_tast_pmj/mv3d_rgbd_ros/PaddleOCR/inference/rec_single_char'
+        self.det_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
+        self.rec_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/steel_rec_model'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',
