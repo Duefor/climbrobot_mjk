@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   control_msgs
   actionlib
   actionlib_msgs
+  car_ctl
   message_generation
   roslib
   tf2
@@ -53,7 +54,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES cs66_ctl_manipulation
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs sensor_msgs trajectory_msgs control_msgs actionlib actionlib_msgs tf2 tf2_ros tf2_geometry_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs sensor_msgs trajectory_msgs control_msgs actionlib actionlib_msgs car_ctl tf2 tf2_ros tf2_geometry_msgs
   DEPENDS Boost
 )
 
@@ -98,6 +99,12 @@ target_link_libraries(task_main_wall
   ${PROJECT_NAME}
 )
 
+add_executable(task_main_mjk src/task_main_mjk.cpp)
+target_link_libraries(task_main_mjk
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 add_executable(camera_calib_eval_node src/camera_calib_eval_node.cpp)
 target_link_libraries(camera_calib_eval_node
   ${catkin_LIBRARIES}
@@ -106,6 +113,9 @@ target_link_libraries(camera_calib_eval_node
 
 ## Add cmake target dependencies of the executable
 add_dependencies(cs66_follow_joint_trajectory_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(task_main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(task_main_wall ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(task_main_mjk ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(camera_calib_eval_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
