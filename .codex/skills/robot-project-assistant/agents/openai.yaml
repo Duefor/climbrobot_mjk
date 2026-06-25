@@ -1,0 +1,4 @@
+interface:
+  display_name: "Robot Project Assistant"
+  short_description: "Long-term ROS robotics project assistant"
+  default_prompt: "Use $robot-project-assistant to analyze and evolve this robotics workspace."
