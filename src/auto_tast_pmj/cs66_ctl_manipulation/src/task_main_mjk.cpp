@@ -421,13 +421,35 @@ bool RunCarAutoTask(
     return true;
 }
 
+AdmittanceForceControlParams LoadAdmittanceParams(const ros::NodeHandle& pnh) {
+    AdmittanceForceControlParams params;
+    pnh.param("target_force_z", params.target_force_z, params.target_force_z);
+    pnh.param("force_sign", params.force_sign, params.force_sign);
+    pnh.param("admittance_mass", params.admittance_mass, params.admittance_mass);
+    pnh.param("admittance_damping", params.admittance_damping, params.admittance_damping);
+    pnh.param("admittance_stiffness", params.admittance_stiffness, params.admittance_stiffness);
+    pnh.param("force_filter_alpha", params.force_filter_alpha, params.force_filter_alpha);
+    pnh.param("control_period", params.control_period, params.control_period);
+    pnh.param("nominal_tcp_speed", params.nominal_tcp_speed, params.nominal_tcp_speed);
+    pnh.param("max_z_offset", params.max_z_offset, params.max_z_offset);
+    pnh.param("max_z_velocity", params.max_z_velocity, params.max_z_velocity);
+    pnh.param("max_joint_step", params.max_joint_step, params.max_joint_step);
+    pnh.param("force_abort_threshold", params.force_abort_threshold, params.force_abort_threshold);
+    pnh.param("state_timeout", params.state_timeout, params.state_timeout);
+    pnh.param("max_consecutive_ik_failures",
+              params.max_consecutive_ik_failures,
+              params.max_consecutive_ik_failures);
+    return params;
+}
+
 bool RunArmScanCycle(
     ros::NodeHandle& nh,
     ros::ServiceClient& ocr_client,
     const std::shared_ptr<CS66RobotController>& my_controller,
     moveit::planning_interface::MoveGroupInterface& move_group,
     const std::vector<double>& observation_joints,
-    const std::vector<double>& shouna_joints) {
+    const std::vector<double>& shouna_joints,
+    const AdmittanceForceControlParams& admittance_params) {
 
     // =======================================================================
     // Step 1: 运动到观测点位
@@ -481,81 +503,21 @@ bool RunArmScanCycle(
         ROS_WARN("Cartesian path incomplete (%.2f%%).", fraction * 100.0);
     }
 
-    moveit::planning_interface::MoveGroupInterface::Plan cartesian_plan;
-    cartesian_plan.trajectory_ = trajectory;
-
-    auto tcp_pose_msg = ros::topic::waitForMessage<geometry_msgs::Pose>(
-        "/tcp_pose", nh, ros::Duration(1.0));
-    if (!tcp_pose_msg) {
-        ROS_ERROR("Failed to read /tcp_pose for force_ref_frame.");
+    if (trajectory.joint_trajectory.points.empty()) {
+        ROS_ERROR("Refusing to run admittance control with empty nominal trajectory.");
         return false;
     }
 
-    ELITE::vector6d_t force_ref_frame;
-    force_ref_frame[0] = tcp_pose_msg->position.x;
-    force_ref_frame[1] = tcp_pose_msg->position.y;
-    force_ref_frame[2] = tcp_pose_msg->position.z;
-
-    tf2::Quaternion q(
-        tcp_pose_msg->orientation.x,
-        tcp_pose_msg->orientation.y,
-        tcp_pose_msg->orientation.z,
-        tcp_pose_msg->orientation.w);
-    q.normalize();
-
-    double w = q.w();
-    if (w > 1.0) {
-        w = 1.0;
-    } else if (w < -1.0) {
-        w = -1.0;
-    }
-    const double angle = 2.0 * std::acos(w);
-
-    const double s = std::sqrt(std::max(0.0, 1.0 - w * w));
-    if (s < 1e-8) {
-        force_ref_frame[3] = 0.0;
-        force_ref_frame[4] = 0.0;
-        force_ref_frame[5] = 0.0;
-    } else {
-        const double axis_x = q.x() / s;
-        const double axis_y = q.y() / s;
-        const double axis_z = q.z() / s;
-        force_ref_frame[3] = axis_x * angle;
-        force_ref_frame[4] = axis_y * angle;
-        force_ref_frame[5] = axis_z * angle;
-    }
-
-    const ELITE::vector6int32_t force_selection_vector = {0, 0, 1, 0, 0, 0};
-    const ELITE::vector6d_t force_wrench = {0.0, 0.0, 8.0, 0.0, 0.0, 0.0};
-    const ELITE::vector6d_t force_limits = {0, 0, 0.02, 0, 0, 0};
-
-    if (!WaitForOperatorEnter("开始通过 MoveIt 执行笛卡尔轨迹...")) {
+    if (!WaitForOperatorEnter("开始执行手动导纳力控轨迹...")) {
         return false;
     }
 
-    if (!my_controller->startForceMode(
-            force_ref_frame, force_selection_vector, force_wrench, force_limits)) {
-        ROS_ERROR("Failed to start Force Mode! Aborting.");
-        return false;
-    }
-    ROS_INFO("Force Mode started with target force Z: %.2f N", force_wrench[2]);
-
-    ros::Duration(0.5).sleep();
-
-    const auto cartesian_exec_result = move_group.execute(cartesian_plan);
-    const bool force_end_ok = my_controller->endForceMode();
-
-    if (cartesian_exec_result != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-        ROS_ERROR("MoveIt execution of Cartesian trajectory failed!");
-        return false;
-    }
-    if (!force_end_ok) {
-        ROS_ERROR("Failed to end Force Mode!");
+    if (!my_controller->RunJointServoAdmittanceTrajectory(target_poses, move_group, admittance_params)) {
+        ROS_ERROR("Manual admittance trajectory execution failed!");
         return false;
     }
 
-    ROS_INFO("Force Mode ended successfully.");
-    ROS_INFO("MoveIt Cartesian trajectory finished.");
+    ROS_INFO("Manual admittance trajectory finished.");
 
     ros::Duration(5).sleep();
 
@@ -608,13 +570,23 @@ int main(int argc, char** argv) {
         nh.serviceClient<mv3d_rgbd_ros::DetectSteelStamp>("get_steel_stamp_location");
 
     actionlib::SimpleActionClient<car_ctl::CarAutoTaskAction> car_client("car_auto_task", true);
+    const AdmittanceForceControlParams admittance_params = LoadAdmittanceParams(pnh);
+    ROS_INFO("Admittance params: target_fz=%.3f sign=%.1f M=%.3f B=%.3f K=%.3f dt=%.4f speed=%.4f",
+             admittance_params.target_force_z,
+             admittance_params.force_sign,
+             admittance_params.admittance_mass,
+             admittance_params.admittance_damping,
+             admittance_params.admittance_stiffness,
+             admittance_params.control_period,
+             admittance_params.nominal_tcp_speed);
 
     int cycle_index = 1;
     while (!IsShutdownRequested()) {
         ROS_INFO("========== Start arm scan cycle %d ==========", cycle_index);
 
         if (!RunArmScanCycle(
-                nh, ocr_client, my_controller, move_group, observation_joints, shouna_joints)) {
+                nh, ocr_client, my_controller, move_group, observation_joints, shouna_joints,
+                admittance_params)) {
             return IsShutdownRequested() ? 0 : -1;
         }
 

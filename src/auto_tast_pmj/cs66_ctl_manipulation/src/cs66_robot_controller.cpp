@@ -6,6 +6,9 @@
 #include <sstream>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/robot_state/robot_state.h>
 
 #if defined(__linux) || defined(linux) || defined(__linux__)
 #include <sys/mman.h>
@@ -295,90 +298,100 @@ void CS66RobotController::stopRobot() {
 }
 
 
-void CS66RobotController::publishJointStates() {
+void CS66RobotController::updateCachedRobotState() {
     if (!is_initialized_ || !rtsi_client_) return;
-    
+
     try {
-        // 获取实际关节位置
-        vector6d_t actual_joints = rtsi_client_->getActualJointPositions();
-        
-        // 创建JointState消息
-        sensor_msgs::JointState joint_msg;
-        joint_msg.header.stamp = ros::Time::now();
-        // 使用 MoveIt SRDF 中的关节名称（带下划线）
-        joint_msg.name = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"};
-        joint_msg.position.resize(6);
-        
-        for (int i = 0; i < 6; i++) {
-            joint_msg.position[i] = actual_joints[i];
-        }
-        
-        joint_state_pub_.publish(joint_msg);
-        
+        CachedRobotState state;
+        state.actual_joints = rtsi_client_->getActualJointPositions();
+        state.actual_tcp_pose_axis_angle = rtsi_client_->getAcutalTCPPose();
+        state.actual_tcp_force = rtsi_client_->getAcutalTCPForce();
+        state.stamp = ros::Time::now();
+        state.valid = true;
+
+        std::lock_guard<std::mutex> lock(cached_state_mutex_);
+        cached_state_ = state;
     } catch (const std::exception& e) {
-        ROS_WARN("Failed to get joint positions: %s", e.what());
+        ROS_WARN_THROTTLE(1.0, "Failed to update cached robot state: %s", e.what());
     }
+}
+
+bool CS66RobotController::copyCachedRobotState(CachedRobotState& state, double max_age_sec) const {
+    std::lock_guard<std::mutex> lock(cached_state_mutex_);
+    if (!cached_state_.valid) {
+        return false;
+    }
+    if (max_age_sec > 0.0 && (ros::Time::now() - cached_state_.stamp).toSec() > max_age_sec) {
+        return false;
+    }
+    state = cached_state_;
+    return true;
+}
+
+void CS66RobotController::publishJointStates() {
+    CachedRobotState state;
+    if (!copyCachedRobotState(state, 0.0)) {
+        return;
+    }
+
+    sensor_msgs::JointState joint_msg;
+    joint_msg.header.stamp = state.stamp;
+    joint_msg.name = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"};
+    joint_msg.position.resize(6);
+    for (int i = 0; i < 6; i++) {
+        joint_msg.position[i] = state.actual_joints[i];
+    }
+
+    joint_state_pub_.publish(joint_msg);
 }
 
 void CS66RobotController::publishTCPPose() {
-    if (!is_initialized_ || !rtsi_client_) return;
-    
-    try {
-        // 获取实际TCP位姿: [x, y, z, rx, ry, rz]
-        // 其中 rx, ry, rz 为旋转向量（axis * angle）
-        vector6d_t actual_pose = rtsi_client_->getAcutalTCPPose();
-        
-        // 创建Pose消息
-        geometry_msgs::Pose pose_msg;
-        
-        // 位置 (x, y, z)
-        pose_msg.position.x = actual_pose[0];
-        pose_msg.position.y = actual_pose[1];
-        pose_msg.position.z = actual_pose[2];
-        
-        const double rx = actual_pose[3];
-        const double ry = actual_pose[4];
-        const double rz = actual_pose[5];
-        const double angle = std::sqrt(rx * rx + ry * ry + rz * rz);
-
-        tf2::Quaternion quat;
-        if (angle < 1e-12) {
-            quat.setValue(0.0, 0.0, 0.0, 1.0);
-        } else {
-            tf2::Vector3 axis(rx / angle, ry / angle, rz / angle);
-            quat.setRotation(axis, angle);
-            quat.normalize();
-        }
-
-        pose_msg.orientation.x = quat.x();
-        pose_msg.orientation.y = quat.y();
-        pose_msg.orientation.z = quat.z();
-        pose_msg.orientation.w = quat.w();
-        
-        tcp_pose_pub_.publish(pose_msg);
-        
-    } catch (const std::exception& e) {
-        ROS_WARN("Failed to get TCP pose: %s", e.what());
+    CachedRobotState state;
+    if (!copyCachedRobotState(state, 0.0)) {
+        return;
     }
+
+    const vector6d_t& actual_pose = state.actual_tcp_pose_axis_angle;
+    geometry_msgs::Pose pose_msg;
+    pose_msg.position.x = actual_pose[0];
+    pose_msg.position.y = actual_pose[1];
+    pose_msg.position.z = actual_pose[2];
+
+    const double rx = actual_pose[3];
+    const double ry = actual_pose[4];
+    const double rz = actual_pose[5];
+    const double angle = std::sqrt(rx * rx + ry * ry + rz * rz);
+
+    tf2::Quaternion quat;
+    if (angle < 1e-12) {
+        quat.setValue(0.0, 0.0, 0.0, 1.0);
+    } else {
+        tf2::Vector3 axis(rx / angle, ry / angle, rz / angle);
+        quat.setRotation(axis, angle);
+        quat.normalize();
+    }
+
+    pose_msg.orientation.x = quat.x();
+    pose_msg.orientation.y = quat.y();
+    pose_msg.orientation.z = quat.z();
+    pose_msg.orientation.w = quat.w();
+
+    tcp_pose_pub_.publish(pose_msg);
 }
 
 void CS66RobotController::publishTCPForce() {
-    if (!is_initialized_ || !rtsi_client_) return;
-
-    try {
-        // 获取实际TCP广义力: [fx, fy, fz, tx, ty, tz]
-        vector6d_t actual_force = rtsi_client_->getAcutalTCPForce();
-
-        std_msgs::Float64MultiArray force_msg;
-        force_msg.data.resize(6);
-        for (int i = 0; i < 6; ++i) {
-            force_msg.data[i] = actual_force[i];
-        }
-
-        tcp_force_pub_.publish(force_msg);
-    } catch (const std::exception& e) {
-        ROS_WARN("Failed to get TCP force: %s", e.what());
+    CachedRobotState state;
+    if (!copyCachedRobotState(state, 0.0)) {
+        return;
     }
+
+    std_msgs::Float64MultiArray force_msg;
+    force_msg.data.resize(6);
+    for (int i = 0; i < 6; ++i) {
+        force_msg.data[i] = state.actual_tcp_force[i];
+    }
+
+    tcp_force_pub_.publish(force_msg);
 }
 
 //直接将轨迹数据整条sdk执行，需要知道执行时间和路点数量，单位为rad
@@ -556,6 +569,251 @@ bool CS66RobotController::WriteIdleOnce(int timeout_ms)
         ROS_ERROR("WriteIdleOnce: writeIdle failed");
     }
     return ok;
+}
+
+bool CS66RobotController::RunJointServoAdmittanceTrajectory(
+    const std::vector<geometry_msgs::Pose>& nominal_poses,
+    moveit::planning_interface::MoveGroupInterface& move_group,
+    const AdmittanceForceControlParams& raw_params)
+{
+    if (!is_initialized_ || !driver_) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: Robot not initialized or driver missing");
+        return false;
+    }
+    if (nominal_poses.size() < 2) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: need at least two nominal poses");
+        return false;
+    }
+
+    AdmittanceForceControlParams params = raw_params;
+    auto clamp = [](double value, double lo, double hi) {
+        return std::max(lo, std::min(hi, value));
+    };
+    params.force_filter_alpha = clamp(params.force_filter_alpha, 0.0, 1.0);
+    params.control_period = std::max(0.002, params.control_period);
+    params.nominal_tcp_speed = std::max(1e-4, params.nominal_tcp_speed);
+    params.admittance_mass = std::max(1e-6, params.admittance_mass);
+
+    auto pose_distance = [](const geometry_msgs::Pose& a, const geometry_msgs::Pose& b) {
+        const double dx = b.position.x - a.position.x;
+        const double dy = b.position.y - a.position.y;
+        const double dz = b.position.z - a.position.z;
+        return std::sqrt(dx * dx + dy * dy + dz * dz);
+    };
+    auto pose_quaternion = [](const geometry_msgs::Pose& pose) {
+        tf2::Quaternion q;
+        tf2::fromMsg(pose.orientation, q);
+        q.normalize();
+        return q;
+    };
+    auto interpolate_pose = [&](const geometry_msgs::Pose& a,
+                                const geometry_msgs::Pose& b,
+                                double t) {
+        t = clamp(t, 0.0, 1.0);
+        geometry_msgs::Pose out;
+        out.position.x = a.position.x + (b.position.x - a.position.x) * t;
+        out.position.y = a.position.y + (b.position.y - a.position.y) * t;
+        out.position.z = a.position.z + (b.position.z - a.position.z) * t;
+        tf2::Quaternion q = pose_quaternion(a).slerp(pose_quaternion(b), t);
+        q.normalize();
+        out.orientation = tf2::toMsg(q);
+        return out;
+    };
+    auto max_abs_joint_delta = [](const std::vector<double>& a, const std::vector<double>& b) {
+        const size_t n = std::min(a.size(), b.size());
+        double max_delta = 0.0;
+        for (size_t i = 0; i < n; ++i) {
+            max_delta = std::max(max_delta, std::abs(a[i] - b[i]));
+        }
+        return max_delta;
+    };
+
+    std::vector<double> cumulative_lengths;
+    cumulative_lengths.reserve(nominal_poses.size());
+    cumulative_lengths.push_back(0.0);
+    for (size_t i = 1; i < nominal_poses.size(); ++i) {
+        cumulative_lengths.push_back(cumulative_lengths.back() +
+                                     pose_distance(nominal_poses[i - 1], nominal_poses[i]));
+    }
+    const double total_length = cumulative_lengths.back();
+    if (total_length < 1e-6) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: nominal path length is too small");
+        return false;
+    }
+    auto pose_at_distance = [&](double distance) {
+        if (distance <= 0.0) {
+            return nominal_poses.front();
+        }
+        if (distance >= total_length) {
+            return nominal_poses.back();
+        }
+        for (size_t i = 0; i + 1 < nominal_poses.size(); ++i) {
+            if (distance <= cumulative_lengths[i + 1]) {
+                const double seg_start = cumulative_lengths[i];
+                const double seg_end = cumulative_lengths[i + 1];
+                const double seg_len = seg_end - seg_start;
+                const double t = seg_len > 1e-9 ? (distance - seg_start) / seg_len : 0.0;
+                return interpolate_pose(nominal_poses[i], nominal_poses[i + 1], t);
+            }
+        }
+        return nominal_poses.back();
+    };
+
+    moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
+    if (!current_state) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: failed to get current MoveIt state");
+        return false;
+    }
+    const moveit::core::JointModelGroup* joint_model_group =
+        current_state->getJointModelGroup(move_group.getName());
+    if (!joint_model_group) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: missing joint model group %s",
+                  move_group.getName().c_str());
+        return false;
+    }
+
+    CachedRobotState cached;
+    if (!copyCachedRobotState(cached, params.state_timeout)) {
+        ROS_ERROR("RunJointServoAdmittanceTrajectory: cached robot state is not ready");
+        return false;
+    }
+
+    std::vector<double> seed_joints(6, 0.0);
+    std::vector<double> last_cmd_joints(6, 0.0);
+    for (int i = 0; i < 6; ++i) {
+        seed_joints[i] = cached.actual_joints[i];
+        last_cmd_joints[i] = cached.actual_joints[i];
+    }
+
+    double filtered_force_z = cached.actual_tcp_force[2];
+    double z_offset = 0.0;
+    double z_dot = 0.0;
+    int consecutive_ik_failures = 0;
+    const double total_duration = total_length / params.nominal_tcp_speed;
+
+    ROS_INFO("RunJointServoAdmittanceTrajectory starts: length=%.4f duration=%.3f target_fz=%.3f",
+             total_length, total_duration, params.target_force_z);
+
+    is_move_finish_ = false;
+    ros::Rate rate(1.0 / params.control_period);
+    const ros::Time start_time = ros::Time::now();
+    size_t cycle = 0;
+
+    while (ros::ok()) {
+        if (emergency_stop_) {
+            ROS_WARN("RunJointServoAdmittanceTrajectory: emergency stop is active");
+            WriteIdleOnce();
+            return false;
+        }
+
+        const double elapsed = (ros::Time::now() - start_time).toSec();
+        const double path_distance = std::min(total_length, elapsed * params.nominal_tcp_speed);
+        const geometry_msgs::Pose nominal_pose = pose_at_distance(path_distance);
+
+        if (!copyCachedRobotState(cached, params.state_timeout)) {
+            ROS_ERROR("RunJointServoAdmittanceTrajectory: cached robot state timeout");
+            WriteIdleOnce();
+            return false;
+        }
+
+        filtered_force_z =
+            params.force_filter_alpha * cached.actual_tcp_force[2] +
+            (1.0 - params.force_filter_alpha) * filtered_force_z;
+
+        if (std::abs(filtered_force_z) > params.force_abort_threshold) {
+            ROS_ERROR("RunJointServoAdmittanceTrajectory: force abort filtered_fz=%.3f threshold=%.3f",
+                      filtered_force_z, params.force_abort_threshold);
+            WriteIdleOnce();
+            return false;
+        }
+
+        // 末端朝下时，8N 接触力对应 TCP-Z 读数约 -8N。
+        // 若当前力为 0N 且目标为 -8N，force_error 为正，z_offset 沿 TCP +Z 增大。
+        const double force_error =
+            params.force_sign * (filtered_force_z - params.target_force_z);
+        const double z_ddot =
+            (force_error - params.admittance_damping * z_dot -
+             params.admittance_stiffness * z_offset) / params.admittance_mass;
+
+        z_dot = clamp(z_dot + z_ddot * params.control_period,
+                      -params.max_z_velocity,
+                      params.max_z_velocity);
+        z_offset = clamp(z_offset + z_dot * params.control_period,
+                         -params.max_z_offset,
+                         params.max_z_offset);
+
+        tf2::Quaternion q = pose_quaternion(nominal_pose);
+        const tf2::Vector3 local_z_axis = tf2::quatRotate(q, tf2::Vector3(0.0, 0.0, 1.0));
+
+        geometry_msgs::Pose cmd_pose = nominal_pose;
+        cmd_pose.position.x += z_offset * local_z_axis.x();
+        cmd_pose.position.y += z_offset * local_z_axis.y();
+        cmd_pose.position.z += z_offset * local_z_axis.z();
+
+        moveit::core::RobotState ik_state(*current_state);
+        ik_state.setJointGroupPositions(joint_model_group, seed_joints);
+        ik_state.update();
+
+        const bool found_ik = ik_state.setFromIK(
+            joint_model_group, cmd_pose, move_group.getEndEffectorLink(), 0.005);
+        if (!found_ik) {
+            ++consecutive_ik_failures;
+            ROS_WARN("RunJointServoAdmittanceTrajectory: IK failed (%d/%d)",
+                     consecutive_ik_failures, params.max_consecutive_ik_failures);
+            if (consecutive_ik_failures >= params.max_consecutive_ik_failures) {
+                WriteIdleOnce();
+                return false;
+            }
+            rate.sleep();
+            continue;
+        }
+        consecutive_ik_failures = 0;
+
+        std::vector<double> q_cmd;
+        ik_state.copyJointGroupPositions(joint_model_group, q_cmd);
+        const double max_joint_delta = max_abs_joint_delta(last_cmd_joints, q_cmd);
+        if (max_joint_delta > params.max_joint_step) {
+            ROS_ERROR("RunJointServoAdmittanceTrajectory: joint step abort max_delta=%.5f threshold=%.5f",
+                      max_joint_delta, params.max_joint_step);
+            WriteIdleOnce();
+            return false;
+        }
+
+        ELITE::vector6d_t servo_cmd = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        for (size_t i = 0; i < 6 && i < q_cmd.size(); ++i) {
+            servo_cmd[i] = q_cmd[i];
+        }
+        if (!driver_->writeServoj(servo_cmd, 100, false, false)) {
+            ROS_ERROR("RunJointServoAdmittanceTrajectory: writeServoj failed");
+            WriteIdleOnce();
+            return false;
+        }
+
+        seed_joints = q_cmd;
+        last_cmd_joints = q_cmd;
+
+        if (cycle % 25 == 0) {
+            ROS_INFO("admittance t=%.2f/%.2f fz=%.3f filtered=%.3f z_offset=%.5f z_dot=%.5f joint_step=%.5f",
+                     elapsed,
+                     total_duration,
+                     cached.actual_tcp_force[2],
+                     filtered_force_z,
+                     z_offset,
+                     z_dot,
+                     max_joint_delta);
+        }
+        ++cycle;
+
+        if (path_distance >= total_length) {
+            break;
+        }
+        rate.sleep();
+    }
+
+    WriteIdleOnce();
+    is_move_finish_ = true;
+    ROS_INFO("RunJointServoAdmittanceTrajectory finished.");
+    return ros::ok();
 }
 
 std::vector<ELITE::vector6d_t> CS66RobotController::GenerateDenseTrajectory(
@@ -807,6 +1065,7 @@ bool CS66RobotController::endForceMode()
 }
 
 void CS66RobotController::statusTimerCallback(const ros::TimerEvent&) {
+    updateCachedRobotState();
     publishJointStates();
     publishTCPPose();
     publishTCPForce();
@@ -859,4 +1118,3 @@ void CS66RobotController::keepaliveTimerCallback(const ros::TimerEvent&) {
 //     result[5] = yaw;
 //     return result;
 // }
-

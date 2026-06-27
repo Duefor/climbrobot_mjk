@@ -22,6 +22,7 @@
 #include <atomic>
 #include <vector>
 #include <cmath>
+#include <mutex>
 
 #if defined(__linux) || defined(linux) || defined(__linux__)
 #include <sys/mman.h>
@@ -29,6 +30,31 @@
 #endif
 
 using namespace ELITE;
+
+namespace moveit {
+namespace planning_interface {
+class MoveGroupInterface;
+}
+}
+
+struct AdmittanceForceControlParams {
+    // 期望的 TCP-Z 力传感器读数，单位 N。末端朝下接触 8N 时通常约为 -8N。
+    double target_force_z = -8.0;
+    // 力误差方向系数。默认力不足时沿名义 TCP 自身 +Z 方向补偿；方向反了设为 -1。
+    double force_sign = 1.0;
+    double admittance_mass = 1.0;   // 质量参数，单位 kg
+    double admittance_damping = 30.0;   // 阻尼参数，单位 N/(m/s)
+    double admittance_stiffness = 80.0;  // 刚度参数，单位 N/m
+    double force_filter_alpha = 0.15;   // 低通滤波系数，范围 [0,1]，越大滤波越慢
+    double control_period = 0.01;   // 控制周期，单位 s，建议 >= 0.002
+    double nominal_tcp_speed = 0.02;    // 名义 TCP 速度，单位 m/s，用于计算轨迹总时长
+    double max_z_offset = 0.05;  // TCP-Z 最大偏移量，单位 m
+    double max_z_velocity = 0.001;   // TCP-Z 最大速度，单位 m/s
+    double max_joint_step = 0.03;   // 最大关节步长，单位 rad，防止关节跳跃
+    double force_abort_threshold = 25.0;    // 当滤波后的 TCP-Z 力超过此阈值时，立即中止轨迹执行，单位 N
+    double state_timeout = 0.2; // 读取缓存状态的超时时间，单位 s
+    int max_consecutive_ik_failures = 3;    // 连续 IK 失败次数超过此值时，立即中止轨迹执行
+};
 
 /**
  * @brief CS66 Robot Controller Class
@@ -81,6 +107,16 @@ private:
     bool is_connected_;
     bool emergency_stop_;
     bool is_move_finish_;
+
+    struct CachedRobotState {
+        ELITE::vector6d_t actual_joints{};
+        ELITE::vector6d_t actual_tcp_pose_axis_angle{};
+        ELITE::vector6d_t actual_tcp_force{};
+        ros::Time stamp;
+        bool valid = false;
+    };
+    mutable std::mutex cached_state_mutex_;
+    CachedRobotState cached_state_;
     
     // 话题名称
     std::string joint_state_topic_;
@@ -96,6 +132,8 @@ private:
     void loadParameters();
     void initializeROSInterface();
     void initializeEliteSDK();
+    void updateCachedRobotState();
+    bool copyCachedRobotState(CachedRobotState& state, double max_age_sec) const;
     
     // 状态发布
     void publishJointStates();
@@ -127,6 +165,11 @@ public:
     
     bool RunServojTrajectory(const std::vector<ELITE::vector6d_t>& trajectory, 
         const std::vector<double>& times);
+
+    bool RunJointServoAdmittanceTrajectory(
+        const std::vector<geometry_msgs::Pose>& nominal_poses,
+        moveit::planning_interface::MoveGroupInterface& move_group,
+        const AdmittanceForceControlParams& params = AdmittanceForceControlParams());
 
     bool WriteServojJointOnce(const ELITE::vector6d_t& joints, int timeout_ms = 100);
 
