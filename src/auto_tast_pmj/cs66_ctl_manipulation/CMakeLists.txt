@@ -105,6 +105,12 @@ target_link_libraries(task_main_mjk
   ${PROJECT_NAME}
 )
 
+add_executable(task_main_admittance src/task_main_admittance.cpp)
+target_link_libraries(task_main_admittance
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 add_executable(camera_calib_eval_node src/camera_calib_eval_node.cpp)
 target_link_libraries(camera_calib_eval_node
   ${catkin_LIBRARIES}
@@ -122,6 +128,7 @@ add_dependencies(cs66_follow_joint_trajectory_server ${${PROJECT_NAME}_EXPORTED_
 add_dependencies(task_main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(task_main_wall ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(task_main_mjk ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(task_main_admittance ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(camera_calib_eval_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(force_mode_probe_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

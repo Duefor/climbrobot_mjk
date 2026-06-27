@@ -524,6 +524,40 @@ bool CS66RobotController::RunServojTrajectory(
     return true;
 }
 
+bool CS66RobotController::WriteServojJointOnce(const ELITE::vector6d_t& joints, int timeout_ms)
+{
+    if (!is_initialized_ || !driver_) {
+        ROS_ERROR("WriteServojJointOnce: Robot not initialized or driver missing");
+        return false;
+    }
+    if (emergency_stop_) {
+        ROS_WARN("WriteServojJointOnce: emergency stop is active");
+        return false;
+    }
+
+    is_move_finish_ = false;
+    const bool ok = driver_->writeServoj(joints, timeout_ms, false, false);
+    if (!ok) {
+        ROS_ERROR("WriteServojJointOnce: writeServoj failed");
+    }
+    return ok;
+}
+
+bool CS66RobotController::WriteIdleOnce(int timeout_ms)
+{
+    if (!is_initialized_ || !driver_) {
+        ROS_ERROR("WriteIdleOnce: Robot not initialized or driver missing");
+        return false;
+    }
+    const bool ok = driver_->writeIdle(timeout_ms);
+    if (ok) {
+        is_move_finish_ = true;
+    } else {
+        ROS_ERROR("WriteIdleOnce: writeIdle failed");
+    }
+    return ok;
+}
+
 std::vector<ELITE::vector6d_t> CS66RobotController::GenerateDenseTrajectory(
     const std::vector<ELITE::vector6d_t>& raw_points,
     double process_speed,
@@ -825,6 +859,4 @@ void CS66RobotController::keepaliveTimerCallback(const ros::TimerEvent&) {
 //     result[5] = yaw;
 //     return result;
 // }
-
-
 

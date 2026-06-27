@@ -128,6 +128,10 @@ public:
     bool RunServojTrajectory(const std::vector<ELITE::vector6d_t>& trajectory, 
         const std::vector<double>& times);
 
+    bool WriteServojJointOnce(const ELITE::vector6d_t& joints, int timeout_ms = 100);
+
+    bool WriteIdleOnce(int timeout_ms = 0);
+
     bool SendScriptToRobot(const std::string& script);
 
     // Force mode control: simplified API - only provide desired Z force (N)
