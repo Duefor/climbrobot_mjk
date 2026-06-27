@@ -12,12 +12,17 @@
 // ============================================================================
 
 #include <cmath>
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include <ros/ros.h>
+#include <moveit_msgs/MoveItErrorCodes.h>
 #include <moveit/move_group_interface/move_group_interface.h>  // MoveIt C++ API
 #include <moveit/robot_state/robot_state.h>                    // 机器人状态（IK 用）
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -39,6 +44,62 @@ constexpr double kCartesianStepMeters = 0.005;
 
 // 第一个接近点使用的规划器：RRTstar（渐进最优的采样规划器，路径质量好但稍慢）
 const char* kFirstApproachPlannerId = "RRTstar";
+
+std::string MoveItErrorCodeToString(const moveit::planning_interface::MoveItErrorCode& code) {
+    switch (code.val) {
+        case moveit_msgs::MoveItErrorCodes::SUCCESS:
+            return "SUCCESS";
+        case moveit_msgs::MoveItErrorCodes::PLANNING_FAILED:
+            return "PLANNING_FAILED";
+        case moveit_msgs::MoveItErrorCodes::INVALID_MOTION_PLAN:
+            return "INVALID_MOTION_PLAN";
+        case moveit_msgs::MoveItErrorCodes::MOTION_PLAN_INVALIDATED_BY_ENVIRONMENT_CHANGE:
+            return "MOTION_PLAN_INVALIDATED_BY_ENVIRONMENT_CHANGE";
+        case moveit_msgs::MoveItErrorCodes::CONTROL_FAILED:
+            return "CONTROL_FAILED";
+        case moveit_msgs::MoveItErrorCodes::UNABLE_TO_AQUIRE_SENSOR_DATA:
+            return "UNABLE_TO_AQUIRE_SENSOR_DATA";
+        case moveit_msgs::MoveItErrorCodes::TIMED_OUT:
+            return "TIMED_OUT";
+        case moveit_msgs::MoveItErrorCodes::PREEMPTED:
+            return "PREEMPTED";
+        case moveit_msgs::MoveItErrorCodes::START_STATE_IN_COLLISION:
+            return "START_STATE_IN_COLLISION";
+        case moveit_msgs::MoveItErrorCodes::START_STATE_VIOLATES_PATH_CONSTRAINTS:
+            return "START_STATE_VIOLATES_PATH_CONSTRAINTS";
+        case moveit_msgs::MoveItErrorCodes::GOAL_IN_COLLISION:
+            return "GOAL_IN_COLLISION";
+        case moveit_msgs::MoveItErrorCodes::GOAL_VIOLATES_PATH_CONSTRAINTS:
+            return "GOAL_VIOLATES_PATH_CONSTRAINTS";
+        case moveit_msgs::MoveItErrorCodes::GOAL_CONSTRAINTS_VIOLATED:
+            return "GOAL_CONSTRAINTS_VIOLATED";
+        case moveit_msgs::MoveItErrorCodes::INVALID_GROUP_NAME:
+            return "INVALID_GROUP_NAME";
+        case moveit_msgs::MoveItErrorCodes::INVALID_GOAL_CONSTRAINTS:
+            return "INVALID_GOAL_CONSTRAINTS";
+        case moveit_msgs::MoveItErrorCodes::INVALID_ROBOT_STATE:
+            return "INVALID_ROBOT_STATE";
+        case moveit_msgs::MoveItErrorCodes::INVALID_LINK_NAME:
+            return "INVALID_LINK_NAME";
+        case moveit_msgs::MoveItErrorCodes::INVALID_OBJECT_NAME:
+            return "INVALID_OBJECT_NAME";
+        case moveit_msgs::MoveItErrorCodes::FRAME_TRANSFORM_FAILURE:
+            return "FRAME_TRANSFORM_FAILURE";
+        case moveit_msgs::MoveItErrorCodes::COLLISION_CHECKING_UNAVAILABLE:
+            return "COLLISION_CHECKING_UNAVAILABLE";
+        case moveit_msgs::MoveItErrorCodes::ROBOT_STATE_STALE:
+            return "ROBOT_STATE_STALE";
+        case moveit_msgs::MoveItErrorCodes::SENSOR_INFO_STALE:
+            return "SENSOR_INFO_STALE";
+        case moveit_msgs::MoveItErrorCodes::NO_IK_SOLUTION:
+            return "NO_IK_SOLUTION";
+        default: {
+            std::ostringstream oss;
+            oss << "UNKNOWN(" << code.val << ")";
+            return oss.str();
+        }
+    }
+}
 
 // ===========================================================================
 // 辅助函数
@@ -212,6 +273,23 @@ void PrintTrajectoryDebug(
     std::cout << "\n================ [DEBUG] Trajectory Inspection ================" << std::endl;
     const auto& joint_names = trajectory.joint_trajectory.joint_names;
     const auto& points = trajectory.joint_trajectory.points;
+    const std::vector<double> current_joints = move_group.getCurrentJointValues();
+
+    ROS_INFO("[DEBUG][Cartesian] group=%s planning_frame=%s ee_link=%s",
+             move_group.getName().c_str(),
+             move_group.getPlanningFrame().c_str(),
+             move_group.getEndEffectorLink().c_str());
+    ROS_INFO("[DEBUG][Cartesian] current_joint_count=%zu trajectory_joint_count=%zu point_count=%zu",
+             current_joints.size(), joint_names.size(), points.size());
+
+    if (joint_names.empty()) {
+        ROS_ERROR("[DEBUG][Cartesian] joint_names is empty.");
+    }
+    if (points.empty()) {
+        ROS_ERROR("[DEBUG][Cartesian] trajectory points are empty; MoveIt execution will fail.");
+        std::cout << "===========================================================\n" << std::endl;
+        return;
+    }
 
     // 打印表头
     std::cout << "Planned Points Count: " << points.size() << std::endl;
@@ -232,12 +310,68 @@ void PrintTrajectoryDebug(
         std::cout << std::endl;
     }
 
+    bool all_times_zero = true;
+    bool time_strictly_increasing = true;
+    bool position_size_ok = true;
+    bool velocity_size_ok = true;
+    bool acceleration_size_ok = true;
+    double previous_time = points.front().time_from_start.toSec();
+    double min_segment_dt = std::numeric_limits<double>::infinity();
+    double max_segment_dt = 0.0;
+
+    for (size_t i = 0; i < points.size(); ++i) {
+        const auto& point = points[i];
+        const double t = point.time_from_start.toSec();
+        all_times_zero = all_times_zero && std::abs(t) < 1e-9;
+
+        if (i > 0) {
+            const double dt = t - previous_time;
+            if (dt <= 0.0) {
+                time_strictly_increasing = false;
+            }
+            min_segment_dt = std::min(min_segment_dt, dt);
+            max_segment_dt = std::max(max_segment_dt, dt);
+        }
+        previous_time = t;
+
+        position_size_ok = position_size_ok && (point.positions.size() == joint_names.size());
+        velocity_size_ok = velocity_size_ok &&
+            (point.velocities.empty() || point.velocities.size() == joint_names.size());
+        acceleration_size_ok = acceleration_size_ok &&
+            (point.accelerations.empty() || point.accelerations.size() == joint_names.size());
+    }
+
+    ROS_INFO("[DEBUG][Cartesian] first_time=%.6f last_time=%.6f duration=%.6f",
+             points.front().time_from_start.toSec(),
+             points.back().time_from_start.toSec(),
+             points.back().time_from_start.toSec() - points.front().time_from_start.toSec());
+    if (points.size() > 1) {
+        ROS_INFO("[DEBUG][Cartesian] segment_dt_min=%.6f segment_dt_max=%.6f",
+                 min_segment_dt, max_segment_dt);
+    }
+    ROS_INFO("[DEBUG][Cartesian] checks all_times_zero=%s time_strictly_increasing=%s position_size_ok=%s velocity_size_ok=%s acceleration_size_ok=%s",
+             all_times_zero ? "true" : "false",
+             time_strictly_increasing ? "true" : "false",
+             position_size_ok ? "true" : "false",
+             velocity_size_ok ? "true" : "false",
+             acceleration_size_ok ? "true" : "false");
+
+    if (all_times_zero) {
+        ROS_ERROR("[DEBUG][Cartesian] all time_from_start values are zero. The trajectory likely needs time parameterization before execute().");
+    }
+    if (!time_strictly_increasing) {
+        ROS_ERROR("[DEBUG][Cartesian] time_from_start is not strictly increasing.");
+    }
+    if (!position_size_ok || !velocity_size_ok || !acceleration_size_ok) {
+        ROS_ERROR("[DEBUG][Cartesian] trajectory point vector sizes do not match joint_names.");
+    }
+
     // 起点跳变检查：轨迹第一个规划点 vs 当前实际关节角
     std::cout << "\n================ [DEBUG] Start Point Check ================" << std::endl;
-    std::vector<double> current_joints = move_group.getCurrentJointValues();
     if (!points.empty()) {
         std::cout << "Joint ID | Current (Real) | Trajectory[0] (Plan) | Diff (Rad)" << std::endl;
-        for (size_t j = 0; j < current_joints.size(); ++j) {
+        const size_t joint_count = std::min(current_joints.size(), points[0].positions.size());
+        for (size_t j = 0; j < joint_count; ++j) {
             const double diff = points[0].positions[j] - current_joints[j];
             printf("Joint %zu  | %14.6f | %18.6f | %10.6f",
                    j, current_joints[j], points[0].positions[j], diff);
@@ -245,6 +379,10 @@ void PrintTrajectoryDebug(
                 std::cout << " <--- JUMP DETECTED!";      // 警告：关节跳变！
             }
             std::cout << std::endl;
+        }
+        if (current_joints.size() != points[0].positions.size()) {
+            ROS_ERROR("[DEBUG][Cartesian] current joint count (%zu) != trajectory[0] positions count (%zu).",
+                      current_joints.size(), points[0].positions.size());
         }
     }
     std::cout << "===========================================================\n" << std::endl;
@@ -314,7 +452,7 @@ int main(int argc, char** argv) {
     // const std::vector<double> observation_joints = {0.87, -1.51, -1.44, -1.79, 1.56, -0.7};
     // const std::vector<double> observation_joints = {0.12, -1.38,-2.24,-1.09,1.57,-1.45};
     // const std::vector<double> observation_joints = {0.12, -1.42, -1.94, -1.26, 1.57, -1.44};
-    const std::vector<double> observation_joints = {-0.63, -1.86, -1.18, -1.67, 1.57, -2.14};
+    const std::vector<double> observation_joints = {0.03, -0.96, -1.95, -1.81, 1.57, -1.55};
 
     // shouna_joints: 收納姿态——任务结束后机械臂收回的安全位置
     const std::vector<double> shouna_joints = {0.04, -0.11, -2.7, -1.24, 1.45, -0.37};
@@ -406,6 +544,20 @@ int main(int argc, char** argv) {
     // --- 4A. 构建笛卡尔路点 ---
     // 丢弃第一个点（Step 3 已到达），从 index=1 开始
     std::vector<geometry_msgs::Pose> waypoints = BuildTrackingWaypoints(target_poses);
+    ROS_INFO("[DEBUG][Cartesian] target_pose_count=%zu waypoint_count=%zu cartesian_step=%.4f",
+             target_poses.size(), waypoints.size(), kCartesianStepMeters);
+    if (!waypoints.empty()) {
+        const auto& first_waypoint = waypoints.front();
+        const auto& last_waypoint = waypoints.back();
+        ROS_INFO("[DEBUG][Cartesian] first waypoint pos=[%.4f %.4f %.4f] quat=[%.4f %.4f %.4f %.4f]",
+                 first_waypoint.position.x, first_waypoint.position.y, first_waypoint.position.z,
+                 first_waypoint.orientation.x, first_waypoint.orientation.y,
+                 first_waypoint.orientation.z, first_waypoint.orientation.w);
+        ROS_INFO("[DEBUG][Cartesian] last waypoint pos=[%.4f %.4f %.4f] quat=[%.4f %.4f %.4f %.4f]",
+                 last_waypoint.position.x, last_waypoint.position.y, last_waypoint.position.z,
+                 last_waypoint.orientation.x, last_waypoint.orientation.y,
+                 last_waypoint.orientation.z, last_waypoint.orientation.w);
+    }
 
     // --- 4B. 笛卡尔路径规划 ---
     // computeCartesianPath:
@@ -413,9 +565,13 @@ int main(int argc, char** argv) {
     //   - 每个中间点调用 IK，保持末端沿直线运动
     //   - kCartesianStepMeters=0.005: 每隔 5mm 插一个点
     //   - fraction: 成功规划的比例（1.0=100%成功，<0.9 时发出警告）
+
+    ros::Duration(0.5).sleep();
+    move_group.setStartStateToCurrentState();
     moveit_msgs::RobotTrajectory trajectory;
     double fraction = move_group.computeCartesianPath(
         waypoints, kCartesianStepMeters, trajectory);
+    ROS_INFO("[DEBUG][Cartesian] computeCartesianPath fraction=%.6f", fraction);
 
     // 打印轨迹调试信息（关节角表 + 起点跳变检查）
     PrintTrajectoryDebug(move_group, trajectory);
@@ -427,6 +583,10 @@ int main(int argc, char** argv) {
     // 将规划的轨迹包装为 MoveIt Plan
     moveit::planning_interface::MoveGroupInterface::Plan cartesian_plan;
     cartesian_plan.trajectory_ = trajectory;
+    if (trajectory.joint_trajectory.points.empty()) {
+        ROS_ERROR("[DEBUG][Cartesian] Refusing to execute empty Cartesian trajectory.");
+        return -1;
+    }
 
     // ===================================================================
     // 4C. 力控参数配置
@@ -518,13 +678,13 @@ int main(int argc, char** argv) {
     // {0, 0, 8.0, 0, 0, 0}:
     //   Fz = 8.0N（Z 方向施加 8 牛顿的恒定接触力）
     //   其他方向力/力矩均为 0
-    const ELITE::vector6d_t force_wrench = {0.0, 0.0, 8.0, 0.0, 0.0, 0.0};
+    const ELITE::vector6d_t force_wrench = {0.0, 0.0, 20.0, 0.0, 0.0, 0.0};
 
     // ---- 力控位移限制 (force_limits) ----
     // {0, 0, 0.02, 0, 0, 0}:
     //   Z 方向最大顺应位移 = 0.02m = 2cm
     //   防止力控过度偏离轨迹（如深度相机误读导致工具压入工件太深）
-    const ELITE::vector6d_t force_limits = {0, 0, 0.02, 0, 0, 0};
+    const ELITE::vector6d_t force_limits = {0, 0, 0.75, 0, 0, 0};
 
     // ===================================================================
     // 4D. 开启力控 + 执行笛卡尔轨迹
@@ -547,7 +707,23 @@ int main(int argc, char** argv) {
     // if (!my_controller->RunServojTrajectory(sdk_traj, traj_times)) { ... }
 
     // MoveIt 执行笛卡尔轨迹（力控已在后台运行）
+    const std::vector<double> joints_before_execute = move_group.getCurrentJointValues();
+    ROS_INFO("[DEBUG][Cartesian] execute() starting. current_joint_count=%zu trajectory_points=%zu trajectory_duration=%.6f",
+             joints_before_execute.size(),
+             cartesian_plan.trajectory_.joint_trajectory.points.size(),
+             cartesian_plan.trajectory_.joint_trajectory.points.back().time_from_start.toSec());
     const auto cartesian_exec_result = move_group.execute(cartesian_plan);
+    ROS_INFO("[DEBUG][Cartesian] execute() result=%s (%d)",
+             MoveItErrorCodeToString(cartesian_exec_result).c_str(),
+             cartesian_exec_result.val);
+    const std::vector<double> joints_after_execute = move_group.getCurrentJointValues();
+    for (size_t i = 0; i < std::min(joints_before_execute.size(), joints_after_execute.size()); ++i) {
+        ROS_INFO("[DEBUG][Cartesian] joint[%zu] before=%.6f after=%.6f delta=%.6f",
+                 i,
+                 joints_before_execute[i],
+                 joints_after_execute[i],
+                 joints_after_execute[i] - joints_before_execute[i]);
+    }
 
     // 轨迹执行完毕后关闭力控
     const bool force_end_ok = my_controller->endForceMode();
@@ -582,7 +758,3 @@ int main(int argc, char** argv) {
     ros::waitForShutdown();
     return 0;
 }
-
-
-
-

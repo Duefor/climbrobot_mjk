@@ -6,8 +6,8 @@ import os
 import sys
 
 # 1. 强制预加载系统 libgomp (请先用 find /usr/lib -name "libgomp.so.1" 确认路径)
-# os.environ["LD_PRELOAD"] = "/usr/lib/aarch64-linux-gnu/libgomp.so.1"
-os.environ["LD_PRELOAD"] = "/usr/lib/x86_64-linux-gnu/libgomp.so.1"
+os.environ["LD_PRELOAD"] = "/usr/lib/aarch64-linux-gnu/libgomp.so.1"
+# os.environ["LD_PRELOAD"] = "/usr/lib/x86_64-linux-gnu/libgomp.so.1"
 
 # 2. 限制 OpenMP 线程数，双保险
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -59,6 +59,15 @@ from scipy.interpolate import splprep, splev
 from mv3d_rgbd_ros.srv import DetectSteelStamp, DetectSteelStampResponse
 
 
+def parse_bool_param(value, default=False):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    if value is None:
+        return default
+    return bool(value)
+
 
 class SteelStampOcrSoloServer:
     """
@@ -87,7 +96,7 @@ class SteelStampOcrSoloServer:
         self.sync_slop = float(rospy.get_param('~sync_slop', 0.05))
         
         self.depth_min_mm = int(rospy.get_param('~depth_min_mm', 300))
-        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 600))
+        self.depth_max_mm = int(rospy.get_param('~depth_max_mm', 1000))
 
         # 新增扩展配置，21为默认ROI提取大小
         self.roi_window_size = int(rospy.get_param('~roi_window_size', 21))
@@ -97,8 +106,12 @@ class SteelStampOcrSoloServer:
         self.arc_sample_step_m = float(rospy.get_param('~arc_sample_step_m', 0.004))
         self.max_arc_points = int(rospy.get_param('~max_arc_points', 500))
         # 新增法向偏移配置，默认 -0.048m（-48mm）向工件表面内偏移
-        self.trajectory_normal_offset_m = float(rospy.get_param('~trajectory_normal_offset_m', -0.048))
+        self.trajectory_normal_offset_m = float(rospy.get_param('~trajectory_normal_offset_m', -0.036))
+        self.cylinder_diameter_m = float(rospy.get_param('~cylinder_diameter_m', 4.3))
+        self.cylinder_radius_m = 0.5 * self.cylinder_diameter_m
         self.debug_image_prefix = rospy.get_param('~debug_image_prefix', 'cyl_solo_result')
+        # True: point -> circle center. False: circle center -> point.
+        self.pose_z_to_center = parse_bool_param(rospy.get_param('~pose_z_to_center', False), False)
 
         # 姿态切向参考向
         self.pose_reference_axis = np.asarray(rospy.get_param('~pose_reference_axis', [1.0, 0.0, 0.0]), dtype=np.float64)
@@ -120,8 +133,8 @@ class SteelStampOcrSoloServer:
         os.makedirs(self.save_dir, exist_ok=True)
 
         # 加载 OCR 模型
-        self.det_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
-        self.rec_model_path = '/home/barry/workspace/ws_moveit/PaddleOCR/inference/steel_rec_model'
+        self.det_model_path = '/home/m/ws_moveit/PaddleOCR/inference/det_steel_wall_new'
+        self.rec_model_path = '/home/m/ws_moveit/PaddleOCR/inference/steel_rec_model'
         self.ocr = PaddleOCR(
             use_angle_cls=True,
             lang='en',
@@ -151,6 +164,9 @@ class SteelStampOcrSoloServer:
         self.pose_array_pub = rospy.Publisher('/debug/steel_pose_array_solo', PoseArray, queue_size=1, latch=True)
 
         rospy.loginfo('独立局部极平滑与三次 B 样条 OCR 节点已启动, service=%s', self.service_name)
+        rospy.loginfo('pose_z_to_center=%s', str(self.pose_z_to_center))
+        rospy.loginfo('cylinder_diameter_m=%.4f cylinder_radius_m=%.4f',
+                      self.cylinder_diameter_m, self.cylinder_radius_m)
 
     def sync_callback(self, rgb_msg, depth_msg, info_msg):
         with self.data_lock:
@@ -549,11 +565,28 @@ class SteelStampOcrSoloServer:
 
         valid_entries = []
         previous_normal = None
+        raw_radius_values = []
+        projection_offsets = []
         for entry in raw_entries:
+            raw_point = entry['point']
             if center is not None:
-                inward_normal = center - entry['point']
-                normal = self.safe_normalize(inward_normal, entry['local_normal'])
+                radial_out = raw_point - center
+                raw_radius = np.linalg.norm(radial_out)
+                raw_radius_values.append(raw_radius)
+
+                if raw_radius < 1e-9:
+                    radial_out = self.safe_normalize(entry['local_normal'], self.base_negative_axis)
+                else:
+                    radial_out = radial_out / raw_radius
+
+                projected_point = center + self.cylinder_radius_m * radial_out
+                projection_offsets.append(np.linalg.norm(projected_point - raw_point))
+
+                radial_to_center = center - projected_point
+                normal = radial_to_center if self.pose_z_to_center else -radial_to_center
+                normal = self.safe_normalize(normal, entry['local_normal'])
             else:
+                projected_point = raw_point
                 normal = entry['local_normal']
                 if np.dot(normal, self.base_negative_axis) < 0:
                     normal = -normal
@@ -563,16 +596,29 @@ class SteelStampOcrSoloServer:
                 normal = -normal
             previous_normal = normal
 
-            pose = self.pose_from_oriented_normal(entry['point'], normal)
+            pose = self.pose_from_oriented_normal(projected_point, normal)
             valid_entries.append({
                 'text': entry['text'],
                 'bbox': entry['bbox'],
                 'center_px': entry['center_px'],
                 'score': entry['score'],
                 'pose': pose,
-                'point': entry['point'],
+                'raw_point': raw_point,
+                'point': projected_point,
                 'normal': normal,
             })
+
+        if raw_radius_values:
+            raw_radius_values = np.asarray(raw_radius_values, dtype=np.float64)
+            projection_offsets = np.asarray(projection_offsets, dtype=np.float64)
+            rospy.loginfo(
+                'Solo fixed-radius projection: target_radius=%.4f raw_radius[min/mean/max]=[%.4f %.4f %.4f] max_projection_offset=%.4f',
+                self.cylinder_radius_m,
+                float(np.min(raw_radius_values)),
+                float(np.mean(raw_radius_values)),
+                float(np.max(raw_radius_values)),
+                float(np.max(projection_offsets)) if len(projection_offsets) > 0 else 0.0,
+            )
 
         return valid_entries
 
@@ -599,7 +645,20 @@ class SteelStampOcrSoloServer:
         if center_2d is None:
             return None
 
-        return plane_origin + center_2d[0] * basis_u + center_2d[1] * basis_v
+        fixed_center_2d = self.refine_circle_center_with_fixed_radius_2d(
+            x, y, center_2d, self.cylinder_radius_m)
+        free_radius = np.sqrt(np.square(x - center_2d[0]) + np.square(y - center_2d[1]))
+        fixed_radius = np.sqrt(np.square(x - fixed_center_2d[0]) + np.square(y - fixed_center_2d[1]))
+        rospy.loginfo(
+            'Solo circle fit: free_radius_mean=%.4f fixed_radius_target=%.4f fixed_radius[min/mean/max]=[%.4f %.4f %.4f]',
+            float(np.mean(free_radius)),
+            self.cylinder_radius_m,
+            float(np.min(fixed_radius)),
+            float(np.mean(fixed_radius)),
+            float(np.max(fixed_radius)),
+        )
+
+        return plane_origin + fixed_center_2d[0] * basis_u + fixed_center_2d[1] * basis_v
 
     def fit_circle_center_2d(self, x, y):
         if len(x) < 3:
@@ -615,6 +674,33 @@ class SteelStampOcrSoloServer:
             return None
 
         return np.array([solution[0], solution[1]], dtype=np.float64)
+
+    def refine_circle_center_with_fixed_radius_2d(self, x, y, initial_center, radius):
+        center = np.asarray(initial_center, dtype=np.float64).copy()
+        points = np.column_stack((x, y)).astype(np.float64)
+        radius = float(radius)
+        if len(points) < 2 or radius <= 1e-9:
+            return center
+
+        for _ in range(20):
+            diff = center[None, :] - points
+            distances = np.linalg.norm(diff, axis=1)
+            valid = distances > 1e-9
+            if np.count_nonzero(valid) < 2:
+                break
+
+            residual = distances[valid] - radius
+            jacobian = diff[valid] / distances[valid, None]
+            try:
+                delta, _, _, _ = np.linalg.lstsq(jacobian, -residual, rcond=None)
+            except np.linalg.LinAlgError:
+                break
+
+            center += delta
+            if np.linalg.norm(delta) < 1e-6:
+                break
+
+        return center
 
     def generate_bspline_trajectory(self, valid_entries):
         """

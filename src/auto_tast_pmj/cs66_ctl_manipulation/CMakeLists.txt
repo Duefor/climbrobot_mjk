@@ -111,12 +111,19 @@ target_link_libraries(camera_calib_eval_node
   ${PROJECT_NAME}
 )
 
+add_executable(force_mode_probe_node src/force_mode_probe_node.cpp)
+target_link_libraries(force_mode_probe_node
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 ## Add cmake target dependencies of the executable
 add_dependencies(cs66_follow_joint_trajectory_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(task_main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(task_main_wall ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(task_main_mjk ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(camera_calib_eval_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(force_mode_probe_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(cs66_follow_joint_trajectory_server

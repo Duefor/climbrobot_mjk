@@ -92,7 +92,7 @@ CS66RobotController::~CS66RobotController() {
 void CS66RobotController::loadParameters() {
     // 从ROS参数服务器读取配置
     private_nh_.param<std::string>("robot_ip", robot_ip_, "192.168.1.199");
-    private_nh_.param<std::string>("local_ip", local_ip_, "192.168.1.150");
+    private_nh_.param<std::string>("local_ip", local_ip_, "192.168.1.234");
     private_nh_.param<bool>("headless_mode", headless_mode_, true);
     private_nh_.param<double>("control_frequency", control_frequency_, 50.0);
     private_nh_.param<double>("status_frequency", status_frequency_, 250.0);
@@ -460,6 +460,13 @@ bool CS66RobotController::RunServojTrajectory(
     const std::vector<ELITE::vector6d_t>& trajectory,
     const std::vector<double>& times)
 {
+    ROS_INFO("RunServojTrajectory called: raw_points=%zu time_count=%zu initialized=%s driver=%s emergency_stop=%s",
+             trajectory.size(),
+             times.size(),
+             is_initialized_ ? "true" : "false",
+             driver_ ? "true" : "false",
+             emergency_stop_ ? "true" : "false");
+
     if (trajectory.size() < 2 || trajectory.size() != times.size()) {
         ROS_ERROR("Invalid trajectory size for Servoj");
         return false;
@@ -473,10 +480,19 @@ bool CS66RobotController::RunServojTrajectory(
     const double servo_period = config_.servoj_time > 0 ? config_.servoj_time : 0.004;
     double process_speed = 0.2;   // 0.5rad/s    1rad/s = 57.3 deg/s
     std::vector<ELITE::vector6d_t> dense_traj = GenerateDenseTrajectory(trajectory, process_speed, servo_period);
+    ROS_INFO("RunServojTrajectory config: servo_period=%.6f process_speed=%.6f dense_points=%zu",
+             servo_period, process_speed, dense_traj.size());
     if (dense_traj.empty()) {
         ROS_ERROR("Generated dense trajectory is empty");
         return false;
     }
+
+    ROS_INFO("RunServojTrajectory first dense target: [%.6f %.6f %.6f %.6f %.6f %.6f]",
+             dense_traj.front()[0], dense_traj.front()[1], dense_traj.front()[2],
+             dense_traj.front()[3], dense_traj.front()[4], dense_traj.front()[5]);
+    ROS_INFO("RunServojTrajectory last dense target: [%.6f %.6f %.6f %.6f %.6f %.6f]",
+             dense_traj.back()[0], dense_traj.back()[1], dense_traj.back()[2],
+             dense_traj.back()[3], dense_traj.back()[4], dense_traj.back()[5]);
 
     is_move_finish_ = false;
     auto next = std::chrono::steady_clock::now();
@@ -487,7 +503,11 @@ bool CS66RobotController::RunServojTrajectory(
         }
 
         if (!driver_->writeServoj(dense_traj[i], 100, false, false)) {
-            ROS_ERROR("writeServoj failed at step %zu", i);
+            ROS_ERROR("writeServoj failed at step %zu/%zu target=[%.6f %.6f %.6f %.6f %.6f %.6f]",
+                      i,
+                      dense_traj.size(),
+                      dense_traj[i][0], dense_traj[i][1], dense_traj[i][2],
+                      dense_traj[i][3], dense_traj[i][4], dense_traj[i][5]);
             return false;
         }
         if (!ros::ok()) {
@@ -720,7 +740,7 @@ bool CS66RobotController::startForceMode(const ELITE::vector6d_t& ref_frame,
         ROS_ERROR("startForceMode: driver reported failure");
         return false;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     ROS_INFO("startForceMode: started successfully");
     return true;

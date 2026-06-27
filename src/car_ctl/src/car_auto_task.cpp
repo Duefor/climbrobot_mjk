@@ -139,7 +139,7 @@ private:
     ROS_INFO("[%s] Received goal: distance=%.3f m", action_name_.c_str(), goal->distance);
     stop_requested_.store(false);
 
-    double rotation_revs = computeRotationRevolutions();
+    double rotation_revs = 1.4 * computeRotationRevolutions();
     double distance_revs = computeDistanceRevolutions(goal->distance);
     double turn_timeout = std::max(base_turn_timeout_, std::fabs(rotation_revs) * 10.0);
     double drive_timeout = std::max(base_drive_timeout_, std::fabs(distance_revs) * 10.0);
@@ -162,6 +162,8 @@ private:
     feedback.progress = 0.33f;
     as_.publishFeedback(feedback);
 
+    ros::Duration(1.0).sleep();
+
     // 2. Forward move
     if (!sendWheelPositionGoal(distance_revs, distance_revs, drive_timeout, overall_deadline)) {
       result.success = false;
@@ -176,8 +178,10 @@ private:
     feedback.progress = 0.66f;
     as_.publishFeedback(feedback);
 
+    ros::Duration(1.0).sleep();
+
     // 3. Counter-clockwise 90° turn
-    if (!sendWheelPositionGoal(-rotation_revs, rotation_revs, turn_timeout, overall_deadline)) {
+    if (!sendWheelPositionGoal(-1.0635 * rotation_revs, 1.0635 * rotation_revs, turn_timeout, overall_deadline)) {
       result.success = false;
       result.message = "Failed during second 90-degree rotation";
       if (stop_requested_.load() || as_.isPreemptRequested()) {

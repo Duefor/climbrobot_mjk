@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <limits>
 #include <chrono>
 #include <Elite/DataType.hpp>
 #include "cs66_robot_controller.h"
@@ -60,8 +61,19 @@ void CS66FollowTrajectoryServer::executeCB(const FollowGoalConstPtr& goal)
   trajectory.reserve(traj.points.size());
   time_vec.reserve(traj.points.size());
   double last_time_stamp = 0.0;
+  double min_duration = std::numeric_limits<double>::infinity();
+  double max_duration = 0.0;
+  bool non_positive_duration = false;
 
-  for (const auto& pt : traj.points) {
+  ROS_INFO("FollowJointTrajectory goal received: joints=%zu points=%zu",
+           traj.joint_names.size(), traj.points.size());
+  for (size_t i = 0; i < traj.joint_names.size(); ++i) {
+    ROS_INFO("  joint_names[%zu]=%s -> sdk_index=%d",
+             i, traj.joint_names[i].c_str(), idx_map[i]);
+  }
+
+  for (size_t point_index = 0; point_index < traj.points.size(); ++point_index) {
+    const auto& pt = traj.points[point_index];
     if (pt.positions.size() != traj.joint_names.size()) {
       result.error_code = result.INVALID_GOAL;
       return abortGoal("Trajectory point joint size mismatch");
@@ -77,12 +89,34 @@ void CS66FollowTrajectoryServer::executeCB(const FollowGoalConstPtr& goal)
     double current_time_stamp = pt.time_from_start.toSec(); 
 
     double duration = current_time_stamp - last_time_stamp;
+    if (point_index > 0) {
+      min_duration = std::min(min_duration, duration);
+      max_duration = std::max(max_duration, duration);
+      if (duration <= 0.0) {
+        non_positive_duration = true;
+      }
+    }
     time_vec.push_back(duration);
     trajectory.push_back(target_joints);
     last_time_stamp = current_time_stamp;
   }
 
-  ROS_INFO("Trajectory received: %zu points. Sending to SDK...", trajectory.size());
+  ROS_INFO("Trajectory received: %zu points. total_time=%.6f min_dt=%.6f max_dt=%.6f non_positive_dt=%s",
+           trajectory.size(),
+           last_time_stamp,
+           std::isfinite(min_duration) ? min_duration : 0.0,
+           max_duration,
+           non_positive_duration ? "true" : "false");
+  if (!trajectory.empty()) {
+    ROS_INFO("First SDK target: [%.6f %.6f %.6f %.6f %.6f %.6f], first_dt=%.6f",
+             trajectory.front()[0], trajectory.front()[1], trajectory.front()[2],
+             trajectory.front()[3], trajectory.front()[4], trajectory.front()[5],
+             time_vec.front());
+    ROS_INFO("Last SDK target: [%.6f %.6f %.6f %.6f %.6f %.6f]",
+             trajectory.back()[0], trajectory.back()[1], trajectory.back()[2],
+             trajectory.back()[3], trajectory.back()[4], trajectory.back()[5]);
+  }
+  ROS_INFO("Sending trajectory to SDK...");
 
   if (as_.isPreemptRequested()) {
     control_msgs::FollowJointTrajectoryResult preempt_result;

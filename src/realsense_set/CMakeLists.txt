@@ -171,7 +171,7 @@ add_executable(imu_cov_republisher src/imu_cov_republisher.cpp)
 
 add_executable(camera_imu_error src/camera_imu_error.cpp)
 
-add_executable(testC src/testC.cpp)
+# add_executable(testC src/testC.cpp)
 
 
 ## Rename C++ executable without prefix
@@ -214,10 +214,10 @@ target_link_libraries(camera_imu_error
 )
 
 
-target_link_libraries(testC
-  ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
-)
+# target_link_libraries(testC
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
 #############
 ## Install ##
 #############

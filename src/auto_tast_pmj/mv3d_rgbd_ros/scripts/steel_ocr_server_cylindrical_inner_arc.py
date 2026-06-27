@@ -31,6 +31,16 @@ from visualization_msgs.msg import Marker, MarkerArray
 from mv3d_rgbd_ros.srv import DetectSteelStamp, DetectSteelStampResponse
 
 
+def parse_bool_param(value, default=False):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    if value is None:
+        return default
+    return bool(value)
+
+
 class SteelStampCylindricalInnerArcServer:
     """
     规则圆柱内壁单圈字符专用：
@@ -87,7 +97,7 @@ class SteelStampCylindricalInnerArcServer:
         self.trajectory_mode = rospy.get_param('~trajectory_mode', 'dense_arc')
         self.arc_sample_step_m = float(rospy.get_param('~arc_sample_step_m', 0.004))
         self.max_arc_points = int(rospy.get_param('~max_arc_points', 500))
-        self.pose_z_to_center = bool(rospy.get_param('~pose_z_to_center', True))
+        self.pose_z_to_center = parse_bool_param(rospy.get_param('~pose_z_to_center', True), True)
         self.debug_image_prefix = rospy.get_param('~debug_image_prefix', 'cyl_inner_arc_result')
         self.sort_by = rospy.get_param('~sort_by', 'ocr_x')
         # self.sort_by = rospy.get_param('~sort_by', 'arc_angle')
