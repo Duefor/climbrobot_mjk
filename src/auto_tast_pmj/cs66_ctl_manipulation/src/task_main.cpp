@@ -180,6 +180,24 @@ bool MoveToPoseWithOptimizingPlanner(
     moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
     const moveit::core::JointModelGroup* joint_model_group =
         current_state->getJointModelGroup(move_group.getName());
+    std::vector<double> current_joint_values;
+    current_state->copyJointGroupPositions(joint_model_group, current_joint_values);
+
+    // Fill this with the preferred 6-joint configuration near the desired IK branch.
+    // Leave it empty to keep using the current robot state as the IK seed.
+    const std::vector<double> preferred_seed_joints = {
+        // TODO: fill expected joints here, for example:
+        // j1, j2, j3, j4, j5, j6
+    };
+    if (preferred_seed_joints.size() == current_joint_values.size()) {
+        current_state->setJointGroupPositions(joint_model_group, preferred_seed_joints);
+        ROS_INFO("[DEBUG][FirstIK] Using preferred seed joints for first approach IK.");
+    } else if (!preferred_seed_joints.empty()) {
+        ROS_WARN("[DEBUG][FirstIK] preferred_seed_joints size=%zu, expected=%zu. Using current state as IK seed.",
+                 preferred_seed_joints.size(), current_joint_values.size());
+    } else {
+        ROS_INFO("[DEBUG][FirstIK] preferred_seed_joints is empty. Using current state as IK seed.");
+    }
 
     // 2. 逆运动学求解
     //    setFromIK(target_pose, timeout):
@@ -196,8 +214,21 @@ bool MoveToPoseWithOptimizingPlanner(
     // 3. 提取 IK 解出的目标关节角
     std::vector<double> target_joint_values;
     current_state->copyJointGroupPositions(joint_model_group, target_joint_values);
-    // [安全提示]：可在此处打印 target_joint_values，
-    // 与当前关节角对比，确保 J1/J2 变化量 < 0.5 rad
+    for (size_t i = 0; i < target_joint_values.size(); ++i) {
+        const double current_delta =
+            i < current_joint_values.size() ? target_joint_values[i] - current_joint_values[i] : 0.0;
+        if (preferred_seed_joints.size() == target_joint_values.size()) {
+            const double seed_delta = target_joint_values[i] - preferred_seed_joints[i];
+            ROS_INFO("[DEBUG][FirstIK] joint[%zu] current=%.6f seed=%.6f ik=%.6f ik-current=%.6f ik-seed=%.6f",
+                     i, current_joint_values[i], preferred_seed_joints[i],
+                     target_joint_values[i], current_delta, seed_delta);
+        } else {
+            ROS_INFO("[DEBUG][FirstIK] joint[%zu] current=%.6f ik=%.6f ik-current=%.6f",
+                     i,
+                     i < current_joint_values.size() ? current_joint_values[i] : 0.0,
+                     target_joint_values[i], current_delta);
+        }
+    }
 
     // 4. 关节空间规划（而非笛卡尔空间）
     move_group.setStartStateToCurrentState();            // 从当前状态出发

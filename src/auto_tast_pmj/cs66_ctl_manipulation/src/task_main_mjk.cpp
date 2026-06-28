@@ -43,7 +43,7 @@ namespace {
 constexpr double kCartesianStepMeters = 0.005;
 
 // 每轮扫查结束后，小车横向移动距离（米）
-constexpr double kCarMoveDistanceMeters = -0.6;
+constexpr double kCarMoveDistanceMeters = -0.9;
 
 // 第一个接近点使用的规划器：RRTstar（渐进最优的采样规划器，路径质量好但稍慢）
 const char* kFirstApproachPlannerId = "RRTstar";
@@ -154,6 +154,19 @@ bool MoveToPoseWithOptimizingPlanner(
     moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
     const moveit::core::JointModelGroup* joint_model_group =
         current_state->getJointModelGroup(move_group.getName());
+    std::vector<double> current_joint_values;
+    current_state->copyJointGroupPositions(joint_model_group, current_joint_values);
+
+    const std::vector<double> preferred_seed_joints = {
+        0.03, -2.71, -2.43, 0.45, 1.57, -1.55
+    };
+    if (preferred_seed_joints.size() == current_joint_values.size()) {
+        current_state->setJointGroupPositions(joint_model_group, preferred_seed_joints);
+        ROS_INFO("[DEBUG][FirstIK] Using preferred seed joints for first approach IK.");
+    } else {
+        ROS_WARN("[DEBUG][FirstIK] preferred_seed_joints size=%zu, expected=%zu. Using current state as IK seed.",
+                 preferred_seed_joints.size(), current_joint_values.size());
+    }
 
     // 2. 逆运动学求解
     //    setFromIK(target_pose, timeout):
@@ -170,6 +183,19 @@ bool MoveToPoseWithOptimizingPlanner(
     // 3. 提取 IK 解出的目标关节角
     std::vector<double> target_joint_values;
     current_state->copyJointGroupPositions(joint_model_group, target_joint_values);
+    for (size_t i = 0; i < target_joint_values.size(); ++i) {
+        const double current_delta =
+            i < current_joint_values.size() ? target_joint_values[i] - current_joint_values[i] : 0.0;
+        const double seed_delta =
+            i < preferred_seed_joints.size() ? target_joint_values[i] - preferred_seed_joints[i] : 0.0;
+        ROS_INFO("[DEBUG][FirstIK] joint[%zu] current=%.6f seed=%.6f ik=%.6f ik-current=%.6f ik-seed=%.6f",
+                 i,
+                 i < current_joint_values.size() ? current_joint_values[i] : 0.0,
+                 i < preferred_seed_joints.size() ? preferred_seed_joints[i] : 0.0,
+                 target_joint_values[i],
+                 current_delta,
+                 seed_delta);
+    }
     // [安全提示]：可在此处打印 target_joint_values，
     // 与当前关节角对比，确保 J1/J2 变化量 < 0.5 rad
 

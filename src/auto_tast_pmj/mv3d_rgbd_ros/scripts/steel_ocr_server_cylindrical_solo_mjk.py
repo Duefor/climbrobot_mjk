@@ -143,8 +143,8 @@ class SteelStampOcrSoloServer:
             rec_model_dir=self.rec_model_path,
             rec=True,
             det_algorithm='DB',
-            det_db_thresh=0.1,
-            det_db_box_thresh=0.1,
+            det_db_thresh=0.5,
+            det_db_box_thresh=0.7,
             det_db_unclip_ratio=1.6,
             show_log=False,
         )
