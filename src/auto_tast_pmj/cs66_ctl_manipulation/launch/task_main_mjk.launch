@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Main task parameters -->
+  <arg name="car_move_distance_meters" default="-0.9"/>
+  <arg name="task_launch_prefix" default=""/>
+
+  <!-- MoveIt demo.launch parameters -->
+  <arg name="use_rviz" default="true"/>
+  <arg name="moveit_controller_manager" default="simple"/>
+  <arg name="pipeline" default="ompl"/>
+
+  <!-- RealSense D435i publisher parameters -->
+  <arg name="serial_number" default=""/>
+  <arg name="color_width" default="1280"/>
+  <arg name="color_height" default="720"/>
+  <arg name="depth_width" default="640"/>
+  <arg name="depth_height" default="480"/>
+  <arg name="fps" default="15"/>
+  <arg name="camera_frame" default="camera_color_optical_frame"/>
+  <arg name="align_depth_to_color" default="true"/>
+
+  <!-- OCR server parameters -->
+  <arg name="ocr_base_frame" default="base_link"/>
+  <arg name="ocr_service_name" default="get_steel_stamp_location"/>
+  <arg name="roi_window_size" default="21"/>
+  <arg name="trajectory_mode" default="dense_arc"/>
+  <arg name="arc_sample_step_m" default="0.004"/>
+  <arg name="trajectory_normal_offset_m" default="-0.036"/>
+  <arg name="cylinder_diameter_m" default="4.3"/>
+
+  <include file="$(find cs66_arm_config1)/launch/demo.launch">
+    <arg name="use_rviz" value="$(arg use_rviz)"/>
+    <arg name="moveit_controller_manager" value="$(arg moveit_controller_manager)"/>
+    <arg name="pipeline" value="$(arg pipeline)"/>
+  </include>
+
+  <node name="realsense_d435i_image_publisher"
+        pkg="mv3d_rgbd_ros"
+        type="realsense_d435i_camera_pub.py"
+        output="screen">
+    <param name="serial_number" value="$(arg serial_number)"/>
+    <param name="color_width" value="$(arg color_width)"/>
+    <param name="color_height" value="$(arg color_height)"/>
+    <param name="depth_width" value="$(arg depth_width)"/>
+    <param name="depth_height" value="$(arg depth_height)"/>
+    <param name="fps" value="$(arg fps)"/>
+    <param name="frame_id" value="$(arg camera_frame)"/>
+    <param name="align_depth_to_color" value="$(arg align_depth_to_color)"/>
+  </node>
+
+  <node name="steel_stamp_ocr_solo_server_node"
+        pkg="mv3d_rgbd_ros"
+        type="steel_ocr_server_cylindrical_solo_mjk.py"
+        output="screen">
+    <param name="base_frame" value="$(arg ocr_base_frame)"/>
+    <param name="service_name" value="$(arg ocr_service_name)"/>
+    <param name="rgb_topic" value="/camera/rgb/image_raw"/>
+    <param name="depth_topic" value="/camera/depth/image_raw"/>
+    <param name="camera_info_topic" value="/camera/rgb/camera_info"/>
+    <param name="roi_window_size" value="$(arg roi_window_size)"/>
+    <param name="trajectory_mode" value="$(arg trajectory_mode)"/>
+    <param name="arc_sample_step_m" value="$(arg arc_sample_step_m)"/>
+    <param name="trajectory_normal_offset_m" value="$(arg trajectory_normal_offset_m)"/>
+    <param name="cylinder_diameter_m" value="$(arg cylinder_diameter_m)"/>
+  </node>
+
+  <node name="steel_task_node"
+        pkg="cs66_ctl_manipulation"
+        type="task_main_mjk"
+        output="screen"
+        launch-prefix="$(arg task_launch_prefix)">
+    <param name="car_move_distance_meters" value="$(arg car_move_distance_meters)"/>
+  </node>
+</launch>

@@ -42,8 +42,8 @@ namespace {
 // 笛卡尔路径插值步长（米）：MoveIt 在相邻路点之间每 5mm 插一个点
 constexpr double kCartesianStepMeters = 0.005;
 
-// 每轮扫查结束后，小车横向移动距离（米）
-constexpr double kCarMoveDistanceMeters = -0.9;
+// 每轮扫查结束后，小车横向移动距离默认值（米），可通过 ~car_move_distance_meters 覆盖。
+constexpr double kDefaultCarMoveDistanceMeters = -0.9;
 
 // 第一个接近点使用的规划器：RRTstar（渐进最优的采样规划器，路径质量好但稍慢）
 const char* kFirstApproachPlannerId = "RRTstar";
@@ -572,6 +572,9 @@ int main(int argc, char** argv) {
 
     ros::NodeHandle nh;
     ros::NodeHandle pnh("~");
+    const double car_move_distance_meters =
+        pnh.param<double>("car_move_distance_meters", kDefaultCarMoveDistanceMeters);
+    ROS_INFO("Car move distance per scan cycle: %.3f m", car_move_distance_meters);
 
     auto my_controller = std::make_shared<CS66RobotController>(nh, pnh);
     ros::Duration(1.0).sleep();
@@ -617,7 +620,7 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "当前轮次已回到安全位置。按Enter控制小车横移"
-                  << kCarMoveDistanceMeters
+                  << car_move_distance_meters
                   << "m并进入下一轮；输入R后回车退出任务: ";
         std::string input;
         if (!std::getline(std::cin, input)) {
@@ -628,7 +631,7 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-        if (!RunCarAutoTask(car_client, kCarMoveDistanceMeters)) {
+        if (!RunCarAutoTask(car_client, car_move_distance_meters)) {
             return IsShutdownRequested() ? 0 : -1;
         }
 
